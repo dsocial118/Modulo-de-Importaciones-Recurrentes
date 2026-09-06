@@ -1,0 +1,112 @@
+{% extends "runac/base.html" %}
+{% block titulo %}Detalle{% endblock %}
+{% block nav_resultado %}activo{% endblock %}
+
+{% block contenido %}
+
+<div class="mb-3">
+  <a href="{% url 'runac:resultado' %}" class="ayuda text-decoration-none">
+    <i class="bi bi-arrow-left"></i> Volver al resultado
+  </a>
+  <h5 class="mt-2 mb-0">
+    {{ importacion.archivo_codigo }} · {{ importacion.nombre_archivo }}
+    <span class="estado e-{{ importacion.estado }} ms-2">{{ importacion.estado }}</span>
+  </h5>
+  <div class="ayuda">
+    {{ importacion.filas_totales }} filas ·
+    {{ importacion.filas_validas }} sin problemas ·
+    {{ importacion.bloqueantes }} bloqueantes ·
+    {{ importacion.advertencias }} advertencias ·
+    {{ importacion.duracion_ms }} ms
+  </div>
+</div>
+
+{% if importacion.detalle_error %}
+  <div class="alert alert-danger">
+    <strong>La estructura del archivo no corresponde. No se procesó ninguna fila.</strong>
+    <pre class="mb-0 mt-2 mono" style="white-space:pre-wrap">{{ importacion.detalle_error }}</pre>
+    <hr>
+    <p class="mb-0 ayuda">
+      Suele pasar cuando se usa una plantilla de un período anterior, o cuando se agregaron
+      o renombraron columnas.
+    </p>
+    <a class="btn btn-primary btn-sm mt-2" href="{% url 'runac:plantillas' %}">
+      Descargar la plantilla vigente
+    </a>
+  </div>
+{% endif %}
+
+{% if resumen %}
+<div class="card mb-3">
+  <div class="card-header">Problemas por tipo</div>
+  <div class="card-body p-0">
+    <table class="table table-sm tabla-compacta mb-0">
+      <tbody>
+      {% for r in resumen %}
+        <tr>
+          <td style="width:5rem" class="text-end fw-semibold sev-{{ r.severidad }}">{{ r.casos }}</td>
+          <td style="width:11rem"><span class="mono ayuda">{{ r.codigo }}</span></td>
+          <td>{{ r.ejemplo }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<form method="get" class="row g-2 align-items-end mb-3">
+  <div class="col-auto">
+    <label class="form-label mb-1 ayuda">Severidad</label>
+    <select name="severidad" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">Todas</option>
+      <option value="BLOQUEANTE" {% if filtro.severidad == "BLOQUEANTE" %}selected{% endif %}>Bloqueantes</option>
+      <option value="ADVERTENCIA" {% if filtro.severidad == "ADVERTENCIA" %}selected{% endif %}>Advertencias</option>
+    </select>
+  </div>
+  {% if hojas %}
+  <div class="col-auto">
+    <label class="form-label mb-1 ayuda">Hoja</label>
+    <select name="hoja" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">Todas</option>
+      {% for h in hojas %}<option value="{{ h }}" {% if filtro.hoja == h %}selected{% endif %}>{{ h }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="col-auto">
+    <label class="form-label mb-1 ayuda">Buscar</label>
+    <input type="text" name="buscar" value="{{ filtro.buscar }}" class="form-control form-control-sm"
+           placeholder="campo o texto del error">
+  </div>
+  <div class="col-auto"><button class="btn btn-sm btn-outline-secondary">Filtrar</button></div>
+</form>
+
+<div class="card">
+  <div class="card-header">{{ hallazgos|length }} resultado(s)</div>
+  <div class="card-body p-0">
+    <table class="table table-sm tabla-compacta mb-0">
+      <thead class="table-light">
+        <tr><th>Fila</th><th>Hoja</th><th>Campo</th><th>Sev.</th><th>Valor</th><th>Qué pasa</th></tr>
+      </thead>
+      <tbody>
+      {% for h in hallazgos %}
+        <tr>
+          <td class="fw-semibold">{{ h.numero_fila|default:"—" }}</td>
+          <td class="ayuda">{{ h.nombre_hoja|default:"—" }}</td>
+          <td>{{ h.nombre_campo|default:"—" }}</td>
+          <td class="sev-{{ h.severidad }}">{% if h.severidad == "BLOQUEANTE" %}◆{% else %}▲{% endif %}</td>
+          <td class="mono">{{ h.valor_encontrado|default:"—"|truncatechars:34 }}</td>
+          <td>{{ h.descripcion }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-center ayuda py-4">No hay problemas con esos filtros.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<p class="ayuda mt-3">
+  El número de fila es el del Excel, tal como lo ves al abrirlo.
+</p>
+{% endblock %}

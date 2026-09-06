@@ -1,0 +1,108 @@
+{% extends "runac/base.html" %}
+{% block titulo %}Reconocimiento{% endblock %}
+{% block nav_cargar %}activo{% endblock %}
+
+{% block contenido %}
+<h5 class="mb-1">Antes de procesar</h5>
+<p class="ayuda mb-4">
+  Esto es lo que el sistema reconoció. Revisá que cada archivo corresponda a lo que dice,
+  y corregí lo que haga falta. <strong>Todavía no se procesó nada.</strong>
+</p>
+
+<form method="post" action="{% url 'runac:procesar' %}">
+  {% csrf_token %}
+
+  <div class="card mb-3">
+    <div class="card-header">
+      {{ jurisdiccion }} · {{ periodo_elegido }}
+      <span class="ayuda ms-2">{{ reconocimiento.reconocidos|length }} reconocidos</span>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm tabla-compacta align-middle mb-0">
+        <tbody>
+        {% for r in reconocimiento.reconocidos %}
+          <tr>
+            <td style="width:2.4rem"><i class="bi bi-check-circle-fill text-success"></i></td>
+            <td class="mono">{{ r.nombre }}</td>
+            <td style="width:1.4rem" class="ayuda">→</td>
+            <td style="width:16rem">
+              <select name="asignar_{{ r.nombre }}" class="form-select form-select-sm">
+                {% for a in todos_los_archivos %}
+                  <option value="{{ a.codigo }}" {% if a.codigo == r.archivo.codigo %}selected{% endif %}>{{ a.codigo }}</option>
+                {% endfor %}
+                <option value="ninguno">no corresponde</option>
+              </select>
+            </td>
+          </tr>
+        {% endfor %}
+
+        {% for am in reconocimiento.ambiguos %}
+          <tr class="table-warning">
+            <td><i class="bi bi-exclamation-triangle-fill text-warning"></i></td>
+            <td colspan="3">
+              <strong>{{ am.codigo }}</strong>: hay {{ am.candidatos|length }} archivos que podrían serlo.
+              Elegí cuál va:
+              <ul class="mb-0 mt-1">
+                {% for c in am.candidatos %}
+                  <li>
+                    <label class="ayuda">
+                      <input type="radio" name="asignar_ambiguo_{{ am.codigo }}" value="{{ c }}">
+                      <span class="mono">{{ c }}</span>
+                    </label>
+                  </li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+        {% endfor %}
+
+        {% for f in reconocimiento.sin_reconocer %}
+          <tr>
+            <td><i class="bi bi-question-circle text-secondary"></i></td>
+            <td class="mono text-secondary">{{ f }}</td>
+            <td class="ayuda">→</td>
+            <td>
+              <select name="asignar_{{ f }}" class="form-select form-select-sm">
+                <option value="ninguno">no se pudo reconocer</option>
+                {% for a in todos_los_archivos %}
+                  <option value="{{ a.codigo }}">{{ a.codigo }}</option>
+                {% endfor %}
+              </select>
+            </td>
+          </tr>
+        {% endfor %}
+
+        {% for a in reconocimiento.faltantes %}
+          <tr>
+            <td><i class="bi bi-dash-circle text-danger"></i></td>
+            <td colspan="3" class="text-danger">
+              Falta <strong>{{ a.codigo }}</strong>, que es obligatorio.
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="alert alert-light border py-2 ayuda">
+    <strong>Orden de procesamiento:</strong>
+    {% for a in todos_los_archivos %}{{ a.codigo }}{% if not forloop.last %} → {% endif %}{% endfor %}
+    <br>
+    Los dispositivos se procesan primero porque las nóminas los referencian.
+  </div>
+
+  {% if reconocimiento.faltantes %}
+    <div class="alert alert-warning py-2">
+      <i class="bi bi-exclamation-triangle"></i>
+      Se puede procesar igual, pero con archivos obligatorios faltantes no vas a poder presentar.
+    </div>
+  {% endif %}
+
+  <a href="{% url 'runac:cargar' %}" class="btn btn-outline-secondary">Cancelar</a>
+  <button class="btn btn-primary" {% if not puede_procesar %}disabled{% endif %}>Procesar</button>
+  {% if not puede_procesar %}
+    <span class="ayuda ms-2">Hay que resolver las ambigüedades antes de procesar.</span>
+  {% endif %}
+</form>
+{% endblock %}

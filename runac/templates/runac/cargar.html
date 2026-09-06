@@ -1,0 +1,82 @@
+{% extends "runac/base.html" %}
+{% block titulo %}Cargar archivos{% endblock %}
+{% block nav_cargar %}activo{% endblock %}
+
+{% block contenido %}
+<form method="post" enctype="multipart/form-data" id="formCarga">
+  {% csrf_token %}
+
+  <div class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+      <label class="form-label mb-1 ayuda">Jurisdicción</label>
+      <select name="jurisdiccion" class="form-select">
+        {% for j in jurisdicciones %}
+          <option value="{{ j }}" {% if j == jurisdiccion %}selected{% endif %}>{{ j }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label mb-1 ayuda">Período</label>
+      <select name="periodo" class="form-select">
+        {% for p in periodos %}
+          <option value="{{ p.codigo }}" {% if p.codigo == periodo_elegido %}selected{% endif %}>{{ p.codigo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="zona-suelta mb-3" id="zona">
+    <div class="fs-1 text-secondary mb-2"><i class="bi bi-folder2-open"></i></div>
+    <p class="mb-1"><strong>Arrastrá acá la carpeta con los archivos</strong></p>
+    <p class="ayuda mb-3">o</p>
+    <input type="file" name="archivos" id="archivos" multiple webkitdirectory directory
+           class="form-control d-none" accept=".xlsx,.xlsm">
+    <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('archivos').click()">
+      Seleccionar carpeta…
+    </button>
+    <div id="listado" class="mt-3 text-start ayuda"></div>
+  </div>
+
+  <p class="ayuda">
+    <i class="bi bi-info-circle"></i>
+    Se pueden subir todos juntos. El sistema los reconoce por el nombre y los procesa en el orden
+    que corresponde: los dispositivos antes que las nóminas, porque las nóminas los referencian.
+  </p>
+
+  <button class="btn btn-primary" id="btnSubir" disabled>Continuar</button>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const zona = document.getElementById('zona');
+  const input = document.getElementById('archivos');
+  const listado = document.getElementById('listado');
+  const boton = document.getElementById('btnSubir');
+
+  function mostrar(archivos) {
+    const excels = [...archivos].filter(f => /\.xlsx?$/i.test(f.name) && !f.name.startsWith('~$'));
+    if (!excels.length) {
+      listado.innerHTML = '<span class="text-danger">No se encontró ningún Excel en la carpeta.</span>';
+      boton.disabled = true;
+      return;
+    }
+    listado.innerHTML = '<strong>' + excels.length + ' archivo(s):</strong><ul class="mb-0">' +
+      excels.map(f => '<li class="mono">' + f.name + '</li>').join('') + '</ul>';
+    boton.disabled = false;
+  }
+
+  input.addEventListener('change', () => mostrar(input.files));
+  ['dragenter','dragover'].forEach(e => zona.addEventListener(e, ev => {
+    ev.preventDefault(); zona.classList.add('encima');
+  }));
+  ['dragleave','drop'].forEach(e => zona.addEventListener(e, ev => {
+    ev.preventDefault(); zona.classList.remove('encima');
+  }));
+  zona.addEventListener('drop', ev => {
+    input.files = ev.dataTransfer.files;
+    mostrar(input.files);
+  });
+</script>
+{% endblock %}

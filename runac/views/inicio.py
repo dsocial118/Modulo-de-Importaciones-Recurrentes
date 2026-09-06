@@ -1,0 +1,47 @@
+"""Entrada al prototipo y pantalla de inicio."""
+
+from django.contrib.auth import logout
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView
+from django.shortcuts import redirect
+from django.views.generic import TemplateView
+
+from runac.services import importacion_service as svc
+from runac.permissions import jurisdiccion_de, rol_de
+
+
+class EntrarView(LoginView):
+    template_name = "runac/entrar.html"
+    redirect_authenticated_user = True
+
+
+def salir(request):
+    logout(request)
+    return redirect("runac:entrar")
+
+
+class InicioView(LoginRequiredMixin, TemplateView):
+    """Punto de partida: elegir período y ver cómo viene la presentación."""
+
+    template_name = "runac/inicio.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        periodos = svc.periodos()
+        elegido = self.request.GET.get("periodo") or (periodos[0]["codigo"] if periodos else None)
+
+        ctx["periodos"] = periodos
+        ctx["periodo_elegido"] = elegido
+        ctx["periodo"] = svc.periodo(elegido) if elegido else None
+        ctx["rol"] = rol_de(self.request.user)
+        ctx["jurisdiccion"] = jurisdiccion_de(self.request.user)
+
+        if elegido and ctx["jurisdiccion"]:
+            estado = svc.estado_de_la_presentacion(ctx["jurisdiccion"], elegido)
+            ctx.update(estado)
+            listos = [a for a in estado["archivos"] if a["estado"] != "SIN_CARGAR"
+                      and a["estado"] not in ("CON_ERRORES", "ESTRUCTURA_INVALIDA")]
+            ctx["cargados"] = len(listos)
+            ctx["total_archivos"] = len(estado["archivos"])
+            ctx["avance"] = int(len(listos) * 100 / len(estado["archivos"])) if estado["archivos"] else 0
+        return ctx
