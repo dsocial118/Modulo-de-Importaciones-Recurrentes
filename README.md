@@ -7,25 +7,67 @@ las validaciones de seguridad que exige el repositorio.
 Sirve para que el equipo técnico de RUNAC pruebe el circuito con **datos de
 prueba** y decida cómo tiene que funcionar. Recién después se integra a SISOC.
 
+### Si llegaste acá para revisar el código, leé esto primero
+
+**Este repositorio no se levanta solo.** No incluye la base de datos, el esquema
+SQL de las tres capas ni los Excel de prueba: eso vive en otras carpetas de la
+máquina del responsable funcional, y el prototipo se conecta a esa base por red
+de Docker.
+
+Es deliberado. El repositorio está publicado **para auditar el código**; las
+pruebas funcionales se hacen en un solo lugar, con los datos de prueba
+controlados. Si querés ver el sistema andando, pedile una demostración al
+responsable funcional.
+
+Por dónde empezar a leer, en este orden:
+
+| Archivo | Qué responde |
+|---|---|
+| `runac/services/circuito_service.py` | Las transiciones: quién puede hacer qué y desde qué estado |
+| `runac/permissions.py` | Los roles, y la diferencia entre menú y acceso |
+| `runac/services/importacion_service.py` | Cómo se importa y por qué una importación se rechaza entera |
+| `runac/services/motor/importar.py` | El motor, que lee la definición de la Capa 1 y la ejecuta |
+| `runac/tests/` | Las reglas escritas como casos: 86 tests |
+
+**La clave del diseño:** el motor no sabe qué es una MPI. Lee la definición de
+cada archivo desde la Capa 1 —hojas, columnas, tipos, catálogos, reglas— y la
+ejecuta. Cuando cambia una planilla se cambian datos, no código.
+
 ---
 
 ## Cómo se levanta
 
-Desde esta carpeta:
+Esto es para la máquina donde está el modelo de datos completo.
+
+**El orden importa.** El prototipo **lee** el modelo de tres capas, no lo crea:
+si arranca antes que la base, Django no la encuentra y el contenedor queda
+muerto. Primero la base, después el prototipo:
 
 ```
+cd ../analisis_datos/ModeloMySql
+docker compose -p runac-c1 up -d
+
+cd ../../prototipo
 docker compose -p runac-proto up -d
 ```
 
 Y se abre en **http://localhost:8100**
 
-Necesita que la base esté corriendo, porque el prototipo **lee** el modelo de
-tres capas, no lo crea:
+### Después de reiniciar la máquina
+
+El contenedor del prototipo se enciende solo —está marcado
+`restart: unless-stopped`— pero lo hace **antes** que la base, así que queda sin
+poder conectarse. Hay que levantar la base y reiniciarlo:
 
 ```
 cd ../analisis_datos/ModeloMySql
 docker compose -p runac-c1 up -d
+docker restart runac_proto_web
 ```
+
+Si `http://localhost:8100` no responde, es casi siempre esto. Para confirmarlo:
+`docker logs --tail 20 runac_proto_web` — si dice
+`Unknown server host 'mysql'`, es exactamente este caso.
 
 ## Usuarios de prueba
 
@@ -100,8 +142,12 @@ escritorio (992px). En pantalla chica las tablas se convierten en fichas, con el
 nombre de cada dato; desde tablet vuelven a ser tablas, con el encabezado fijo al
 desplazarse.
 
-El circuito completo, con todas las pantallas previstas, está en
-`../analisis_funcional/08_Circuito_completo_y_pantallas.md`.
+El circuito de nueve pasos —quién puede hacer qué y desde qué estado— está en
+`runac/services/circuito_service.py`, en el diccionario `ACCIONES`. Es el único
+lugar donde viven las transiciones: si una acción no está ahí, no existe.
+
+El análisis funcional completo del que sale este circuito no forma parte de este
+repositorio: lo mantiene el responsable funcional en documentos aparte.
 
 ---
 
@@ -110,17 +156,37 @@ El circuito completo, con todas las pantallas previstas, está en
 Con **la misma estructura que las apps de SISOC**, a propósito: cuando esto se
 integre, se copia la carpeta en vez de reescribirla.
 
+**La lógica vive en `services/`; las vistas no deciden nada.**
+
 ```
 runac/
-├── models.py        generados con inspectdb, todos con managed = False
-├── views/           delgadas: reciben, llaman al servicio, arman el contexto
+├── models.py                       Generado con inspectdb. El prototipo LEE el
+│                                   modelo, no lo crea.
+├── permissions.py                  Roles del prototipo. Provisorio: SISOC
+│                                   resuelve esto con iam/services.py.
+├── views/                          Delgadas: piden al servicio y arman contexto.
+│   ├── carga.py                    Cargar de a uno, resultado y detalle.
+│   ├── circuito.py                 Acciones del circuito y descargas.
+│   ├── edicion.py                  Corregir un dato ya importado.
+│   ├── estructura.py               Qué espera la Capa 1.
+│   ├── inicio.py
+│   └── plantillas.py
 ├── services/
-│   ├── importacion_service.py   la lógica
-│   └── motor/                   el motor, Python puro, sin Django
-├── permissions.py   provisorio: SISOC resuelve esto con iam/
+│   ├── importacion_service.py      Importar, estado del período, dependencias.
+│   ├── circuito_service.py         Las transiciones del circuito. Están acá y
+│   │                               en ningún otro lado.
+│   ├── edicion_service.py          Edición de datos, con validación por tipo.
+│   ├── informe_errores_service.py  Los dos informes que el operador se lleva.
+│   └── motor/                      Python puro, sin Django. Es COPIA de la
+│                                   skill `runac-capa1`: si se toca uno hay que
+│                                   sincronizar el otro.
 ├── templates/runac/
+├── tests/
 └── management/commands/
 ```
+
+**El motor está duplicado** entre este prototipo y la skill `runac-capa1`. Es
+deuda conocida: al integrar el módulo a SISOC tiene que quedar en un solo lugar.
 
 Versiones: **Django 5.2.16, Python 3.11.15, openpyxl 3.1.5, crispy-forms con
 Bootstrap 5** — las mismas que `requirements/base.txt` del repositorio.
@@ -154,11 +220,26 @@ docker exec runac_proto_web python manage.py inspectdb <tablas> > runac/models.p
 
 ## Qué falta antes de pensar en integrarlo
 
-1. Las decisiones funcionales pendientes — están listadas en
-   `../analisis_funcional/08_Circuito_completo_y_pantallas.md`, parte 4.
-2. La clasificación de RUNAC según `docs/ia/MODULAR_BOUNDARIES.md`. Es el paso 0
-   obligatorio de la norma del repositorio.
-3. Definir si las personas de RUNAC son las de `ciudadanos` o un registro propio.
+**Decisiones funcionales**, que no son del equipo de desarrollo:
+
+1. **Los datos personales repetidos** en las cuatro planillas nominales. Hay tres
+   alternativas sobre la mesa y la elegida condiciona el rediseño de las
+   planillas. Decide la DNPYPI.
+2. **Anulación excepcional después de consolidar**, y si el responsable
+   provincial puede hacer además lo del operador. Son los dos supuestos abiertos
+   del circuito.
+
+**Decisiones técnicas**, que sí son del equipo:
+
+3. **La clasificación de RUNAC** según `docs/ia/MODULAR_BOUNDARIES.md` de SISOC.
+   Es el paso 0 obligatorio de la norma del repositorio y todavía no se hizo.
+4. **Si las personas de RUNAC son las de `ciudadanos`** o un registro propio
+   vinculado. Hoy el prototipo asume registro propio.
+5. **Las dependencias entre archivos deberían declararse en la Capa 1**, no
+   derivarse del orden de importación. Hoy `DISP_SCP` queda bloqueado por
+   `DISP_PENAL` aunque sean independientes; las dependencias reales son
+   MPE→residenciales y MPJ/DAE→penales.
+6. **Unificar el motor**, hoy duplicado con la skill `runac-capa1`.
 
 ---
 
@@ -179,37 +260,3 @@ Los tests cubren las reglas del circuito —quién puede hacer qué, desde qué
 estado— y la convención de nombres de las tablas receptoras. No tocan la base:
 los modelos son `managed = False`, porque la estructura la define la Capa 1 y no
 Django.
-
----
-
-## Cómo está organizado
-
-Sigue la forma que pide SISOC: **la lógica vive en `services/`, las vistas no
-deciden nada.**
-
-```
-runac/
-├── models.py                       Generado con inspectdb. El prototipo LEE el
-│                                   modelo, no lo crea.
-├── permissions.py                  Roles del prototipo. Provisorio: SISOC
-│                                   resuelve esto con iam/services.py.
-├── views/                          Delgadas: piden al servicio y arman contexto.
-│   ├── carga.py                    Cargar de a uno, resultado y detalle.
-│   ├── circuito.py                 Acciones del circuito y descargas.
-│   ├── estructura.py               Qué espera la Capa 1.
-│   ├── inicio.py
-│   └── plantillas.py
-├── services/
-│   ├── importacion_service.py      Importar, estado del período, dependencias.
-│   ├── circuito_service.py         Las transiciones del circuito. Están acá y
-│   │                               en ningún otro lado.
-│   ├── informe_errores_service.py  Los dos informes que el operador se lleva.
-│   └── motor/                      Python puro, sin Django. Es COPIA de la
-│                                   skill `runac-capa1`: si se toca uno hay que
-│                                   sincronizar el otro.
-├── templates/runac/
-└── tests/
-```
-
-**El motor está duplicado** entre este prototipo y la skill `runac-capa1`. Es
-deuda conocida: al integrar el módulo a SISOC tiene que quedar en un solo lugar.
