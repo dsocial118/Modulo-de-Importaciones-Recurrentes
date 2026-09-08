@@ -9,15 +9,12 @@ no sabe nada de Django ni de web.
 
 from __future__ import annotations
 
-import hashlib
-import os
-import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
 
 from django.conf import settings
-from django.db import connection, transaction
+from django.db import connection
 
 # El motor se importa por ruta porque está pensado para correr también fuera de
 # Django, desde la línea de comandos.
@@ -25,7 +22,9 @@ _MOTOR = Path(__file__).resolve().parent / "motor"
 if str(_MOTOR) not in sys.path:
     sys.path.insert(0, str(_MOTOR))
 
-import importar as motor_importar  # noqa: E402
+# El import va aca y no arriba porque depende del sys.path que se arma
+# unas lineas antes: el motor corre tambien fuera de Django.
+import importar as motor_importar  # noqa: E402  # pylint: disable=wrong-import-position
 
 
 def _fila_a_dict(cursor):
@@ -37,13 +36,16 @@ def _fila_a_dict(cursor):
 # Consultas de configuración
 # ---------------------------------------------------------------------------
 
+
 def periodos():
     with connection.cursor() as cur:
-        cur.execute("""
+        cur.execute(
+            """
             SELECT p.id, p.codigo, p.anio, p.numero, p.fecha_desde, p.fecha_hasta, p.estado,
                    (SELECT COUNT(*) FROM runac_c2_presentacion s WHERE s.periodo_id = p.id) AS presentaciones
             FROM runac_c2_periodo p ORDER BY p.anio DESC, p.numero DESC
-        """)
+        """
+        )
         return _fila_a_dict(cur)
 
 
@@ -57,24 +59,34 @@ def periodo(codigo: str):
 def archivos_esperados(codigo_periodo: str):
     """Los archivos que la provincia tiene que presentar, con su estructura."""
     with connection.cursor() as cur:
-        cur.execute("""
-            SELECT a.id, a.codigo, a.nombre_esperado, a.titulo, a.orden_importacion, a.obligatorio,
+        # La estructura de un período es la de las VERSIONES que ese período usa.
+        cur.execute(
+            """
+            SELECT a.id, a.codigo, av.id AS version_id, av.numero AS version,
+                   av.nombre_esperado, av.titulo, av.orden_importacion, av.obligatorio,
                    COUNT(DISTINCT h.id) AS hojas,
                    COUNT(DISTINCT c.id) AS campos,
                    COUNT(DISTINCT c.catalogo_id) AS catalogos,
                    COUNT(DISTINCT cr.id) AS reglas
-            FROM runac_c1_archivo a
-            LEFT JOIN runac_c1_hoja h ON h.archivo_id = a.id
+            FROM runac_c2_periodo p
+            JOIN runac_c2_periodo_archivo pa ON pa.periodo_id = p.id
+            JOIN runac_c1_archivo_version av ON av.id = pa.archivo_version_id
+            JOIN runac_c1_archivo a ON a.id = av.archivo_id
+            LEFT JOIN runac_c1_hoja h ON h.archivo_version_id = av.id
             LEFT JOIN runac_c1_campo c ON c.hoja_id = h.id
             LEFT JOIN runac_c1_campo_regla cr ON cr.campo_id = c.id
-            GROUP BY a.id ORDER BY a.orden_importacion
-        """)
+            WHERE p.codigo = %s
+            GROUP BY a.id, av.id ORDER BY av.orden_importacion
+        """,
+            [codigo_periodo],
+        )
         return _fila_a_dict(cur)
 
 
 def campos_de(codigo_archivo: str):
     with connection.cursor() as cur:
-        cur.execute("""
+        cur.execute(
+            """
             SELECT h.nombre_esperado AS hoja, c.orden, c.nombre, c.titulo_esperado,
                    c.tipo_dato, c.longitud_maxima, c.obligatorio, c.ayuda,
                    d.nombre_esperado AS grupo, cat.codigo AS catalogo,
@@ -83,12 +95,15 @@ def campos_de(codigo_archivo: str):
                    (SELECT COUNT(*) FROM runac_c1_campo_regla cr WHERE cr.campo_id = c.id) AS reglas
             FROM runac_c1_campo c
             JOIN runac_c1_hoja h ON h.id = c.hoja_id
-            JOIN runac_c1_archivo a ON a.id = h.archivo_id
+            JOIN runac_c1_archivo_version av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+            JOIN runac_c1_archivo a ON a.id = av.archivo_id
             LEFT JOIN runac_c1_dimension d ON d.id = c.dimension_id
             LEFT JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
             WHERE a.codigo = %s
             ORDER BY h.orden_procesamiento, c.orden
-        """, [codigo_archivo])
+        """,
+            [codigo_archivo],
+        )
         return _fila_a_dict(cur)
 
 
@@ -96,42 +111,73 @@ def campos_de(codigo_archivo: str):
 # Presentación
 # ---------------------------------------------------------------------------
 
+
 def presentacion_de(jurisdiccion: str, codigo_periodo: str, crear: bool = True):
     with connection.cursor() as cur:
-        cur.execute("""
-            SELECT s.* FROM runac_c2_presentacion s
+        cur.execute(
+            """
+            SELECT s.*, j.nombre AS jurisdiccion
+            FROM runac_c2_presentacion s
             JOIN runac_c2_periodo p ON p.id = s.periodo_id
-            WHERE s.jurisdiccion = %s AND p.codigo = %s
+            JOIN runac_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
+            WHERE j.nombre = %s AND p.codigo = %s
             ORDER BY s.version DESC LIMIT 1
-        """, [jurisdiccion, codigo_periodo])
+        """,
+            [jurisdiccion, codigo_periodo],
+        )
         filas = _fila_a_dict(cur)
         if filas:
             return filas[0]
         if not crear:
             return None
-        cur.execute("SELECT id FROM runac_c2_periodo WHERE codigo = %s", [codigo_periodo])
+        cur.execute(
+            "SELECT id FROM runac_c2_periodo WHERE codigo = %s", [codigo_periodo]
+        )
         fila = cur.fetchone()
         if not fila:
             return None
-        cur.execute("""
-            INSERT INTO runac_c2_presentacion (periodo_id, jurisdiccion, version, estado)
-            VALUES (%s, %s, 1, 'BORRADOR')
-        """, [fila[0], jurisdiccion])
+        # La jurisdicción es una entidad: si no existe, se da de alta.
+        cur.execute(
+            "SELECT id FROM runac_c2_jurisdiccion WHERE nombre = %s", [jurisdiccion]
+        )
+        f_j = cur.fetchone()
+        if f_j:
+            jurisdiccion_id = f_j[0]
+        else:
+            cur.execute(
+                """INSERT INTO runac_c2_jurisdiccion (codigo, nombre, modalidad, activa)
+                           VALUES (%s, %s, 'PRESENTACION_PERIODICA', 1)""",
+                [jurisdiccion.upper()[:20], jurisdiccion],
+            )
+            cur.execute(
+                "SELECT id FROM runac_c2_jurisdiccion WHERE nombre = %s", [jurisdiccion]
+            )
+            jurisdiccion_id = cur.fetchone()[0]
+        cur.execute(
+            """
+            INSERT INTO runac_c2_presentacion (periodo_id, jurisdiccion_id, version, estado)
+            VALUES (%s, %s, 1, 'EN_CARGA')
+        """,
+            [fila[0], jurisdiccion_id],
+        )
     return presentacion_de(jurisdiccion, codigo_periodo, crear=False)
 
 
 def importaciones_de(presentacion_id: int):
     """La importación vigente de cada archivo, más el historial."""
     with connection.cursor() as cur:
-        cur.execute("""
-            SELECT i.*, a.codigo AS archivo_codigo, a.titulo AS archivo_titulo,
-                   a.orden_importacion, a.obligatorio
+        cur.execute(
+            """
+            SELECT i.*, a.codigo AS archivo_codigo, av.titulo AS archivo_titulo,
+                   av.orden_importacion, av.obligatorio
             FROM runac_c2_importacion i
-            LEFT JOIN runac_c2_estructura e ON e.id = i.estructura_id
-            LEFT JOIN runac_c1_archivo a ON a.id = e.archivo_id
+            LEFT JOIN runac_c1_archivo a ON a.id = i.archivo_id
+            LEFT JOIN runac_c1_archivo_version av ON av.id = i.archivo_version_id
             WHERE i.presentacion_id = %s
-            ORDER BY a.orden_importacion, i.iniciada_el DESC
-        """, [presentacion_id])
+            ORDER BY av.orden_importacion, i.iniciada_el DESC
+        """,
+            [presentacion_id],
+        )
         return _fila_a_dict(cur)
 
 
@@ -142,27 +188,43 @@ def estado_de_la_presentacion(jurisdiccion: str, codigo_periodo: str):
     if not pres:
         return {"presentacion": None, "archivos": esperados, "listo": False}
 
-    vigentes = {}
+    # La importación vigente de cada archivo es la última que quedó VALIDA.
+    # Las ANULADAS fueron reemplazadas; las FALLIDAS no incorporaron nada.
+    vigentes, ultimos = {}, {}
     for imp in importaciones_de(pres["id"]):
         cod = imp["archivo_codigo"]
-        if cod and cod not in vigentes and imp["estado"] != "REEMPLAZADO":
+        if not cod:
+            continue
+        ultimos.setdefault(cod, imp)
+        if cod not in vigentes and imp["estado"] == "VALIDA":
             vigentes[cod] = imp
 
     filas = []
     for a in esperados:
         imp = vigentes.get(a["codigo"])
-        filas.append({**a, "importacion": imp,
-                      "estado": imp["estado"] if imp else "SIN_CARGAR"})
+        ultimo = ultimos.get(a["codigo"])
+        filas.append(
+            {
+                **a,
+                "importacion": imp or ultimo,
+                "importada": bool(imp),
+                "estado": (
+                    (imp or ultimo)["estado"] if (imp or ultimo) else "SIN_CARGAR"
+                ),
+            }
+        )
 
     obligatorios = [f for f in filas if f["obligatorio"]]
-    listo = bool(obligatorios) and all(
-        f["estado"] in ("VALIDADO", "REQUIERE_REVISION", "NORMALIZADO") for f in obligatorios)
+    # "Listo" es: todos los archivos obligatorios importados. Es la condición
+    # para poder cerrar la carga, no para presentar.
+    listo = bool(obligatorios) and all(f["importada"] for f in obligatorios)
     return {"presentacion": pres, "archivos": filas, "listo": listo}
 
 
 # ---------------------------------------------------------------------------
 # Carga
 # ---------------------------------------------------------------------------
+
 
 def guardar_archivos(archivos, jurisdiccion: str, codigo_periodo: str) -> Path:
     """Deja los archivos subidos en una carpeta propia de esta carga."""
@@ -179,14 +241,26 @@ def guardar_archivos(archivos, jurisdiccion: str, codigo_periodo: str) -> Path:
 def reconocer(carpeta: Path, codigo_periodo: str):
     """Empareja lo subido con lo que la Capa 1 espera. No procesa nada."""
     with connection.cursor() as cur:
-        cur.execute("""
-            SELECT a.id, a.codigo, a.nombre_esperado, a.orden_importacion, a.obligatorio
-            FROM runac_c1_archivo a ORDER BY a.orden_importacion
-        """)
+        cur.execute(
+            """
+            SELECT a.id, a.codigo, av.id AS version_id,
+                   av.nombre_esperado, av.orden_importacion, av.obligatorio
+            FROM runac_c2_periodo p
+            JOIN runac_c2_periodo_archivo pa ON pa.periodo_id = p.id
+            JOIN runac_c1_archivo_version av ON av.id = pa.archivo_version_id
+            JOIN runac_c1_archivo a ON a.id = av.archivo_id
+            WHERE p.codigo = %s ORDER BY av.orden_importacion
+        """,
+            [codigo_periodo],
+        )
         esperados = _fila_a_dict(cur)
-    reconocidos, sin_reconocer, faltantes, ambiguos = motor_importar.reconocer(str(carpeta), esperados)
+    reconocidos, sin_reconocer, faltantes, ambiguos = motor_importar.reconocer(
+        str(carpeta), esperados
+    )
     return {
-        "reconocidos": sorted(reconocidos, key=lambda r: r["archivo"]["orden_importacion"]),
+        "reconocidos": sorted(
+            reconocidos, key=lambda r: r["archivo"]["orden_importacion"]
+        ),
         "sin_reconocer": sin_reconocer,
         "faltantes": faltantes,
         "ambiguos": ambiguos,
@@ -194,39 +268,48 @@ def reconocer(carpeta: Path, codigo_periodo: str):
     }
 
 
-def procesar(carpeta: Path, jurisdiccion: str, codigo_periodo: str, usuario: str,
-             asignacion: dict[str, str] | None = None):
+def procesar(
+    carpeta: Path,
+    jurisdiccion: str,
+    codigo_periodo: str,
+    usuario: str,
+    asignacion: dict[str, str] | None = None,
+):
     """Corre el motor sobre la carpeta y devuelve el resumen.
 
     `asignacion` permite forzar qué archivo es cuál, cuando el usuario lo indicó
     a mano en la pantalla de reconocimiento.
     """
-    import mysql.connector
-
     resultado = motor_importar.procesar_carpeta(
         carpeta=str(carpeta),
         jurisdiccion=jurisdiccion,
         periodo=codigo_periodo,
         usuario=usuario,
         asignacion=asignacion or {},
-        conexion=dict(
-            host=settings.DATABASES["default"]["HOST"],
-            port=int(settings.DATABASES["default"]["PORT"]),
-            user=settings.DATABASES["default"]["USER"],
-            password=settings.DATABASES["default"]["PASSWORD"],
-            database=settings.DATABASES["default"]["NAME"],
-        ),
+        conexion={
+            "host": settings.DATABASES["default"]["HOST"],
+            "port": int(settings.DATABASES["default"]["PORT"]),
+            "user": settings.DATABASES["default"]["USER"],
+            "password": settings.DATABASES["default"]["PASSWORD"],
+            "database": settings.DATABASES["default"]["NAME"],
+        },
     )
     return resultado
 
 
-def hallazgos_de(importacion_id: int, severidad: str | None = None,
-                 hoja: str | None = None, buscar: str | None = None,
-                 limite: int = 500):
+def hallazgos_de(
+    importacion_id: int,
+    severidad: str | None = None,
+    hoja: str | None = None,
+    buscar: str | None = None,
+    limite: int = 500,
+):
+    # Las reglas incumplidas son de un archivo que SÍ fue admitido. Los problemas
+    # del archivo entero viven en runac_c2_errores_de_importacion.
     sql = """
         SELECT h.numero_fila, h.nombre_hoja, h.columna, h.nombre_campo, h.severidad,
                h.codigo, h.valor_encontrado, h.descripcion
-        FROM runac_c2_hallazgo h WHERE h.importacion_id = %s
+        FROM runac_c2_reglas_incumplidas h WHERE h.importacion_id = %s
     """
     params: list = [importacion_id]
     if severidad:
@@ -247,9 +330,99 @@ def hallazgos_de(importacion_id: int, severidad: str | None = None,
 
 def resumen_de_hallazgos(importacion_id: int):
     with connection.cursor() as cur:
-        cur.execute("""
+        cur.execute(
+            """
             SELECT codigo, severidad, COUNT(*) AS casos, MIN(descripcion) AS ejemplo
-            FROM runac_c2_hallazgo WHERE importacion_id = %s
+            FROM runac_c2_reglas_incumplidas WHERE importacion_id = %s
             GROUP BY codigo, severidad ORDER BY casos DESC
-        """, [importacion_id])
+        """,
+            [importacion_id],
+        )
         return _fila_a_dict(cur)
+
+
+# ---------------------------------------------------------------------------
+# Carga de a un archivo
+#
+# El documento funcional define esta modalidad para la primera versión: el
+# operador indica de qué archivo se trata, de modo que el sistema no necesita
+# deducirlo del nombre, y el ORDEN lo controla el sistema.
+# ---------------------------------------------------------------------------
+
+
+def dependencias_faltantes(codigo_archivo: str, jurisdiccion: str, codigo_periodo: str):
+    """Archivos que deben estar importados antes que este.
+
+    La regla es el orden de importación declarado en la Capa 1: los dispositivos
+    se cargan antes que las nóminas, porque las nóminas los referencian.
+    """
+    estado = estado_de_la_presentacion(jurisdiccion, codigo_periodo)
+    orden_de_este = None
+    for a in estado["archivos"]:
+        if a["codigo"] == codigo_archivo:
+            orden_de_este = a["orden_importacion"]
+            break
+    if orden_de_este is None:
+        return []
+    return [
+        a
+        for a in estado["archivos"]
+        if a["obligatorio"]
+        and a["orden_importacion"] < orden_de_este
+        and not a.get("importada")
+    ]
+
+
+def importar_uno(
+    codigo_archivo: str, fichero, jurisdiccion: str, codigo_periodo: str, usuario: str
+):
+    """Importa un único archivo, declarado por el operador.
+
+    Devuelve el resumen del motor. Si faltan dependencias, no se procesa: se
+    informa qué falta, como pide el documento.
+    """
+    faltan = dependencias_faltantes(codigo_archivo, jurisdiccion, codigo_periodo)
+    if faltan:
+        return {
+            "rechazado": True,
+            "faltan": [f["codigo"] for f in faltan],
+            "mensaje": (
+                "No se puede importar %s todavía: primero hay que importar %s, "
+                "porque este archivo los referencia."
+                % (codigo_archivo, ", ".join(f["codigo"] for f in faltan))
+            ),
+        }
+
+    marca = datetime.now().strftime("%Y%m%d_%H%M%S")
+    destino = (
+        Path(settings.RUNAC_CARGAS)
+        / f"{jurisdiccion}_{codigo_periodo}_{codigo_archivo}_{marca}"
+    )
+    destino.mkdir(parents=True, exist_ok=True)
+    ruta = destino / fichero.name
+    with open(ruta, "wb") as salida:
+        for bloque in fichero.chunks():
+            salida.write(bloque)
+
+    # La asignación fuerza qué archivo es cuál: el operador ya lo declaró, así
+    # que el nombre del fichero no condiciona nada.
+    resultado = procesar(
+        carpeta=destino,
+        jurisdiccion=jurisdiccion,
+        codigo_periodo=codigo_periodo,
+        usuario=usuario,
+        asignacion={fichero.name: codigo_archivo},
+    )
+    resultado["rechazado"] = False
+    resultado["codigo"] = codigo_archivo
+    # Advertencia temprana por el nombre: no impide la importación.
+    esperado = f"{codigo_archivo}_{codigo_periodo}_{jurisdiccion}"
+    resultado["nombre_inesperado"] = codigo_periodo.replace(
+        "_", ""
+    ) not in fichero.name.replace("_", "") or jurisdiccion.lower().replace(
+        " ", ""
+    ) not in fichero.name.lower().replace(
+        " ", ""
+    )
+    resultado["nombre_sugerido"] = f"{esperado}.xlsx"
+    return resultado

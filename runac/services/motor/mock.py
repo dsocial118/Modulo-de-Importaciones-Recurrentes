@@ -22,19 +22,128 @@ from datetime import date, timedelta
 import mysql.connector
 from openpyxl import load_workbook
 
-CONEXION = dict(host=os.environ.get("RUNAC_DB_HOST", "mysql"), port=3306,
-                user="root", password="runac_local", database="runac")
+CONEXION = dict(
+    host=os.environ.get("RUNAC_DB_HOST", "mysql"),
+    port=3306,
+    user="root",
+    password="runac_local",
+    database="runac",
+)
 
-NOMBRES = ["Ana", "Luis", "Sofía", "Mateo", "Valentina", "Thiago", "Camila", "Benjamín",
-           "Martina", "Joaquín", "Emilia", "Bautista", "Isabella", "Lorenzo", "Renata"]
-APELLIDOS = ["Gómez", "Fernández", "López", "Martínez", "Rodríguez", "Sosa", "Romero",
-             "Díaz", "Quiroga", "Ledesma", "Villalba", "Cabrera", "Ojeda", "Paz"]
-CALLES = ["San Martín", "Belgrano", "Rivadavia", "Mitre", "Sarmiento", "Alberdi", "Güemes"]
-DISPOSITIVOS = ["Hogar Los Álamos", "Residencia El Ceibo", "Centro Municipal Norte",
-                "Programa de Acompañamiento Sur", "Hogar Nuestra Señora"]
+NOMBRES = [
+    "Ana",
+    "Luis",
+    "Sofía",
+    "Mateo",
+    "Valentina",
+    "Thiago",
+    "Camila",
+    "Benjamín",
+    "Martina",
+    "Joaquín",
+    "Emilia",
+    "Bautista",
+    "Isabella",
+    "Lorenzo",
+    "Renata",
+]
+APELLIDOS = [
+    "Gómez",
+    "Fernández",
+    "López",
+    "Martínez",
+    "Rodríguez",
+    "Sosa",
+    "Romero",
+    "Díaz",
+    "Quiroga",
+    "Ledesma",
+    "Villalba",
+    "Cabrera",
+    "Ojeda",
+    "Paz",
+]
+CALLES = [
+    "San Martín",
+    "Belgrano",
+    "Rivadavia",
+    "Mitre",
+    "Sarmiento",
+    "Alberdi",
+    "Güemes",
+]
+DISPOSITIVOS = [
+    "Hogar Los Álamos",
+    "Residencia El Ceibo",
+    "Centro Municipal Norte",
+    "Programa de Acompañamiento Sur",
+    "Hogar Nuestra Señora",
+]
 
 # Los documentos van en un rango alto que no corresponde a personas reales.
 DOC_DESDE = 90_000_000
+
+# Cada provincia presenta SOLO sus archivos: un mock es de una jurisdicción, y
+# todos sus campos de provincia y localidad son coherentes con ella.
+LOCALIDADES = {
+    "Chubut": [
+        "Rawson",
+        "Trelew",
+        "Comodoro Rivadavia",
+        "Puerto Madryn",
+        "Esquel",
+        "Sarmiento",
+        "Gaiman",
+        "Dolavon",
+        "Rada Tilly",
+        "Trevelin",
+        "El Maitén",
+        "Lago Puelo",
+        "El Hoyo",
+        "Camarones",
+        "Río Mayo",
+    ],
+    "Chaco": [
+        "Resistencia",
+        "Barranqueras",
+        "Presidencia Roque Sáenz Peña",
+        "Villa Ángela",
+        "Charata",
+        "General San Martín",
+        "Las Breñas",
+        "Quitilipi",
+    ],
+    "Salta": [
+        "Salta",
+        "San Ramón de la Nueva Orán",
+        "Tartagal",
+        "General Güemes",
+        "Rosario de la Frontera",
+        "Metán",
+        "Cafayate",
+    ],
+    "Buenos Aires": [
+        "La Plata",
+        "Mar del Plata",
+        "Bahía Blanca",
+        "San Isidro",
+        "Quilmes",
+        "Morón",
+        "Lomas de Zamora",
+        "Tandil",
+    ],
+}
+LOCALIDAD_POR_DEFECTO = ["Capital", "Centro", "Norte", "Sur"]
+
+
+def clave_simple(texto) -> str:
+    """Forma comparable de un texto: sin tildes, en minúsculas, sin espacios de más."""
+    import unicodedata
+
+    t = re.sub(r"\s+", " ", str(texto or "").strip()).lower()
+    return "".join(
+        c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn"
+    )
 
 
 def digito_cuil(diez: str) -> int:
@@ -45,14 +154,34 @@ def digito_cuil(diez: str) -> int:
     return 0 if resto == 11 else (9 if resto == 10 else resto)
 
 
-def valor_inventado(campo: dict, opciones: list[str], i: int, rnd: random.Random,
-                    fila: dict | None = None):
-    if opciones:
-        return rnd.choice(opciones)
-
+def valor_inventado(
+    campo: dict,
+    opciones: list[str],
+    i: int,
+    rnd: random.Random,
+    fila: dict | None = None,
+    jurisdiccion: str | None = None,
+):
     t = (campo["titulo_esperado"] or "").lower()
     tipo = campo["tipo_dato"]
     fila = fila if fila is not None else {}
+
+    # Una provincia sube sólo sus archivos: todos los campos de provincia llevan
+    # la jurisdicción que presenta. Si el campo tiene lista, se busca el valor
+    # que le corresponde dentro de las opciones admitidas.
+    if jurisdiccion and "provincia" in t:
+        if opciones:
+            exacto = next(
+                (o for o in opciones if clave_simple(o) == clave_simple(jurisdiccion)),
+                None,
+            )
+            if exacto:
+                return exacto
+        else:
+            return jurisdiccion
+
+    if opciones:
+        return rnd.choice(opciones)
 
     if tipo == "FECHA":
         hoy = date.today()
@@ -62,8 +191,15 @@ def valor_inventado(campo: dict, opciones: list[str], i: int, rnd: random.Random
         # así los datos "sin errores" pasan limpios y los errores son los que se
         # introducen a propósito.
         if any(p in t for p in ("egreso", "cese", "finaliz", "salida", "fin ")):
-            inicio = next((v for k, v in fila.items()
-                           if isinstance(v, date) and any(p in k for p in ("ingreso", "inicio", "medida"))), None)
+            inicio = next(
+                (
+                    v
+                    for k, v in fila.items()
+                    if isinstance(v, date)
+                    and any(p in k for p in ("ingreso", "inicio", "medida"))
+                ),
+                None,
+            )
             if inicio:
                 return min(hoy, inicio + timedelta(days=rnd.randint(1, 200)))
         return hoy - timedelta(days=rnd.randint(1, 700))
@@ -98,7 +234,7 @@ def valor_inventado(campo: dict, opciones: list[str], i: int, rnd: random.Random
     if "dispositivo" in t or "programa" in t or "residencia" in t or "hogar" in t:
         return rnd.choice(DISPOSITIVOS)
     if "localidad" in t or "partido" in t or "municipio" in t:
-        return rnd.choice(["San Miguel", "Merlo", "Rosario", "Salta Capital", "Godoy Cruz"])
+        return rnd.choice(LOCALIDADES.get(jurisdiccion or "", LOCALIDAD_POR_DEFECTO))
     if "observacion" in t or "observación" in t or "detalle" in t or "especificar" in t:
         return rnd.choice(["", "", f"Nota de ejemplo {i}"])
     if "equipo" in t or "responsable" in t:
@@ -112,7 +248,12 @@ def valor_inventado(campo: dict, opciones: list[str], i: int, rnd: random.Random
 ERRORES = [
     ("fecha_invalida", "una fecha que no existe", "FECHA", "31/02/2026"),
     ("texto_en_numero", "letras donde va un número", "ENTERO", "doce"),
-    ("valor_fuera_de_catalogo", "un valor que no está en la lista", None, "VALOR INVENTADO"),
+    (
+        "valor_fuera_de_catalogo",
+        "un valor que no está en la lista",
+        None,
+        "VALOR INVENTADO",
+    ),
     ("fila_vacia_intercalada", "una fila vacía en el medio de los datos", None, None),
     ("obligatorio_vacio", "un campo obligatorio sin completar", None, None),
     ("texto_muy_largo", "un texto más largo de lo admitido", "TEXTO", "X" * 400),
@@ -121,33 +262,50 @@ ERRORES = [
 
 
 def leer_definicion(cur, codigo: str):
-    cur.execute("SELECT id, codigo, nombre_esperado FROM runac_c1_archivo WHERE codigo=%s", (codigo,))
+    cur.execute(
+        """SELECT a.id, a.codigo, av.id AS version_id, av.nombre_esperado
+                   FROM runac_c1_archivo a
+                   JOIN runac_c1_archivo_version av ON av.archivo_id = a.id AND av.estado='VIGENTE'
+                   WHERE a.codigo=%s""",
+        (codigo,),
+    )
     archivo = cur.fetchone()
     if not archivo:
-        raise SystemExit(f"No existe {codigo} en la Capa 1.")
-    cur.execute("""SELECT id, nombre_esperado, fila_encabezados, orden_procesamiento
-                   FROM runac_c1_hoja WHERE archivo_id=%s ORDER BY orden_procesamiento""", (archivo["id"],))
+        raise SystemExit(f"No existe {codigo} con una versión vigente en la Capa 1.")
+    cur.execute(
+        """SELECT id, nombre_esperado, fila_encabezados, orden_procesamiento
+                   FROM runac_c1_hoja WHERE archivo_version_id=%s ORDER BY orden_procesamiento""",
+        (archivo["version_id"],),
+    )
     hojas = cur.fetchall()
     for h in hojas:
-        cur.execute("""
+        cur.execute(
+            """
             SELECT c.id, c.nombre, c.titulo_esperado, c.orden, c.tipo_dato,
                    c.longitud_maxima, c.obligatorio, cat.codigo AS catalogo
             FROM runac_c1_campo c LEFT JOIN runac_c1_catalogo cat ON cat.id=c.catalogo_id
-            WHERE c.hoja_id=%s ORDER BY c.orden""", (h["id"],))
+            WHERE c.hoja_id=%s ORDER BY c.orden""",
+            (h["id"],),
+        )
         h["campos"] = cur.fetchall()
         for campo in h["campos"]:
             campo["opciones"] = []
             if campo["catalogo"]:
-                cur.execute("""SELECT o.valor_esperado FROM runac_c1_catalogo_opcion o
+                cur.execute(
+                    """SELECT o.valor_esperado FROM runac_c1_catalogo_opcion o
                                JOIN runac_c1_catalogo c ON c.id=o.catalogo_id
-                               WHERE c.codigo=%s AND o.activo=1 ORDER BY o.orden""", (campo["catalogo"],))
+                               WHERE c.codigo=%s AND o.activo=1 ORDER BY o.orden""",
+                    (campo["catalogo"],),
+                )
                 campo["opciones"] = [r["valor_esperado"] for r in cur.fetchall()]
     archivo["hojas"] = hojas
     return archivo
 
 
 def main():
-    p = argparse.ArgumentParser(description="Genera datos de prueba sobre las plantillas de la Capa 1.")
+    p = argparse.ArgumentParser(
+        description="Genera datos de prueba sobre las plantillas de la Capa 1."
+    )
     p.add_argument("--archivo", default=None)
     p.add_argument("--todos", action="store_true")
     p.add_argument("--filas", type=int, default=30)
@@ -155,14 +313,28 @@ def main():
     p.add_argument("--plantillas", default="/trabajo/capa1/plantillas")
     p.add_argument("--salida", default="/trabajo/capa1/mock")
     p.add_argument("--periodo", default="2026_T1")
-    p.add_argument("--semilla", type=int, default=42, help="para que los datos sean siempre los mismos")
+    p.add_argument(
+        "--jurisdiccion",
+        default="Chubut",
+        help="provincia que presenta: sus archivos llevan sus localidades",
+    )
+    p.add_argument(
+        "--semilla",
+        type=int,
+        default=42,
+        help="para que los datos sean siempre los mismos",
+    )
     args = p.parse_args()
 
     cn = mysql.connector.connect(**CONEXION)
     cur = cn.cursor(dictionary=True)
 
     if args.todos:
-        cur.execute("SELECT codigo FROM runac_c1_archivo ORDER BY orden_importacion")
+        cur.execute(
+            """SELECT a.codigo FROM runac_c1_archivo a
+                       JOIN runac_c1_archivo_version av ON av.archivo_id = a.id AND av.estado='VIGENTE'
+                       ORDER BY av.orden_importacion"""
+        )
         codigos = [r["codigo"] for r in cur.fetchall()]
     elif args.archivo:
         codigos = [args.archivo]
@@ -196,8 +368,11 @@ def main():
             # campo, ignorando el asterisco de obligatorio y los acentos.
             def comparable(v):
                 import unicodedata as _u
+
                 t = re.sub(r"\s+", " ", str(v or "").strip()).rstrip(" *").lower()
-                return "".join(c for c in _u.normalize("NFD", t) if _u.category(c) != "Mn")
+                return "".join(
+                    c for c in _u.normalize("NFD", t) if _u.category(c) != "Mn"
+                )
 
             esperado = comparable(campos[0]["titulo_esperado"])
             fila_enc = None
@@ -206,14 +381,18 @@ def main():
                     fila_enc = f
                     break
             if fila_enc is None:
-                print(f"  {codigo}/{nombre}: no se ubicó la fila de encabezados, se omite la hoja")
+                print(
+                    f"  {codigo}/{nombre}: no se ubicó la fila de encabezados, se omite la hoja"
+                )
                 continue
             fila = fila_enc + 1
 
             for i in range(1, args.filas + 1):
                 generados: dict = {}
                 for k, campo in enumerate(campos, start=1):
-                    v = valor_inventado(campo, campo["opciones"], i, rnd, generados)
+                    v = valor_inventado(
+                        campo, campo["opciones"], i, rnd, generados, args.jurisdiccion
+                    )
                     generados[campo["nombre"]] = v
                     ws.cell(row=fila, column=k, value=v)
                 fila += 1
@@ -223,11 +402,22 @@ def main():
                 errores_puestos = []
                 # Una fila por cada tipo de error, para poder verificar uno por uno.
                 for clave, descripcion, tipo_objetivo, valor in ERRORES:
-                    destino = next((c for c in campos
-                                    if (tipo_objetivo is None or c["tipo_dato"] == tipo_objetivo)
-                                    and (clave != "valor_fuera_de_catalogo" or c["catalogo"])
-                                    and (clave != "obligatorio_vacio" or c["obligatorio"])
-                                    and (clave != "texto_muy_largo" or (c["longitud_maxima"] or 0) > 0)), None)
+                    destino = next(
+                        (
+                            c
+                            for c in campos
+                            if (
+                                tipo_objetivo is None or c["tipo_dato"] == tipo_objetivo
+                            )
+                            and (clave != "valor_fuera_de_catalogo" or c["catalogo"])
+                            and (clave != "obligatorio_vacio" or c["obligatorio"])
+                            and (
+                                clave != "texto_muy_largo"
+                                or (c["longitud_maxima"] or 0) > 0
+                            )
+                        ),
+                        None,
+                    )
                     if clave == "fila_vacia_intercalada":
                         fila += 1  # se salta una fila y se sigue: queda una vacía en el medio
                         errores_puestos.append((clave, descripcion, "—", fila - 1))
@@ -236,23 +426,42 @@ def main():
                         continue
                     generados = {}
                     for k, campo in enumerate(campos, start=1):
-                        v = valor_inventado(campo, campo["opciones"], 999, rnd, generados)
+                        v = valor_inventado(
+                            campo,
+                            campo["opciones"],
+                            999,
+                            rnd,
+                            generados,
+                            args.jurisdiccion,
+                        )
                         generados[campo["nombre"]] = v
                         ws.cell(row=fila, column=k, value=v)
                     if clave == "documento_repetido":
-                        doc = next((c for c in campos if "dni" in (c["titulo_esperado"] or "").lower()), None)
+                        doc = next(
+                            (
+                                c
+                                for c in campos
+                                if "dni" in (c["titulo_esperado"] or "").lower()
+                            ),
+                            None,
+                        )
                         if not doc:
                             continue
                         # Se copia el documento que quedó en la primera fila de datos,
                         # así el duplicado es real y no depende de reproducir el azar.
-                        ws.cell(row=fila, column=doc["orden"]).value = \
-                            ws.cell(row=fila_enc + 1, column=doc["orden"]).value
-                        errores_puestos.append((clave, descripcion, doc["titulo_esperado"], fila))
+                        ws.cell(row=fila, column=doc["orden"]).value = ws.cell(
+                            row=fila_enc + 1, column=doc["orden"]
+                        ).value
+                        errores_puestos.append(
+                            (clave, descripcion, doc["titulo_esperado"], fila)
+                        )
                     else:
                         # Asignar por .value, no por cell(value=...): con None, la
                         # segunda forma no vacía la celda.
                         ws.cell(row=fila, column=destino["orden"]).value = valor
-                        errores_puestos.append((clave, descripcion, destino["titulo_esperado"], fila))
+                        errores_puestos.append(
+                            (clave, descripcion, destino["titulo_esperado"], fila)
+                        )
                     fila += 1
                 resumen[-1] = (nombre, args.filas, len(errores_puestos))
 
@@ -260,16 +469,32 @@ def main():
                 if "ERRORES_ESPERADOS" in wb.sheetnames:
                     del wb["ERRORES_ESPERADOS"]
                 we = wb.create_sheet("ERRORES_ESPERADOS")
-                we.append(["Hoja", "Fila", "Campo", "Error introducido", "Qué debería detectar el sistema"])
+                we.append(
+                    [
+                        "Hoja",
+                        "Fila",
+                        "Campo",
+                        "Error introducido",
+                        "Qué debería detectar el sistema",
+                    ]
+                )
                 for clave, descripcion, campo_nom, f in errores_puestos:
                     we.append([nombre, f, campo_nom, clave, descripcion])
                 for col, ancho in zip("ABCDE", (18, 8, 34, 28, 46)):
                     we.column_dimensions[col].width = ancho
 
+        # Formato de nombre propuesto en el análisis funcional:
+        #   MPI_2026_T1_NombreProvincia.xlsx
+        prov = re.sub(r"[^A-Za-z0-9]", "", clave_simple(args.jurisdiccion).title())
         sufijo = "_CON_ERRORES" if args.con_errores else ""
-        destino_archivo = os.path.join(args.salida, f"{codigo}_{args.periodo}_PRUEBA{sufijo}.xlsx")
+        destino_archivo = os.path.join(
+            args.salida, f"{codigo}_{args.periodo}_{prov}{sufijo}.xlsx"
+        )
         wb.save(destino_archivo)
-        detalle = ", ".join(f"{n}: {f} filas" + (f" + {e} con errores" if e else "") for n, f, e in resumen)
+        detalle = ", ".join(
+            f"{n}: {f} filas" + (f" + {e} con errores" if e else "")
+            for n, f, e in resumen
+        )
         print(f"  {codigo:12} {os.path.basename(destino_archivo):42} {detalle}")
 
     cur.close()

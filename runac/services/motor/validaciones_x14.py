@@ -57,7 +57,9 @@ def _hojas_del_libro(z: zipfile.ZipFile) -> dict[str, str]:
     """Nombre de hoja -> ruta de su XML dentro del archivo."""
     wb = ET.fromstring(z.read("xl/workbook.xml"))
     rels = ET.fromstring(z.read("xl/_rels/workbook.xml.rels"))
-    destino = {r.get("Id"): r.get("Target") for r in rels.findall("rel:Relationship", NS)}
+    destino = {
+        r.get("Id"): r.get("Target") for r in rels.findall("rel:Relationship", NS)
+    }
     salida = {}
     for hoja in wb.findall("main:sheets/main:sheet", NS):
         rid = hoja.get(f"{{{NS['r']}}}id")
@@ -94,27 +96,33 @@ def leer(ruta_xlsx: str) -> dict[str, list[dict]]:
                     continue
                 formula = (f1.text or "").strip()
                 referencia = None
-                m = re.fullmatch(r"'?([^'!]+)'?!(\$?[A-Z]+\$?\d+(?::\$?[A-Z]+\$?\d+)?)", formula)
+                m = re.fullmatch(
+                    r"'?([^'!]+)'?!(\$?[A-Z]+\$?\d+(?::\$?[A-Z]+\$?\d+)?)", formula
+                )
                 if m:
                     referencia = {"hoja": m.group(1), "rango": m.group(2)}
                 for parte in (sq.text or "").split():
                     r = _partes_rango(parte)
                     if not r:
                         continue
-                    encontradas.append({
-                        "fila_desde": r[0], "col_desde": r[1],
-                        "fila_hasta": r[2], "col_hasta": r[3],
-                        "formula": formula,
-                        "literal": None,
-                        "referencia": referencia,
-                        "admite_vacio": dv.get("allowBlank") == "1",
-                        # Distinguir "el autor declaró que no admite vacío" de
-                        # "el atributo no está y vale el valor por omisión".
-                        # Sólo lo primero es evidencia de obligatoriedad.
-                        "admite_vacio_declarado": dv.get("allowBlank") is not None,
-                        "mensaje_error": dv.get("error"),
-                        "mensaje_ayuda": dv.get("prompt"),
-                    })
+                    encontradas.append(
+                        {
+                            "fila_desde": r[0],
+                            "col_desde": r[1],
+                            "fila_hasta": r[2],
+                            "col_hasta": r[3],
+                            "formula": formula,
+                            "literal": None,
+                            "referencia": referencia,
+                            "admite_vacio": dv.get("allowBlank") == "1",
+                            # Distinguir "el autor declaró que no admite vacío" de
+                            # "el atributo no está y vale el valor por omisión".
+                            # Sólo lo primero es evidencia de obligatoriedad.
+                            "admite_vacio_declarado": dv.get("allowBlank") is not None,
+                            "mensaje_error": dv.get("error"),
+                            "mensaje_ayuda": dv.get("prompt"),
+                        }
+                    )
             if encontradas:
                 resultado[nombre] = encontradas
     return resultado

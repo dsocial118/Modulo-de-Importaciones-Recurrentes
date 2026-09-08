@@ -9,6 +9,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import FileResponse, Http404, HttpResponse
 from django.views.generic import TemplateView
 
+from runac.permissions import SeccionPermitidaMixin
+
 from runac.services import importacion_service as svc
 
 
@@ -16,7 +18,8 @@ def _ruta_de_plantilla(codigo: str, periodo: str) -> Path:
     return Path(settings.RUNAC_PLANTILLAS) / f"{codigo}_{periodo}_MODELO.xlsx"
 
 
-class PlantillasView(LoginRequiredMixin, TemplateView):
+class PlantillasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
+    seccion = "plantillas"
     template_name = "runac/plantillas.html"
 
     def get_context_data(self, **kwargs):
@@ -51,5 +54,7 @@ def descargar_todas(request, periodo):
                 z.write(ruta, ruta.name)
     buffer.seek(0)
     respuesta = HttpResponse(buffer.read(), content_type="application/zip")
-    respuesta["Content-Disposition"] = f'attachment; filename="RUNAC_plantillas_{periodo}.zip"'
+    respuesta["Content-Disposition"] = (
+        f'attachment; filename="RUNAC_plantillas_{periodo}.zip"'
+    )
     return respuesta

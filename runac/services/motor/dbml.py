@@ -5,9 +5,9 @@
 Lee la estructura real de la base de trabajo, así el diagrama siempre refleja
 lo que hay y no lo que creemos que hay.
 
-Por defecto NO incluye las tablas receptoras generadas (runac_c2_cru_* y
-runac_c2_dat_*): son decenas de tablas con hasta 64 columnas cada una y harían
-el diagrama ilegible. Se agregan con --incluir-receptoras.
+Por defecto NO incluye las tablas receptoras generadas
+(runac_c2_<archivo>_v<n>[_<hoja>]): son decenas de tablas con hasta 64 columnas
+cada una y harían el diagrama ilegible. Se agregan con --incluir-receptoras.
 """
 
 from __future__ import annotations
@@ -18,8 +18,13 @@ import re
 
 import mysql.connector
 
-CONEXION = dict(host=os.environ.get("RUNAC_DB_HOST", "mysql"), port=3306,
-                user="root", password="runac_local", database="runac")
+CONEXION = dict(
+    host=os.environ.get("RUNAC_DB_HOST", "mysql"),
+    port=3306,
+    user="root",
+    password="runac_local",
+    database="runac",
+)
 
 GRUPOS = {
     "1": ("Capa 1 — definición de los archivos", "runac_c1_"),
@@ -56,51 +61,64 @@ def main():
     cn = mysql.connector.connect(**CONEXION)
     cur = cn.cursor(dictionary=True)
 
-    cur.execute("""
+    cur.execute(
+        """
         SELECT TABLE_NAME, TABLE_COMMENT FROM information_schema.TABLES
         WHERE TABLE_SCHEMA = 'runac' ORDER BY TABLE_NAME
-    """)
+    """
+    )
     tablas = []
     for t in cur.fetchall():
         n = t["TABLE_NAME"]
         if not n.startswith(prefijos):
             continue
-        if not args.incluir_receptoras and (n.startswith("runac_c2_cru_") or n.startswith("runac_c2_dat_")):
+        # Las receptoras se reconocen por llevar la versión en el nombre
+        # (runac_c2_<archivo>_v<n>[_<hoja>]); las de control, no.
+        if not args.incluir_receptoras and re.search(r"^runac_c2_.+_v\d+(_.+)?$", n):
             continue
         tablas.append(t)
     nombres = {t["TABLE_NAME"] for t in tablas}
 
-    cur.execute("""
+    cur.execute(
+        """
         SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY,
                EXTRA, COLUMN_COMMENT, ORDINAL_POSITION, COLUMN_DEFAULT
         FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='runac'
         ORDER BY TABLE_NAME, ORDINAL_POSITION
-    """)
+    """
+    )
     columnas: dict[str, list] = {}
     for c in cur.fetchall():
         columnas.setdefault(c["TABLE_NAME"], []).append(c)
 
-    cur.execute("""
+    cur.execute(
+        """
         SELECT k.TABLE_NAME, k.COLUMN_NAME, k.REFERENCED_TABLE_NAME, k.REFERENCED_COLUMN_NAME
         FROM information_schema.KEY_COLUMN_USAGE k
         WHERE k.TABLE_SCHEMA='runac' AND k.REFERENCED_TABLE_NAME IS NOT NULL
         ORDER BY k.TABLE_NAME, k.COLUMN_NAME
-    """)
-    fks = [f for f in cur.fetchall()
-           if f["TABLE_NAME"] in nombres and f["REFERENCED_TABLE_NAME"] in nombres]
+    """
+    )
+    fks = [
+        f
+        for f in cur.fetchall()
+        if f["TABLE_NAME"] in nombres and f["REFERENCED_TABLE_NAME"] in nombres
+    ]
 
-    cur.execute("""
+    cur.execute(
+        """
         SELECT TABLE_NAME, INDEX_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS COLS
         FROM information_schema.STATISTICS
         WHERE TABLE_SCHEMA='runac' AND NON_UNIQUE=0 AND INDEX_NAME <> 'PRIMARY'
         GROUP BY TABLE_NAME, INDEX_NAME
-    """)
+    """
+    )
     unicos: dict[str, list] = {}
     for i in cur.fetchall():
         unicos.setdefault(i["TABLE_NAME"], []).append(i)
 
-    L: list[str] = []
-    w = L.append
+    lineas: list[str] = []
+    w = lineas.append
 
     w("// ===========================================================================")
     w("// RUNAC — modelo de datos")
@@ -110,10 +128,14 @@ def main():
     w("Project RUNAC {")
     w("  database_type: 'MySQL'")
     w("  Note: '''")
-    w("    Registro Único Nacional de Medidas de Protección y Medidas Penales Juveniles.")
+    w(
+        "    Registro Único Nacional de Medidas de Protección y Medidas Penales Juveniles."
+    )
     w("")
     w("    Capa 1: describe los archivos que se esperan recibir. Metadatos, no datos.")
-    w("    Capa 2: recibe las importaciones. Sus tablas receptoras se GENERAN leyendo la Capa 1.")
+    w(
+        "    Capa 2: recibe las importaciones. Sus tablas receptoras se GENERAN leyendo la Capa 1."
+    )
     w("    Capa 3: base consolidada. Modela la realidad, no el Excel.")
     w("  '''")
     w("}")
@@ -130,7 +152,9 @@ def main():
                 partes.append("increment")
             if c["IS_NULLABLE"] == "NO" and c["COLUMN_KEY"] != "PRI":
                 partes.append("not null")
-            es_unica = any(u["COLS"] == c["COLUMN_NAME"] for u in unicos.get(nombre, []))
+            es_unica = any(
+                u["COLS"] == c["COLUMN_NAME"] for u in unicos.get(nombre, [])
+            )
             if es_unica:
                 partes.append("unique")
             if c["COLUMN_COMMENT"]:
@@ -154,8 +178,10 @@ def main():
 
     w("// --- relaciones ---")
     for f in fks:
-        w(f'Ref: {f["TABLE_NAME"]}.{f["COLUMN_NAME"]} > '
-          f'{f["REFERENCED_TABLE_NAME"]}.{f["REFERENCED_COLUMN_NAME"]}')
+        w(
+            f'Ref: {f["TABLE_NAME"]}.{f["COLUMN_NAME"]} > '
+            f'{f["REFERENCED_TABLE_NAME"]}.{f["REFERENCED_COLUMN_NAME"]}'
+        )
     w("")
 
     w("// --- agrupación visual ---")
@@ -163,10 +189,12 @@ def main():
         if c not in GRUPOS:
             continue
         titulo, prefijo = GRUPOS[c]
-        del_grupo = [t["TABLE_NAME"] for t in tablas if t["TABLE_NAME"].startswith(prefijo)]
+        del_grupo = [
+            t["TABLE_NAME"] for t in tablas if t["TABLE_NAME"].startswith(prefijo)
+        ]
         if not del_grupo:
             continue
-        w(f"TableGroup \"{titulo}\" {{")
+        w(f'TableGroup "{titulo}" {{')
         for n in del_grupo:
             w(f"  {n}")
         w("}")
@@ -174,7 +202,7 @@ def main():
 
     os.makedirs(os.path.dirname(args.salida), exist_ok=True)
     with open(args.salida, "w", encoding="utf-8") as fh:
-        fh.write("\n".join(L))
+        fh.write("\n".join(lineas))
 
     print(f"dbml: {args.salida}")
     print(f"  tablas:     {len(tablas)}")

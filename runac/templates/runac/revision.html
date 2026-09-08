@@ -1,0 +1,116 @@
+{% extends "runac/base.html" %}
+{% block titulo %}Revisión nacional{% endblock %}
+
+{% block contenido %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="mb-0">Revisión nacional</h5>
+            <div class="ayuda">
+                El revisor técnico nacional revisa la calidad de lo cargado, formula observaciones
+                y habilita la presentación. <strong>No modifica datos provinciales.</strong>
+            </div>
+        </div>
+        <form method="get" class="d-flex gap-2">
+            <select class="form-select form-select-sm"
+                    name="periodo"
+                    onchange="this.form.submit()">
+                {% for p in periodos %}
+                    <option value="{{ p.codigo }}"
+                            {% if p.codigo == periodo_elegido %}selected{% endif %}>{{ p.codigo }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    {% if not es_nacional %}
+        <div class="alert alert-secondary py-2">
+            Esta pantalla es de uso del nivel nacional. Con tu rol podés verla, pero no ejecutar acciones.
+        </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body p-0 tabla-scroll">
+            <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
+                <thead class="table-light">
+                    <tr>
+                        <th>Jurisdicción</th>
+                        <th>Estado</th>
+                        <th class="text-end">Archivos importados</th>
+                        <th class="text-end">Observaciones abiertas</th>
+                        <th>Cierre de carga</th>
+                        <th>Expediente</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in presentaciones %}
+                        <tr>
+                            <td>
+                                <strong>{{ s.jurisdiccion }}</strong>
+                                <div class="ayuda">versión {{ s.version }}</div>
+                            </td>
+                            <td data-etiqueta="Estado">
+                                <span class="estado e-{{ s.estado }}">{{ s.estado_legible }}</span>
+                            </td>
+                            <td class="text-end" data-etiqueta="Archivos importados">{{ s.importados }}</td>
+                            <td class="text-end {% if s.observaciones %}sev-ADVERTENCIA{% endif %}"
+                                data-etiqueta="Observaciones abiertas">{{ s.observaciones|default:"—" }}</td>
+                            <td class="ayuda" data-etiqueta="Cierre de carga">{{ s.cerrada_el|date:"d/m/Y H:i"|default:"—" }}</td>
+                            <td class="ayuda" data-etiqueta="Expediente">{{ s.expediente|default:"—" }}</td>
+                            <td class="text-end">
+                                <a class="btn btn-outline-secondary btn-sm"
+                                   href="{% url 'runac:resultado' %}?periodo={{ periodo_elegido }}&jurisdiccion={{ s.jurisdiccion|urlencode }}">
+                                Ver carga</a>
+                            </td>
+                        </tr>
+                        {% if s.acciones or es_revisor %}
+                            <tr>
+                                <td colspan="7" class="pt-0 pb-3">
+                                    <div class="d-flex flex-wrap gap-2 align-items-center ms-3">
+                                        {% for a in s.acciones %}
+                                            <form method="post" action="{% url 'runac:accion' s.id a.accion %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
+                                                <input type="hidden" name="jurisdiccion" value="{{ s.jurisdiccion }}" />
+                                                <input type="hidden" name="volver" value="{{ request.get_full_path }}" />
+                                                <button class="btn btn-sm btn-outline-primary" title="{{ a.ayuda }}">{{ a.etiqueta }}</button>
+                                            </form>
+                                        {% endfor %}
+
+                                        {% if es_revisor and s.estado == 'EN_REVISION' or es_revisor and s.estado == 'CERRADA' %}
+                                            <form method="post"
+                                                  action="{% url 'runac:observar' s.id %}"
+                                                  class="d-flex gap-2 flex-grow-1"
+                                                  style="max-width:44rem">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
+                                                <input type="hidden" name="jurisdiccion" value="{{ s.jurisdiccion }}" />
+                                                <input type="hidden" name="volver" value="{{ request.get_full_path }}" />
+                                                <input class="form-control form-control-sm"
+                                                       name="texto"
+                                                       placeholder="Observación para la jurisdicción"
+                                                       required />
+                                                <button class="btn btn-sm btn-outline-warning text-nowrap">Observar</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center ayuda py-4">Ninguna jurisdicción inició la carga de este período.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="ayuda mt-3">
+        El ciclo de observación y subsanación no tiene límite de rondas. La presentación es el último
+        acto del circuito y sólo se habilita cuando la revisión concluye.
+    </div>
+
+{% endblock %}

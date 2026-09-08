@@ -1,102 +1,232 @@
 {% extends "runac/base.html" %}
 {% block titulo %}Resultado{% endblock %}
-{% block nav_resultado %}activo{% endblock %}
 
 {% block contenido %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h5 class="mb-0">{{ jurisdiccion }} · {{ periodo_elegido }}</h5>
-    {% if presentacion %}
-      <span class="estado e-{{ presentacion.estado }}">{{ presentacion.estado }}</span>
-      <span class="ayuda ms-2">versión {{ presentacion.version }}</span>
-    {% endif %}
-  </div>
-</div>
-
-{% if totales.bloqueantes %}
-  <div class="alert alert-danger py-2">
-    <i class="bi bi-x-octagon-fill"></i>
-    Hay <strong>{{ totales.bloqueantes }} errores</strong> que impiden presentar.
-    Las filas de los archivos con errores <strong>no se incorporaron</strong>: se corrige el Excel
-    y se vuelve a cargar.
-  </div>
-{% elif totales.advertencias %}
-  <div class="alert alert-warning py-2">
-    <i class="bi bi-exclamation-triangle-fill"></i>
-    No hay errores. Quedan <strong>{{ totales.advertencias }} advertencias</strong>: no impiden
-    presentar, pero conviene revisarlas.
-  </div>
-{% elif totales.filas %}
-  <div class="alert alert-success py-2">
-    <i class="bi bi-check-circle-fill"></i>
-    Todos los archivos se cargaron sin errores.
-  </div>
-{% endif %}
-
-<div class="card mb-4">
-  <div class="card-body p-0">
-    <table class="table table-sm tabla-compacta align-middle mb-0">
-      <thead class="table-light">
-        <tr><th>Archivo</th><th>Estado</th><th class="text-end">Filas</th>
-            <th class="text-end">Sin problemas</th><th class="text-end">◆ Bloqueantes</th>
-            <th class="text-end">▲ Advertencias</th><th></th></tr>
-      </thead>
-      <tbody>
-      {% for a in archivos %}
-        <tr>
-          <td><strong>{{ a.codigo }}</strong><div class="ayuda">{{ a.titulo|truncatechars:52 }}</div></td>
-          <td><span class="estado e-{{ a.estado }}">{{ a.estado }}</span></td>
-          <td class="text-end">{{ a.importacion.filas_totales|default:"—" }}</td>
-          <td class="text-end">{{ a.importacion.filas_validas|default:"—" }}</td>
-          <td class="text-end {% if a.importacion.bloqueantes %}sev-BLOQUEANTE{% endif %}">
-            {{ a.importacion.bloqueantes|default:"—" }}</td>
-          <td class="text-end {% if a.importacion.advertencias %}sev-ADVERTENCIA{% endif %}">
-            {{ a.importacion.advertencias|default:"—" }}</td>
-          <td class="text-end">
-            {% if a.importacion %}
-              <a class="btn btn-outline-secondary btn-sm"
-                 href="{% url 'runac:detalle' a.importacion.id %}">Ver detalle</a>
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h5 class="mb-1">{{ jurisdiccion }} · {{ periodo_elegido }}</h5>
+            {% if presentacion %}
+                <span class="estado e-{{ presentacion.estado }}">{{ estado_legible }}</span>
+                <span class="ayuda ms-2">versión {{ presentacion.version }}</span>
+                {% if presentacion.expediente %}<span class="ayuda ms-2">· expediente {{ presentacion.expediente }}</span>{% endif %}
             {% endif %}
-          </td>
-        </tr>
-        {% if a.resumen %}
-          <tr><td colspan="7" class="pt-0 pb-3">
-            <div class="ms-3 ayuda">
-              {% for r in a.resumen %}
-                <span class="badge bg-light text-dark border me-1 mb-1">
-                  <span class="sev-{{ r.severidad }}">{{ r.casos }}</span> · {{ r.ejemplo|truncatechars:74 }}
-                </span>
-              {% endfor %}
-            </div>
-          </td></tr>
-        {% endif %}
-      {% endfor %}
-      </tbody>
-      {% if totales.filas %}
-      <tfoot class="table-light">
-        <tr class="fw-semibold">
-          <td colspan="2">Total</td>
-          <td class="text-end">{{ totales.filas }}</td>
-          <td class="text-end">{{ totales.validas }}</td>
-          <td class="text-end">{{ totales.bloqueantes }}</td>
-          <td class="text-end">{{ totales.advertencias }}</td>
-          <td></td>
-        </tr>
-      </tfoot>
-      {% endif %}
-    </table>
-  </div>
-</div>
+            <div class="ayuda mt-1">{{ estado_ayuda }}</div>
+        </div>
+    </div>
 
-<a href="{% url 'runac:cargar' %}?periodo={{ periodo_elegido }}" class="btn btn-outline-primary">
-  <i class="bi bi-upload"></i> Cargar de nuevo
-</a>
-{% if listo %}
-  <button class="btn btn-success" disabled title="La pantalla de presentación es el paso siguiente">
-    Ir a presentación
-  </button>
-  <span class="ayuda ms-2">(la presentación es el paso siguiente del prototipo)</span>
-{% endif %}
+    {# --- Dónde está la presentación dentro del circuito ------------------- #}
+    {% if presentacion %}
+        <div class="card mb-3">
+            <div class="card-body py-2 paso-circuito">
+                {% for p in pasos %}
+                    <span class="{% if p.actual %}actual{% endif %}">{{ forloop.counter }}. {{ p.nombre }}</span>
+                    {% if not forloop.last %}<span class="mx-1">›</span>{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if totales.bloqueantes %}
+        <div class="alert alert-danger py-2">
+            <i class="bi bi-x-octagon-fill"></i>
+            Hay <strong>{{ totales.bloqueantes }} errores bloqueantes</strong>.
+            La importación es restrictiva: <strong>no se incorporó ninguna fila</strong> de esos archivos.
+            Se corrige el Excel y se vuelve a importar.
+        </div>
+    {% elif totales.advertencias %}
+        <div class="alert alert-warning py-2">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            No hay errores bloqueantes. Quedan <strong>{{ totales.advertencias }} advertencias</strong>:
+            no impiden continuar, y se resuelven dentro del sistema editando el dato o justificándolo.
+        </div>
+    {% elif totales.filas %}
+        <div class="alert alert-success py-2">
+            <i class="bi bi-check-circle-fill"></i>
+            Todos los archivos se importaron sin errores.
+        </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-body p-0 tabla-scroll">
+            <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
+                <thead class="table-light">
+                    <tr>
+                        <th>Archivo</th>
+                        <th>Importación</th>
+                        <th class="text-end">Filas leídas</th>
+                        <th class="text-end">Incorporadas</th>
+                        <th class="text-end">◆ Bloqueantes</th>
+                        <th class="text-end">▲ Advertencias</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in archivos %}
+                        <tr>
+                            <td>
+                                <strong>{{ a.codigo }}</strong>
+                                <div class="ayuda">{{ a.titulo|truncatechars:52 }}</div>
+                            </td>
+                            <td data-etiqueta="Importación">
+                                <span class="estado e-{{ a.estado }}">{{ a.estado }}</span>
+                            </td>
+                            <td class="text-end" data-etiqueta="Filas leídas">{{ a.importacion.filas_leidas|default:"—" }}</td>
+                            <td class="text-end" data-etiqueta="Incorporadas">{{ a.importacion.filas_incorporadas|default:"—" }}</td>
+                            <td class="text-end {% if a.importacion.bloqueantes %}sev-BLOQUEANTE{% endif %}"
+                                data-etiqueta="◆ Bloqueantes">{{ a.importacion.bloqueantes|default:"—" }}</td>
+                            <td class="text-end {% if a.importacion.advertencias %}sev-ADVERTENCIA{% endif %}"
+                                data-etiqueta="▲ Advertencias">{{ a.importacion.advertencias|default:"—" }}</td>
+                            <td class="text-end">
+                                {% if a.importacion %}
+                                    <a class="btn btn-outline-secondary btn-sm"
+                                       href="{% url 'runac:detalle' a.importacion.id %}">Ver detalle</a>
+                                    {% if a.importada and puede_responder %}
+                                        <a class="btn btn-outline-success btn-sm"
+                                           href="{% url 'runac:edicion' a.importacion.id %}">Corregir</a>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if a.resumen %}
+                            <tr>
+                                <td colspan="7" class="pt-0 pb-3">
+                                    <div class="ms-3 ayuda">
+                                        {% for r in a.resumen %}
+                                            <span class="badge bg-light text-dark border me-1 mb-1">
+                                                <span class="sev-{{ r.severidad }}">{{ r.casos }}</span> · {{ r.ejemplo|truncatechars:74 }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+                {% if totales.filas %}
+                    <tfoot class="table-light">
+                        <tr class="fw-semibold">
+                            <td colspan="2">Total</td>
+                            <td class="text-end">{{ totales.filas }}</td>
+                            <td class="text-end">{{ totales.validas }}</td>
+                            <td class="text-end">{{ totales.bloqueantes }}</td>
+                            <td class="text-end">{{ totales.advertencias }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+
+    {# --- Observaciones del revisor nacional ------------------------------- #}
+    {% if observaciones %}
+        <div class="card mb-4">
+            <div class="card-header">
+                Observaciones del revisor técnico nacional
+                <span class="ayuda fw-normal ms-2">El revisor observa; no modifica datos provinciales.</span>
+            </div>
+            <div class="card-body p-0 tabla-scroll">
+                <table class="table table-sm tabla-compacta mb-0 tabla-ficha">
+                    <tbody>
+                        {% for o in observaciones %}
+                            <tr>
+                                <td style="width:8rem">
+                                    <span class="estado e-{% if o.estado == 'ABIERTA' %}OBSERVADA{% else %}HABILITADA{% endif %}">{{ o.estado }}</span>
+                                </td>
+                                <td>
+                                    {{ o.texto }}
+                                    <div class="ayuda">
+                                        {{ o.usuario_observa }} · {{ o.creada_el|date:"d/m/Y H:i" }}
+                                        {% if o.archivo_codigo %}· {{ o.archivo_codigo }}{% endif %}
+                                        {% if o.numero_fila %}· fila {{ o.numero_fila }}{% endif %}
+                                    </div>
+                                    {% if o.respuesta %}
+                                        <div class="mt-1 ps-2 border-start border-3">
+                                            <strong>Respuesta:</strong> {{ o.respuesta }}
+                                            <div class="ayuda">{{ o.usuario_responde }} · {{ o.respondida_el|date:"d/m/Y H:i" }}</div>
+                                        </div>
+                                    {% elif puede_responder %}
+                                        <form method="post"
+                                              action="{% url 'runac:responder' o.id %}"
+                                              class="mt-2 d-flex gap-2">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="volver" value="{{ request.get_full_path }}" />
+                                            <input class="form-control form-control-sm"
+                                                   name="respuesta"
+                                                   placeholder="Respuesta a la observación"
+                                                   required />
+                                            <button class="btn btn-sm btn-outline-primary">Responder</button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    {# --- Acciones del circuito -------------------------------------------- #}
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a href="{% url 'runac:cargar' %}?periodo={{ periodo_elegido }}"
+           class="btn btn-outline-primary">
+            <i class="bi bi-upload"></i> Cargar archivos
+        </a>
+
+        {% for a in acciones %}
+            <form method="post"
+                  action="{% url 'runac:accion' presentacion.id a.accion %}">
+                {% csrf_token %}
+                <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
+                <input type="hidden" name="jurisdiccion" value="{{ jurisdiccion }}" />
+                <input type="hidden" name="volver" value="{{ request.get_full_path }}" />
+                <button class="btn btn-{% if a.accion == 'presentar' %}success{% elif a.accion == 'reabrir_carga' %}outline-secondary{% else %}primary{% endif %}"
+                        title="{{ a.ayuda }}">{{ a.etiqueta }}</button>
+            </form>
+        {% endfor %}
+
+        {% if presentacion.estado == 'PRESENTADA' or presentacion.estado == 'CONSOLIDADA' %}
+            <a class="btn btn-outline-success"
+               href="{% url 'runac:comprobante' presentacion.id %}">
+                <i class="bi bi-file-earmark-check"></i> Ver comprobante
+            </a>
+        {% endif %}
+    </div>
+
+    {% if not acciones and presentacion.estado == 'EN_CARGA' and not listo %}
+        <div class="ayuda mt-2">
+            Faltan archivos obligatorios por importar. El responsable provincial podrá cerrar la carga
+            cuando estén todos.
+        </div>
+    {% endif %}
+
+    {# --- Número de expediente GDE ----------------------------------------- #}
+    {% if presentacion.estado == 'PRESENTADA' and puede_presentar and not presentacion.expediente %}
+        <div class="card mt-4">
+            <div class="card-header">Número de expediente</div>
+            <div class="card-body">
+                <p class="ayuda">
+                    El comprobante se remite por GDE. Obtenido el número de expediente, se incorpora acá.
+                    Su ausencia no impide la consolidación: es un resguardo documental de la jurisdicción.
+                </p>
+                <form method="post"
+                      action="{% url 'runac:expediente' presentacion.id %}"
+                      class="d-flex gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
+                    <input type="hidden" name="jurisdiccion" value="{{ jurisdiccion }}" />
+                    <input type="hidden" name="volver" value="{{ request.get_full_path }}" />
+                    <input class="form-control"
+                           name="expediente"
+                           style="max-width:22rem"
+                           placeholder="EX-2026-00000000-APN-..."
+                           required />
+                    <button class="btn btn-primary">Registrar</button>
+                </form>
+            </div>
+        </div>
+    {% endif %}
 
 {% endblock %}

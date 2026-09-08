@@ -21,15 +21,20 @@ class Hoja:
     estado: str
     max_fila: int
     max_columna: int
-    celdas: dict            # (fila, columna) -> valor
-    formatos: dict          # columna -> formato de celda predominante
-    combinadas: list        # (fila1, col1, fila2, col2)
-    validaciones: list      # listas desplegables
+    celdas: dict  # (fila, columna) -> valor
+    formatos: dict  # columna -> formato de celda predominante
+    combinadas: list  # (fila1, col1, fila2, col2)
+    validaciones: list  # listas desplegables
     columnas_ancho: dict = field(default_factory=dict)
 
 
 def _rango(celda_rango) -> tuple[int, int, int, int]:
-    return (celda_rango.min_row, celda_rango.min_col, celda_rango.max_row, celda_rango.max_col)
+    return (
+        celda_rango.min_row,
+        celda_rango.min_col,
+        celda_rango.max_row,
+        celda_rango.max_col,
+    )
 
 
 def _rangos_de_sqref(sqref) -> list[tuple[int, int, int, int]]:
@@ -56,7 +61,9 @@ def _referencia_externa(formula: str | None) -> dict | None:
 
     if not formula:
         return None
-    m = re.fullmatch(r"'?([^'!]+)'?!(\$?[A-Z]+\$?\d+(?::\$?[A-Z]+\$?\d+)?)", str(formula).strip())
+    m = re.fullmatch(
+        r"'?([^'!]+)'?!(\$?[A-Z]+\$?\d+(?::\$?[A-Z]+\$?\d+)?)", str(formula).strip()
+    )
     if not m:
         return None
     return {"hoja": m.group(1), "rango": m.group(2)}
@@ -84,7 +91,9 @@ def leer(ruta: str) -> list[Hoja]:
                 fmt = celda.number_format
                 if fmt and fmt != "General":
                     estilos_por_columna.setdefault(celda.column, {})
-                    estilos_por_columna[celda.column][fmt] = estilos_por_columna[celda.column].get(fmt, 0) + 1
+                    estilos_por_columna[celda.column][fmt] = (
+                        estilos_por_columna[celda.column].get(fmt, 0) + 1
+                    )
                 valor = celda.value
                 if valor is None or (isinstance(valor, str) and valor.strip() == ""):
                     continue
@@ -101,7 +110,9 @@ def leer(ruta: str) -> list[Hoja]:
                 except ValueError:
                     continue
                 estilos_por_columna.setdefault(idx, {})
-                estilos_por_columna[idx][fmt] = estilos_por_columna[idx].get(fmt, 0) + 1000
+                estilos_por_columna[idx][fmt] = (
+                    estilos_por_columna[idx].get(fmt, 0) + 1000
+                )
 
         formatos = {}
         for col, conteo in estilos_por_columna.items():
@@ -114,29 +125,35 @@ def leer(ruta: str) -> list[Hoja]:
             if dv.type != "list":
                 continue
             for r in _rangos_de_sqref(dv.sqref):
-                validaciones.append({
-                    "fila_desde": r[0], "col_desde": r[1],
-                    "fila_hasta": r[2], "col_hasta": r[3],
-                    "formula": dv.formula1,
-                    "literal": _valores_literales(dv.formula1),
-                    "referencia": _referencia_externa(dv.formula1),
-                    # allowBlank falso significa que la celda no admite quedar vacía.
-                    "admite_vacio": bool(dv.allowBlank),
-                    "mensaje_error": dv.error,
-                    "mensaje_ayuda": dv.prompt,
-                })
+                validaciones.append(
+                    {
+                        "fila_desde": r[0],
+                        "col_desde": r[1],
+                        "fila_hasta": r[2],
+                        "col_hasta": r[3],
+                        "formula": dv.formula1,
+                        "literal": _valores_literales(dv.formula1),
+                        "referencia": _referencia_externa(dv.formula1),
+                        # allowBlank falso significa que la celda no admite quedar vacía.
+                        "admite_vacio": bool(dv.allowBlank),
+                        "mensaje_error": dv.error,
+                        "mensaje_ayuda": dv.prompt,
+                    }
+                )
 
-        hojas.append(Hoja(
-            nombre=ws.title,
-            indice=indice,
-            estado=ws.sheet_state,
-            max_fila=max_fila,
-            max_columna=max_col,
-            celdas=celdas,
-            formatos=formatos,
-            combinadas=combinadas,
-            validaciones=validaciones,
-        ))
+        hojas.append(
+            Hoja(
+                nombre=ws.title,
+                indice=indice,
+                estado=ws.sheet_state,
+                max_fila=max_fila,
+                max_columna=max_col,
+                celdas=celdas,
+                formatos=formatos,
+                combinadas=combinadas,
+                validaciones=validaciones,
+            )
+        )
 
     wb.close()
     return hojas

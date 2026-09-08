@@ -16,6 +16,19 @@ RUN pip install --no-cache-dir \
       pandas==2.3.1 \
       mysql-connector-python==9.1.0
 
+# Tooling de calidad: las MISMAS versiones que SISOC (requirements/dev.txt,
+# lint.txt y test.txt). Es lo que exige AGENTS.md > Validacion.
+RUN pip install --no-cache-dir \
+      black==24.8.0 \
+      pylint==3.2.6 \
+      pylint-django==2.7.0 \
+      pylint-plugin-utils==0.8.2 \
+      djlint==1.34.2 \
+      pytest==8.3.5 \
+      pytest-django==4.11.1 \
+      pytest-mock==3.14.1 \
+      pytest-xdist==3.6.1
+
 WORKDIR /app
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

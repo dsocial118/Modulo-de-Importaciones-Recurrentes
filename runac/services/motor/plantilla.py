@@ -12,8 +12,9 @@ Cada archivo sale con:
   - la fila de dimensiones, con las celdas combinadas donde corresponde;
   - los títulos de columna, en el orden definido;
   - las listas desplegables cargadas con los valores vigentes;
-  - una hoja de instrucciones con la ayuda de cada campo;
-  - una hoja de listas con los catálogos.
+  - la explicación de cada campo como comentario en la celda del título: al
+    pasar el mouse por encima aparece el globo, sin ir a otra hoja;
+  - una hoja de listas con los catálogos, oculta.
 """
 
 from __future__ import annotations
@@ -24,12 +25,18 @@ from datetime import date
 
 import mysql.connector
 from openpyxl import Workbook
+from openpyxl.comments import Comment
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-CONEXION = dict(host=os.environ.get("RUNAC_DB_HOST", "mysql"), port=3306,
-                user="root", password="runac_local", database="runac")
+CONEXION = dict(
+    host=os.environ.get("RUNAC_DB_HOST", "mysql"),
+    port=3306,
+    user="root",
+    password="runac_local",
+    database="runac",
+)
 
 # Excel no admite más de 255 caracteres en una lista escrita dentro de la
 # validación. Por encima de eso, la lista tiene que vivir en otra hoja.
@@ -42,28 +49,44 @@ BORDE = Border(*[Side(style="thin", color="BFBFBF")] * 4)
 
 
 def leer_definicion(cur, codigo: str) -> dict:
-    cur.execute("""
-        SELECT id, codigo, nombre_esperado, titulo, subtitulo, descripcion
-        FROM runac_c1_archivo WHERE codigo = %s
-    """, (codigo,))
+    cur.execute(
+        """
+        SELECT a.id, a.codigo, a.descripcion,
+               av.id AS version_id, av.numero AS version,
+               av.nombre_esperado, av.titulo, av.subtitulo
+        FROM runac_c1_archivo a
+        JOIN runac_c1_archivo_version av ON av.archivo_id = a.id AND av.estado = 'VIGENTE'
+        WHERE a.codigo = %s
+    """,
+        (codigo,),
+    )
     archivo = cur.fetchone()
     if not archivo:
-        raise SystemExit(f"No existe el archivo {codigo} en la Capa 1.")
+        raise SystemExit(
+            f"No existe el archivo {codigo} con una versión vigente en la Capa 1."
+        )
 
-    cur.execute("""
+    cur.execute(
+        """
         SELECT id, nombre_esperado, descripcion, orden_procesamiento, fila_encabezados
-        FROM runac_c1_hoja WHERE archivo_id = %s ORDER BY orden_procesamiento
-    """, (archivo["id"],))
+        FROM runac_c1_hoja WHERE archivo_version_id = %s ORDER BY orden_procesamiento
+    """,
+        (archivo["version_id"],),
+    )
     hojas = cur.fetchall()
 
     for h in hojas:
-        cur.execute("""
+        cur.execute(
+            """
             SELECT id, nombre_esperado, orden FROM runac_c1_dimension
             WHERE hoja_id = %s ORDER BY orden
-        """, (h["id"],))
+        """,
+            (h["id"],),
+        )
         h["dimensiones"] = cur.fetchall()
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT c.id, c.nombre, c.titulo_esperado, c.orden, c.tipo_dato,
                    c.longitud_maxima, c.obligatorio, c.ayuda,
                    d.nombre_esperado AS dimension, cat.codigo AS catalogo, cat.nombre AS catalogo_nombre
@@ -71,29 +94,76 @@ def leer_definicion(cur, codigo: str) -> dict:
             LEFT JOIN runac_c1_dimension d ON d.id = c.dimension_id
             LEFT JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
             WHERE c.hoja_id = %s ORDER BY c.orden
-        """, (h["id"],))
+        """,
+            (h["id"],),
+        )
         h["campos"] = cur.fetchall()
 
     # Los catálogos que efectivamente usa este archivo.
-    cur.execute("""
+    cur.execute(
+        """
         SELECT DISTINCT cat.codigo, cat.nombre
         FROM runac_c1_campo c
         JOIN runac_c1_hoja h ON h.id = c.hoja_id
         JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
-        WHERE h.archivo_id = %s ORDER BY cat.codigo
-    """, (archivo["id"],))
+        WHERE h.archivo_version_id = %s ORDER BY cat.codigo
+    """,
+        (archivo["version_id"],),
+    )
     catalogos = cur.fetchall()
     for cat in catalogos:
-        cur.execute("""
+        cur.execute(
+            """
             SELECT o.valor_esperado FROM runac_c1_catalogo_opcion o
             JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
             WHERE c.codigo = %s AND o.activo = 1 ORDER BY o.orden
-        """, (cat["codigo"],))
+        """,
+            (cat["codigo"],),
+        )
         cat["valores"] = [r["valor_esperado"] for r in cur.fetchall()]
 
     archivo["hojas"] = hojas
     archivo["catalogos"] = catalogos
     return archivo
+
+
+TIPOS_EN_CASTELLANO = {
+    "FECHA": "una fecha, con formato dd/mm/aaaa",
+    "ENTERO": "un número entero",
+    "DECIMAL": "un número, puede tener decimales",
+    "TEXTO": "texto",
+}
+
+
+def _comentario_del_campo(campo: dict) -> Comment:
+    """El globo que aparece al pasar el mouse sobre el título de la columna.
+
+    Reúne todo lo que necesita saber quien completa la planilla: qué se espera,
+    de qué tipo, si es obligatorio y si hay que elegir de una lista.
+    """
+    partes = [campo["titulo_esperado"], ""]
+
+    if campo["ayuda"]:
+        partes.append(campo["ayuda"])
+        partes.append("")
+
+    detalle = ["Qué se espera: " + TIPOS_EN_CASTELLANO.get(campo["tipo_dato"], "texto")]
+    if campo["tipo_dato"] == "TEXTO" and campo["longitud_maxima"]:
+        detalle.append(f'Máximo {campo["longitud_maxima"]} caracteres.')
+    if campo["catalogo_nombre"]:
+        detalle.append(f'Elegir de la lista "{campo["catalogo_nombre"]}".')
+    detalle.append(
+        "Campo obligatorio." if campo["obligatorio"] else "No es obligatorio."
+    )
+    partes.extend(detalle)
+
+    texto = "\n".join(partes)
+    comentario = Comment(texto, "RUNAC")
+    # El globo se dimensiona según el largo del texto, para que se lea entero.
+    lineas = sum(max(1, len(linea) // 48 + 1) for linea in texto.split("\n"))
+    comentario.width = 340
+    comentario.height = min(400, max(90, lineas * 16 + 20))
+    return comentario
 
 
 def escribir_hoja_listas(wb, catalogos) -> dict[str, str]:
@@ -102,13 +172,17 @@ def escribir_hoja_listas(wb, catalogos) -> dict[str, str]:
     rangos = {}
     for i, cat in enumerate(catalogos, start=1):
         letra = get_column_letter(i)
-        ws.cell(row=1, column=i, value=cat["nombre"][:255]).font = Font(bold=True, color="FFFFFF")
+        ws.cell(row=1, column=i, value=cat["nombre"][:255]).font = Font(
+            bold=True, color="FFFFFF"
+        )
         ws.cell(row=1, column=i).fill = PatternFill("solid", fgColor=AZUL)
         for j, v in enumerate(cat["valores"], start=2):
             ws.cell(row=j, column=i, value=v)
         ws.column_dimensions[letra].width = 28
         if cat["valores"]:
-            rangos[cat["codigo"]] = f"LISTAS!${letra}$2:${letra}${len(cat['valores']) + 1}"
+            rangos[cat["codigo"]] = (
+                f"LISTAS!${letra}$2:${letra}${len(cat['valores']) + 1}"
+            )
     ws.sheet_state = "visible"
     ws["A1"].comment = None
     return rangos
@@ -125,11 +199,15 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
     # se valida el archivo que sube la provincia. Todo lo demás se acomoda arriba.
     fila_enc = hoja["fila_encabezados"]
     fila_dim = (fila_enc - 1) if hoja["dimensiones"] and fila_enc > 1 else None
-    fila_titulo = (fila_dim - 1) if fila_dim else (fila_enc - 1 if fila_enc > 1 else None)
+    fila_titulo = (
+        (fila_dim - 1) if fila_dim else (fila_enc - 1 if fila_enc > 1 else None)
+    )
 
     if archivo["titulo"] and fila_titulo and fila_titulo >= 1:
         ws.cell(row=fila_titulo, column=1, value=archivo["titulo"])
-        ws.merge_cells(start_row=fila_titulo, start_column=1, end_row=fila_titulo, end_column=n)
+        ws.merge_cells(
+            start_row=fila_titulo, start_column=1, end_row=fila_titulo, end_column=n
+        )
         c = ws.cell(row=fila_titulo, column=1)
         c.font = Font(bold=True, size=14, color="FFFFFF")
         c.fill = PatternFill("solid", fgColor=AZUL)
@@ -137,9 +215,16 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
         ws.row_dimensions[fila_titulo].height = 24
     if archivo["subtitulo"] and fila_titulo and fila_titulo > 1:
         ws.cell(row=fila_titulo - 1, column=1, value=archivo["subtitulo"])
-        ws.merge_cells(start_row=fila_titulo - 1, start_column=1, end_row=fila_titulo - 1, end_column=n)
+        ws.merge_cells(
+            start_row=fila_titulo - 1,
+            start_column=1,
+            end_row=fila_titulo - 1,
+            end_column=n,
+        )
         ws.cell(row=fila_titulo - 1, column=1).font = Font(italic=True, size=11)
-        ws.cell(row=fila_titulo - 1, column=1).alignment = Alignment(horizontal="center")
+        ws.cell(row=fila_titulo - 1, column=1).alignment = Alignment(
+            horizontal="center"
+        )
 
     # Fila de dimensiones: se combinan las columnas contiguas de cada una.
     if fila_dim:
@@ -152,7 +237,12 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
             if dim:
                 ws.cell(row=fila_dim, column=i + 1, value=dim)
                 if j > i:
-                    ws.merge_cells(start_row=fila_dim, start_column=i + 1, end_row=fila_dim, end_column=j + 1)
+                    ws.merge_cells(
+                        start_row=fila_dim,
+                        start_column=i + 1,
+                        end_row=fila_dim,
+                        end_column=j + 1,
+                    )
                 c = ws.cell(row=fila_dim, column=i + 1)
                 c.font = Font(bold=True, color="FFFFFF")
                 c.fill = PatternFill("solid", fgColor="2E75B6")
@@ -165,10 +255,16 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
             titulo += " *"
         c = ws.cell(row=fila_enc, column=k, value=titulo)
         c.font = Font(bold=True)
-        c.fill = PatternFill("solid", fgColor=AZUL_CLARO if campo["obligatorio"] else GRIS)
+        c.fill = PatternFill(
+            "solid", fgColor=AZUL_CLARO if campo["obligatorio"] else GRIS
+        )
         c.alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
         c.border = BORDE
-        # La ayuda de la Capa 1 va como comentario y como mensaje de entrada.
+
+        # La explicación va en la propia celda del título, como comentario: al
+        # pasar el mouse por encima aparece el globo, sin tener que ir a otra hoja.
+        c.comment = _comentario_del_campo(campo)
+
         ancho = min(40, max(14, len(campo["titulo_esperado"]) // 2 + 8))
         ws.column_dimensions[get_column_letter(k)].width = ancho
     ws.row_dimensions[fila_enc].height = 48
@@ -193,8 +289,12 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
         if campo["catalogo"] and campo["catalogo"] in rangos:
             # allowBlank explícito: dice si el campo admite quedar vacío. Es la
             # marca que después el importador lee como obligatoriedad.
-            dv = DataValidation(type="list", formula1=rangos[campo["catalogo"]],
-                                allow_blank=not campo["obligatorio"], showDropDown=False)
+            dv = DataValidation(
+                type="list",
+                formula1=rangos[campo["catalogo"]],
+                allow_blank=not campo["obligatorio"],
+                showDropDown=False,
+            )
             dv.error = f'El valor no está entre los admitidos para "{campo["titulo_esperado"]}".'
             dv.errorTitle = "Valor no admitido"
             if campo["ayuda"]:
@@ -211,13 +311,17 @@ def escribir_hoja_instrucciones(wb, archivo):
     ws.column_dimensions["A"].width = 42
     ws.column_dimensions["B"].width = 95
     ws.cell(row=1, column=1, value="Campo").font = Font(bold=True, color="FFFFFF")
-    ws.cell(row=1, column=2, value="Indicación para el llenado").font = Font(bold=True, color="FFFFFF")
+    ws.cell(row=1, column=2, value="Indicación para el llenado").font = Font(
+        bold=True, color="FFFFFF"
+    )
     for c in ("A1", "B1"):
         ws[c].fill = PatternFill("solid", fgColor=AZUL)
 
     f = 2
     for hoja in archivo["hojas"]:
-        ws.cell(row=f, column=1, value=f'Hoja: {hoja["nombre_esperado"]}').font = Font(bold=True, size=12)
+        ws.cell(row=f, column=1, value=f'Hoja: {hoja["nombre_esperado"]}').font = Font(
+            bold=True, size=12
+        )
         f += 1
         dimension_actual = object()
         for campo in hoja["campos"]:
@@ -235,15 +339,21 @@ def escribir_hoja_instrucciones(wb, archivo):
             if campo["obligatorio"]:
                 partes.append("Campo obligatorio.")
             if campo["catalogo_nombre"]:
-                partes.append(f'Debe elegirse un valor de la lista "{campo["catalogo_nombre"]}".')
+                partes.append(
+                    f'Debe elegirse un valor de la lista "{campo["catalogo_nombre"]}".'
+                )
             if campo["tipo_dato"] == "FECHA":
                 partes.append("Formato de fecha: dd/mm/aaaa.")
-            ws.cell(row=f, column=2, value="\n".join(partes) or None).alignment = Alignment(wrap_text=True, vertical="top")
+            ws.cell(row=f, column=2, value="\n".join(partes) or None).alignment = (
+                Alignment(wrap_text=True, vertical="top")
+            )
             f += 1
         f += 1
 
 
-def generar(cur, codigo: str, salida: str, filas_vacias: int, periodo: str | None) -> str:
+def generar(
+    cur, codigo: str, salida: str, filas_vacias: int, periodo: str | None
+) -> str:
     archivo = leer_definicion(cur, codigo)
     wb = Workbook()
     wb.remove(wb.active)
@@ -251,6 +361,9 @@ def generar(cur, codigo: str, salida: str, filas_vacias: int, periodo: str | Non
     rangos = escribir_hoja_listas(wb, archivo["catalogos"])
     for hoja in archivo["hojas"]:
         escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias)
+
+    # Hoja con la ayuda de cada campo: es lo que le explica al operador que se
+    # espera en cada columna, sin tener que consultar el documento funcional.
     escribir_hoja_instrucciones(wb, archivo)
 
     # La hoja de listas va al final y oculta: ayuda al usuario sin estorbarlo.
@@ -260,7 +373,7 @@ def generar(cur, codigo: str, salida: str, filas_vacias: int, periodo: str | Non
     wb.properties.title = archivo["titulo"] or codigo
     wb.properties.subject = f"RUNAC — plantilla {codigo}"
     wb.properties.description = (
-        f'Generada desde la Capa 1 el {date.today().isoformat()}'
+        f"Generada desde la Capa 1 el {date.today().isoformat()}"
         + (f" para el período {periodo}." if periodo else ".")
         + " No modificar los títulos de las columnas ni su orden."
     )
@@ -273,11 +386,15 @@ def generar(cur, codigo: str, salida: str, filas_vacias: int, periodo: str | Non
 
 
 def main():
-    p = argparse.ArgumentParser(description="Genera las plantillas Excel desde la Capa 1.")
+    p = argparse.ArgumentParser(
+        description="Genera las plantillas Excel desde la Capa 1."
+    )
     p.add_argument("--archivo", default=None)
     p.add_argument("--todos", action="store_true")
     p.add_argument("--salida", default="/trabajo/capa1/plantillas")
-    p.add_argument("--filas", type=int, default=200, help="filas vacías preparadas para cargar")
+    p.add_argument(
+        "--filas", type=int, default=200, help="filas vacías preparadas para cargar"
+    )
     p.add_argument("--periodo", default=None)
     args = p.parse_args()
 
@@ -285,7 +402,11 @@ def main():
     cur = cn.cursor(dictionary=True)
 
     if args.todos:
-        cur.execute("SELECT codigo FROM runac_c1_archivo ORDER BY orden_importacion")
+        cur.execute(
+            """SELECT a.codigo FROM runac_c1_archivo a
+                       JOIN runac_c1_archivo_version av ON av.archivo_id = a.id AND av.estado='VIGENTE'
+                       ORDER BY av.orden_importacion"""
+        )
         codigos = [r["codigo"] for r in cur.fetchall()]
     elif args.archivo:
         codigos = [args.archivo]

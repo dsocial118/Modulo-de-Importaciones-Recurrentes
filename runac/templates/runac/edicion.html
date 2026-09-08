@@ -1,0 +1,279 @@
+{% extends "runac/base.html" %}
+{% block titulo %}Corregir datos{% endblock %}
+
+{% block contenido %}
+
+    <form style="display:none">
+        {% csrf_token %}
+    </form>
+
+    <div class="mb-3">
+        <a href="{% url 'runac:detalle' contexto.id %}"
+           class="ayuda text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Volver al detalle de errores
+        </a>
+        <h5 class="mt-2 mb-1">
+            {{ contexto.archivo_codigo }} · corregir datos
+            <span class="estado e-{{ contexto.estado_presentacion }} ms-1">{{ contexto.estado_presentacion }}</span>
+        </h5>
+        <div class="ayuda">{{ contexto.jurisdiccion }} · {{ contexto.periodo }} · estructura v{{ contexto.version }}</div>
+    </div>
+
+    {% if not contexto.editable %}
+        <div class="alert alert-info py-2">
+            <i class="bi bi-lock-fill"></i>
+            La presentación está en «{{ contexto.estado_presentacion }}» y los datos no se
+            pueden modificar. Para corregir, el responsable provincial tiene que
+            <strong>reabrir la carga</strong>.
+        </div>
+    {% elif not puede_editar %}
+        <div class="alert alert-secondary py-2">
+            El nivel nacional <strong>no modifica datos provinciales</strong>: formula
+            observaciones. La corrección la hace la jurisdicción.
+        </div>
+    {% else %}
+        <div class="alert alert-light border py-2 ayuda mb-3">
+            <i class="bi bi-pencil-square"></i>
+            Tocá un valor para corregirlo. Cada cambio queda registrado con usuario, fecha,
+            valor anterior y valor nuevo. Los errores <strong>bloqueantes</strong> no se
+            corrigen acá: se arreglan en el Excel y el archivo se vuelve a importar.
+        </div>
+    {% endif %}
+
+    {# --- Elegir hoja y filtro. En el teléfono, uno debajo del otro. ----- #}
+    <form method="get" class="row g-2 align-items-end mb-3">
+        {% if contexto.hojas|length > 1 %}
+            <div class="col-12 col-md-auto">
+                <label class="form-label mb-1 ayuda" for="hoja">Hoja</label>
+                <select class="form-select"
+                        id="hoja"
+                        name="hoja"
+                        onchange="this.form.submit()">
+                    {% for h in contexto.hojas %}
+                        <option value="{{ h.id }}" {% if h.id == hoja.id %}selected{% endif %}>{{ h.nombre_esperado }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% endif %}
+        <div class="col-12 col-md-auto">
+            <div class="form-check">
+                <input class="form-check-input"
+                       type="checkbox"
+                       id="solo"
+                       name="solo"
+                       value="avisos"
+                       {% if solo_avisos %}checked{% endif %}
+                       onchange="this.form.submit()" />
+                <label class="form-check-label" for="solo">Sólo las filas con advertencia ({{ con_advertencia }})</label>
+            </div>
+        </div>
+        <div class="col-12 col-md-auto ms-md-auto ayuda">
+            {{ total }} fila{{ total|pluralize }} · página {{ pagina }} de {{ paginas }}
+        </div>
+    </form>
+
+    {# --- Los datos. En el teléfono cada fila es una ficha. ------------- #}
+    {% for fila in filas %}
+        <div class="card mb-2">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <span>
+                    Fila {{ fila.numero_fila }} del Excel
+                    {% if fila.estado == 'EDITADA' %}
+                        <span class="estado e-ANULADA ms-1">editada</span>
+                    {% elif fila.avisos %}
+                        <span class="estado e-OBSERVADA ms-1">{{ fila.avisos|length }} advertencia{{ fila.avisos|length|pluralize }}</span>
+                    {% endif %}
+                </span>
+                <button class="btn btn-sm btn-outline-secondary"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#fila{{ fila.numero_fila }}"
+                        aria-expanded="false">Ver y corregir</button>
+            </div>
+            {% if fila.avisos %}
+                <div class="card-body py-2">
+                    {% for a in fila.avisos %}
+                        <div class="ayuda">
+                            <span class="sev-{{ a.severidad }}">◆</span>
+                            <strong>{{ a.nombre_campo }}</strong>: {{ a.descripcion }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <div class="collapse" id="fila{{ fila.numero_fila }}">
+                <div class="card-body pt-0">
+                    <div class="row g-2">
+                        {% for celda in fila.celdas %}
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <label class="form-label mb-1 ayuda"
+                                       for="c{{ fila.numero_fila }}_{{ celda.nombre }}">
+                                    {{ celda.titulo }}
+                                    {% if celda.obligatorio %}<span class="text-danger">*</span>{% endif %}
+                                    {% if celda.tiene_aviso %}<i class="bi bi-exclamation-triangle-fill sev-ADVERTENCIA"></i>{% endif %}
+                                </label>
+                                {% if puede_editar %}
+                                    {% if celda.opciones %}
+                                        <select class="form-select form-select-sm celda-editable"
+                                                id="c{{ fila.numero_fila }}_{{ celda.nombre }}"
+                                                data-fila="{{ fila.numero_fila }}"
+                                                data-campo="{{ celda.nombre }}">
+                                            <option value="">—</option>
+                                            {% for opcion in celda.opciones %}
+                                                <option value="{{ opcion }}"
+                                                        {% if opcion == celda.valor %}selected{% endif %}>
+                                                    {{ opcion }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    {% else %}
+                                        <input class="form-control form-control-sm celda-editable"
+                                               id="c{{ fila.numero_fila }}_{{ celda.nombre }}"
+                                               data-fila="{{ fila.numero_fila }}"
+                                               data-campo="{{ celda.nombre }}"
+                                               value="{{ celda.valor }}" />
+                                    {% endif %}
+                                {% else %}
+                                    <div class="form-control form-control-sm bg-light">{{ celda.valor|default:"—" }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="card">
+            <div class="card-body text-center ayuda py-4">
+                {% if solo_avisos %}
+                    Ninguna fila de esta hoja tiene advertencias.
+                {% else %}
+                    Esta importación no incorporó filas.
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+
+    {# --- Paginación ---------------------------------------------------- #}
+    {% if paginas > 1 %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm flex-wrap">
+                {% if pagina > 1 %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?hoja={{ hoja.id }}&pagina={{ pagina|add:'-1' }}{% if solo_avisos %}&solo=avisos{% endif %}">Anterior</a>
+                    </li>
+                {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">{{ pagina }} / {{ paginas }}</span>
+                </li>
+                {% if pagina < paginas %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?hoja={{ hoja.id }}&pagina={{ pagina|add:'1' }}{% if solo_avisos %}&solo=avisos{% endif %}">Siguiente</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+
+    {# --- Historial de correcciones ------------------------------------- #}
+    {% if historial %}
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Últimas correcciones</span>
+                <button class="btn btn-sm btn-outline-secondary"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#historial">Ver</button>
+            </div>
+            <div class="collapse" id="historial">
+                <div class="card-body p-0 tabla-scroll">
+                    <table class="table table-sm tabla-compacta tabla-ficha mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fila</th>
+                                <th>Campo</th>
+                                <th>Antes</th>
+                                <th>Después</th>
+                                <th>Quién</th>
+                                <th>Cuándo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in historial %}
+                                <tr>
+                                    <td>Fila {{ h.numero_fila }}</td>
+                                    <td data-etiqueta="Campo">{{ h.campo }}</td>
+                                    <td data-etiqueta="Antes" class="ayuda">{{ h.valor_anterior|default:"—" }}</td>
+                                    <td data-etiqueta="Después">{{ h.valor_nuevo|default:"—" }}</td>
+                                    <td data-etiqueta="Quién" class="ayuda">{{ h.usuario }}</td>
+                                    <td data-etiqueta="Cuándo" class="ayuda">{{ h.fecha|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+    {% if puede_editar %}
+        <script>
+    // Edición en línea: al salir del campo se guarda, sin recargar la página.
+    // El operador corrige varias celdas seguidas sin perder el lugar.
+    (function () {
+      const url = "{% url 'runac:editar_campo' contexto.id %}";
+      const hoja = "{{ hoja.id }}";
+      const token = document.querySelector('[name=csrfmiddlewaretoken]');
+
+      function avisar(elemento, ok, mensaje) {
+        elemento.classList.remove("is-valid", "is-invalid");
+        elemento.classList.add(ok ? "is-valid" : "is-invalid");
+        let nota = elemento.parentElement.querySelector(".nota-guardado");
+        if (!nota) {
+          nota = document.createElement("div");
+          nota.className = "nota-guardado ayuda";
+          elemento.parentElement.appendChild(nota);
+        }
+        nota.textContent = mensaje;
+        nota.style.color = ok ? "#0f5132" : "#b02a37";
+      }
+
+      document.querySelectorAll(".celda-editable").forEach(function (campo) {
+        campo.dataset.original = campo.value;
+        campo.addEventListener("change", function () {
+          if (campo.value === campo.dataset.original) return;
+          const datos = new FormData();
+          datos.append("hoja_id", hoja);
+          datos.append("numero_fila", campo.dataset.fila);
+          datos.append("campo", campo.dataset.campo);
+          datos.append("valor", campo.value);
+          if (token) datos.append("csrfmiddlewaretoken", token.value);
+
+          fetch(url, {
+            method: "POST",
+            body: datos,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (r) {
+              if (r.ok) {
+                campo.dataset.original = campo.value;
+                avisar(campo, true, r.sin_cambios ? "Sin cambios" : "Guardado");
+              } else {
+                avisar(campo, false, r.error);
+                campo.value = campo.dataset.original;
+              }
+            })
+            .catch(function () {
+              avisar(campo, false, "No se pudo guardar. Revisá la conexión.");
+            });
+        });
+      });
+    })();
+        </script>
+    {% endif %}
+{% endblock %}

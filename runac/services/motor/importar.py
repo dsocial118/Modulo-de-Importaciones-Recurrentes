@@ -31,16 +31,26 @@ from datetime import date, datetime, time
 
 import mysql.connector
 from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
 
-CONEXION = dict(host=os.environ.get("RUNAC_DB_HOST", "mysql"), port=3306,
-                user="root", password="runac_local", database="runac")
+from comun import nombre_tabla_receptora
+
+CONEXION = dict(
+    host=os.environ.get("RUNAC_DB_HOST", "mysql"),
+    port=3306,
+    user="root",
+    password="runac_local",
+    database="runac",
+)
 
 PLACEHOLDERS = {"seleccionar", "elegir", "elija una opcion", "seleccione", "-", "--"}
 
 
 def clave(v) -> str:
     t = re.sub(r"\s+", " ", str(v or "").replace("\xa0", " ").strip()).lower()
-    return "".join(c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn")
+    return "".join(
+        c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn"
+    )
 
 
 def norm(v) -> str:
@@ -54,6 +64,7 @@ def es_placeholder(v) -> bool:
 # ---------------------------------------------------------------------------
 # Conversión de valores
 # ---------------------------------------------------------------------------
+
 
 def convertir(valor, tipo: str):
     """Devuelve (valor_convertido, error). Si hay error, el valor es None."""
@@ -79,7 +90,11 @@ def convertir(valor, tipo: str):
         if isinstance(valor, int):
             return valor, None
         if isinstance(valor, float):
-            return (int(valor), None) if valor == int(valor) else (None, f"{valor} tiene decimales y se esperaba un número entero.")
+            return (
+                (int(valor), None)
+                if valor == int(valor)
+                else (None, f"{valor} tiene decimales y se esperaba un número entero.")
+            )
         t = norm(valor).replace(".", "").replace(" ", "")
         if re.fullmatch(r"-?\d+", t):
             return int(t), None
@@ -104,6 +119,7 @@ def convertir(valor, tipo: str):
 # ---------------------------------------------------------------------------
 # Reglas
 # ---------------------------------------------------------------------------
+
 
 def comparar(a, operador: str, b) -> bool:
     if operador in ("IGUAL", "=="):
@@ -162,19 +178,29 @@ def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str
         if vacio or otro is None:
             return None
         if not comparar(valor, par.get("operador", "IGUAL"), otro):
-            return (f'El valor no cumple la condición respecto de "{par.get("campo_comparacion")}": '
-                    f'debe ser {par.get("operador", "").lower().replace("_", " ")} que ese campo.')
+            return (
+                f'El valor no cumple la condición respecto de "{par.get("campo_comparacion")}": '
+                f'debe ser {par.get("operador", "").lower().replace("_", " ")} que ese campo.'
+            )
         return None
 
     if tipo == "OBLIGATORIO_SI":
         cond = fila_valores.get(par.get("campo_condicion"))
         op = par.get("operador", "IGUAL")
-        dispara = (cond is None or norm(cond) == "") if op == "ES_VACIO" else \
-                  (cond is not None and norm(cond) != "") if op == "NO_ES_VACIO" else \
-                  comparar(cond, op, par.get("valor_condicion"))
+        dispara = (
+            (cond is None or norm(cond) == "")
+            if op == "ES_VACIO"
+            else (
+                (cond is not None and norm(cond) != "")
+                if op == "NO_ES_VACIO"
+                else comparar(cond, op, par.get("valor_condicion"))
+            )
+        )
         if dispara and vacio:
-            return (f'El campo es obligatorio cuando "{par.get("campo_condicion")}" '
-                    f'{op.lower().replace("_", " ")} "{par.get("valor_condicion")}".')
+            return (
+                f'El campo es obligatorio cuando "{par.get("campo_condicion")}" '
+                f'{op.lower().replace("_", " ")} "{par.get("valor_condicion")}".'
+            )
         return None
 
     if tipo == "FORMATO":
@@ -184,7 +210,7 @@ def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str
         # N = un dígito. El resto de los caracteres se toman literales.
         rx = "".join(r"\d" if c == "N" else re.escape(c) for c in patron)
         if not re.fullmatch(rx, norm(valor)):
-            return f'El valor no respeta el formato esperado ({patron}).'
+            return f"El valor no respeta el formato esperado ({patron})."
         return None
 
     if tipo == "UNICO_EN_HOJA":
@@ -205,12 +231,16 @@ def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str
         vistos = contexto["unicos"].setdefault(regla["id"], {})
         k = "|".join(partes)
         if k in vistos:
-            return (f'La combinación de {", ".join(campos)} ya aparece en la fila {vistos[k]}.')
+            return f'La combinación de {", ".join(campos)} ya aparece en la fila {vistos[k]}.'
         vistos[k] = contexto["fila_actual"]
         return None
 
     if tipo == "EJECUTAR_FUNCION":
-        return FUNCIONES.get(par.get("funcion"), lambda v: None)(valor) if not vacio else None
+        return (
+            FUNCIONES.get(par.get("funcion"), lambda v: None)(valor)
+            if not vacio
+            else None
+        )
 
     return None
 
@@ -241,49 +271,82 @@ FUNCIONES = {"validar_cuil": validar_cuil, "validar_mail": validar_mail}
 # Configuración: se lee de la Capa 1
 # ---------------------------------------------------------------------------
 
+
 def leer_configuracion(cur, periodo: str) -> list[dict]:
-    cur.execute("""
-        SELECT a.id, a.codigo, a.nombre_esperado, a.titulo, a.orden_importacion, a.obligatorio
-        FROM runac_c1_archivo a ORDER BY a.orden_importacion
-    """)
+    # La configuración de un período es la de las VERSIONES que ese período usa.
+    # Si el período siguiente no tuvo cambios, apunta a las mismas versiones.
+    cur.execute(
+        """
+        SELECT a.id AS archivo_id, a.codigo,
+               av.id AS version_id, av.numero AS version,
+               av.nombre_esperado, av.titulo, av.orden_importacion, av.obligatorio
+        FROM runac_c2_periodo_archivo pa
+        JOIN runac_c2_periodo p ON p.id = pa.periodo_id
+        JOIN runac_c1_archivo_version av ON av.id = pa.archivo_version_id
+        JOIN runac_c1_archivo a ON a.id = av.archivo_id
+        WHERE p.codigo = %s
+        ORDER BY av.orden_importacion
+    """,
+        (periodo,),
+    )
     archivos = cur.fetchall()
     for a in archivos:
-        cur.execute("""
-            SELECT h.id, h.nombre_esperado, h.fila_encabezados, h.orden_procesamiento, h.obligatoria,
-                   e.tabla_cruda, e.tabla_tipada, e.id AS estructura_id
+        a["id"] = a["archivo_id"]  # compatibilidad con el resto del script
+        cur.execute(
+            """
+            SELECT h.id, h.nombre_esperado, h.fila_encabezados, h.orden_procesamiento, h.obligatoria
             FROM runac_c1_hoja h
-            LEFT JOIN runac_c2_estructura e ON e.hoja_id = h.id
-                 AND e.periodo_id = (SELECT id FROM runac_c2_periodo WHERE codigo = %s)
-            WHERE h.archivo_id = %s ORDER BY h.orden_procesamiento
-        """, (periodo, a["id"]))
+            WHERE h.archivo_version_id = %s ORDER BY h.orden_procesamiento
+        """,
+            (a["version_id"],),
+        )
         a["hojas"] = cur.fetchall()
+        varias = len(a["hojas"]) > 1
         for h in a["hojas"]:
-            cur.execute("""
+            # El nombre de la tabla receptora no se guarda: se deduce.
+            h["tabla"] = nombre_tabla_receptora(
+                a["codigo"], h["nombre_esperado"], varias, a["version"]
+            )
+        for h in a["hojas"]:
+            cur.execute(
+                """
                 SELECT c.id, c.nombre, c.titulo_esperado, c.orden, c.tipo_dato,
                        c.longitud_maxima, c.obligatorio, cat.codigo AS catalogo
                 FROM runac_c1_campo c LEFT JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
                 WHERE c.hoja_id = %s ORDER BY c.orden
-            """, (h["id"],))
+            """,
+                (h["id"],),
+            )
             h["campos"] = cur.fetchall()
             for campo in h["campos"]:
                 campo["opciones"] = {}
                 if campo["catalogo"]:
-                    cur.execute("""
+                    cur.execute(
+                        """
                         SELECT o.id, o.valor_esperado FROM runac_c1_catalogo_opcion o
                         JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
                         WHERE c.codigo = %s AND o.activo = 1
-                    """, (campo["catalogo"],))
-                    campo["opciones"] = {clave(r["valor_esperado"]): r for r in cur.fetchall()}
-                cur.execute("""
+                    """,
+                        (campo["catalogo"],),
+                    )
+                    campo["opciones"] = {
+                        clave(r["valor_esperado"]): r for r in cur.fetchall()
+                    }
+                cur.execute(
+                    """
                     SELECT r.id, r.nombre, r.parametros, tr.nombre AS tipo_regla, cr.severidad
                     FROM runac_c1_campo_regla cr
                     JOIN runac_c1_regla r ON r.id = cr.regla_id
                     JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
                     WHERE cr.campo_id = %s
-                """, (campo["id"],))
+                """,
+                    (campo["id"],),
+                )
                 campo["reglas"] = []
                 for r in cur.fetchall():
-                    r["parametros"] = json.loads(r["parametros"]) if r["parametros"] else {}
+                    r["parametros"] = (
+                        json.loads(r["parametros"]) if r["parametros"] else {}
+                    )
                     campo["reglas"].append(r)
     return archivos
 
@@ -292,16 +355,25 @@ def leer_configuracion(cur, periodo: str) -> list[dict]:
 # Proceso
 # ---------------------------------------------------------------------------
 
+
 def reconocer(carpeta: str, archivos: list[dict]) -> tuple[list, list, list]:
     """Empareja los archivos de la carpeta con los que la Capa 1 espera."""
-    presentes = [f for f in sorted(os.listdir(carpeta)) if f.lower().endswith((".xlsx", ".xlsm"))
-                 and not f.startswith("~$")]
+    presentes = [
+        f
+        for f in sorted(os.listdir(carpeta))
+        if f.lower().endswith((".xlsx", ".xlsm")) and not f.startswith("~$")
+    ]
     reconocidos, sin_reconocer, ambiguos = [], list(presentes), []
     # Los códigos más largos primero: MPJ_DAE tiene que ganarle a MPJ.
     for a in sorted(archivos, key=lambda x: -len(x["codigo"])):
-        candidatos = [f for f in presentes
-                      if re.search(rf"(^|[^A-Za-z0-9]){re.escape(a['codigo'])}([^A-Za-z0-9]|$)", f, re.I)
-                      and f in sin_reconocer]
+        candidatos = [
+            f
+            for f in presentes
+            if re.search(
+                rf"(^|[^A-Za-z0-9]){re.escape(a['codigo'])}([^A-Za-z0-9]|$)", f, re.I
+            )
+            and f in sin_reconocer
+        ]
         if not candidatos:
             continue
         if len(candidatos) > 1:
@@ -309,10 +381,16 @@ def reconocer(carpeta: str, archivos: list[dict]) -> tuple[list, list, list]:
             ambiguos.append({"codigo": a["codigo"], "candidatos": candidatos})
             continue
         elegido = candidatos[0]
-        reconocidos.append({"archivo": a, "nombre": elegido, "ruta": os.path.join(carpeta, elegido)})
+        reconocidos.append(
+            {"archivo": a, "nombre": elegido, "ruta": os.path.join(carpeta, elegido)}
+        )
         sin_reconocer.remove(elegido)
-    faltantes = [a for a in archivos if a["obligatorio"]
-                 and not any(r["archivo"]["codigo"] == a["codigo"] for r in reconocidos)]
+    faltantes = [
+        a
+        for a in archivos
+        if a["obligatorio"]
+        and not any(r["archivo"]["codigo"] == a["codigo"] for r in reconocidos)
+    ]
     return reconocidos, sin_reconocer, faltantes, ambiguos
 
 
@@ -341,11 +419,15 @@ def validar_estructura(ruta: str, definicion: dict) -> list[str]:
         for campo in hoja["campos"]:
             encontrado = titulos.get(campo["orden"])
             if encontrado is None:
-                problemas.append(f'En la hoja "{nombre}" falta la columna {campo["orden"]}: '
-                                 f'"{campo["titulo_esperado"]}".')
+                problemas.append(
+                    f'En la hoja "{nombre}" falta la columna {campo["orden"]}: '
+                    f'"{campo["titulo_esperado"]}".'
+                )
             elif clave(encontrado) != clave(campo["titulo_esperado"]):
-                problemas.append(f'En la hoja "{nombre}", la columna {campo["orden"]} dice '
-                                 f'"{encontrado}" y debería decir "{campo["titulo_esperado"]}".')
+                problemas.append(
+                    f'En la hoja "{nombre}", la columna {campo["orden"]} dice '
+                    f'"{encontrado}" y debería decir "{campo["titulo_esperado"]}".'
+                )
     wb.close()
     return problemas
 
@@ -399,35 +481,77 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
             valor, error = convertir(crudo, campo["tipo_dato"])
 
             if error:
-                hallazgos.append(dict(codigo="TIPO_INVALIDO", severidad="BLOQUEANTE",
-                                      campo_id=campo["id"], regla_id=None, fila=nro,
-                                      campo=campo["titulo_esperado"], valor=norm(crudo), detalle=error))
+                hallazgos.append(
+                    dict(
+                        codigo="TIPO_INVALIDO",
+                        severidad="BLOQUEANTE",
+                        campo_id=campo["id"],
+                        regla_id=None,
+                        fila=nro,
+                        campo=campo["titulo_esperado"],
+                        columna=get_column_letter(campo["orden"]),
+                        valor=norm(crudo),
+                        detalle=error,
+                    )
+                )
                 errores_fila += 1
                 valores_tipados[campo["nombre"]] = None
                 continue
 
             vacio = valor is None or norm(valor) == ""
             if campo["obligatorio"] and vacio:
-                hallazgos.append(dict(codigo="OBLIGATORIO_VACIO", severidad="BLOQUEANTE",
-                                      campo_id=campo["id"], regla_id=None, fila=nro,
-                                      campo=campo["titulo_esperado"], valor=None,
-                                      detalle="El campo es obligatorio y está vacío."))
+                hallazgos.append(
+                    dict(
+                        codigo="OBLIGATORIO_VACIO",
+                        severidad="BLOQUEANTE",
+                        campo_id=campo["id"],
+                        regla_id=None,
+                        fila=nro,
+                        campo=campo["titulo_esperado"],
+                        columna=get_column_letter(campo["orden"]),
+                        valor=None,
+                        detalle="El campo es obligatorio y está vacío.",
+                    )
+                )
                 errores_fila += 1
 
             if campo["opciones"] and not vacio:
                 if clave(valor) not in campo["opciones"]:
-                    hallazgos.append(dict(codigo="FUERA_DE_CATALOGO", severidad="BLOQUEANTE",
-                                          campo_id=campo["id"], regla_id=None, fila=nro,
-                                          campo=campo["titulo_esperado"], valor=norm(valor),
-                                          detalle=f'El valor no está entre los admitidos para este campo.'))
+                    hallazgos.append(
+                        dict(
+                            codigo="FUERA_DE_CATALOGO",
+                            severidad="BLOQUEANTE",
+                            campo_id=campo["id"],
+                            regla_id=None,
+                            fila=nro,
+                            campo=campo["titulo_esperado"],
+                            columna=get_column_letter(campo["orden"]),
+                            valor=norm(valor),
+                            detalle=f"El valor no está entre los admitidos para este campo.",
+                        )
+                    )
                     errores_fila += 1
 
             largo = campo["longitud_maxima"]
-            if largo and not vacio and campo["tipo_dato"] == "TEXTO" and len(str(valor)) > largo:
-                hallazgos.append(dict(codigo="TEXTO_MUY_LARGO", severidad="BLOQUEANTE",
-                                      campo_id=campo["id"], regla_id=None, fila=nro,
-                                      campo=campo["titulo_esperado"], valor=str(valor)[:60] + "…",
-                                      detalle=f"El texto tiene {len(str(valor))} caracteres y el máximo admitido es {largo}."))
+            if (
+                largo
+                and not vacio
+                and campo["tipo_dato"] == "TEXTO"
+                and len(str(valor)) > largo
+            ):
+                hallazgos.append(
+                    dict(
+                        codigo="TEXTO_MUY_LARGO",
+                        severidad="BLOQUEANTE",
+                        campo_id=campo["id"],
+                        regla_id=None,
+                        fila=nro,
+                        campo=campo["titulo_esperado"],
+                        columna=get_column_letter(campo["orden"]),
+                        valor=str(valor)[:60] + "…",
+                        detalle=f"El texto tiene {len(str(valor))} caracteres y el máximo admitido es {largo}.",
+                    )
+                )
                 errores_fila += 1
 
             valores_tipados[campo["nombre"]] = valor
@@ -435,14 +559,26 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
         # --- reglas ---
         for campo in campos:
             for regla in campo["reglas"]:
-                mensaje = aplicar_regla(regla, valores_tipados.get(campo["nombre"]),
-                                        valores_tipados, contexto)
+                mensaje = aplicar_regla(
+                    regla,
+                    valores_tipados.get(campo["nombre"]),
+                    valores_tipados,
+                    contexto,
+                )
                 if mensaje:
-                    hallazgos.append(dict(codigo=regla["tipo_regla"], severidad=regla["severidad"],
-                                          campo_id=campo["id"], regla_id=regla["id"], fila=nro,
-                                          campo=campo["titulo_esperado"],
-                                          valor=norm(valores_tipados.get(campo["nombre"])),
-                                          detalle=mensaje))
+                    hallazgos.append(
+                        dict(
+                            codigo=regla["tipo_regla"],
+                            severidad=regla["severidad"],
+                            campo_id=campo["id"],
+                            regla_id=regla["id"],
+                            fila=nro,
+                            campo=campo["titulo_esperado"],
+                            columna=get_column_letter(campo["orden"]),
+                            valor=norm(valores_tipados.get(campo["nombre"])),
+                            detalle=mensaje,
+                        )
+                    )
                     if regla["severidad"] == "BLOQUEANTE":
                         errores_fila += 1
 
@@ -451,46 +587,93 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
 
         estado = "CON_ERROR" if errores_fila else "VALIDA"
         contenido = "|".join(norm(valores_crudos.get(c["nombre"])) for c in campos)
-        filas_crudas.append((importacion_id, nro, estado,
-                             hashlib.sha1(contenido.encode("utf-8")).hexdigest(),
-                             *[norm(valores_crudos.get(c["nombre"])) or None for c in campos]))
+        filas_crudas.append(
+            (
+                importacion_id,
+                nro,
+                estado,
+                hashlib.sha1(contenido.encode("utf-8")).hexdigest(),
+                *[norm(valores_crudos.get(c["nombre"])) or None for c in campos],
+            )
+        )
         if not errores_fila:
-            filas_tipadas.append((importacion_id, nro, *[valores_tipados.get(c["nombre"]) for c in campos]))
+            filas_tipadas.append(
+                (
+                    importacion_id,
+                    nro,
+                    *[valores_tipados.get(c["nombre"]) for c in campos],
+                )
+            )
 
     wb.close()
 
     for f in vacias_intercaladas:
-        hallazgos.append(dict(codigo="FILA_VACIA_INTERCALADA", severidad="BLOQUEANTE",
-                              campo_id=None, regla_id=None, fila=f, campo=None, valor=None,
-                              detalle="Hay una fila vacía en el medio de los datos. "
-                                      "El requerimiento pide corregirlo antes de importar."))
+        hallazgos.append(
+            dict(
+                codigo="FILA_VACIA_INTERCALADA",
+                severidad="BLOQUEANTE",
+                campo_id=None,
+                regla_id=None,
+                fila=f,
+                campo=None,
+                valor=None,
+                detalle="Hay una fila vacía en el medio de los datos. "
+                "El requerimiento pide corregirlo antes de importar.",
+            )
+        )
 
-    # --- staging ---
+    # --- incorporación ---
+    # Importación restrictiva: con un solo bloqueante no entra ninguna fila.
+    # Por eso hay una sola tabla receptora y no dos: todo lo que se incorpora
+    # pudo convertirse a su tipo. El valor que provocó cada incumplimiento queda
+    # en runac_c2_reglas_incumplidas.
     cols = ", ".join(f"`{c['nombre']}`" for c in campos)
-    if filas_crudas:
-        marcas = ", ".join(["%s"] * (4 + len(campos)))
-        cur.executemany(
-            f'INSERT INTO `{hoja["tabla_cruda"]}` (importacion_id, numero_fila, estado, hash_contenido, {cols}) '
-            f"VALUES ({marcas})", filas_crudas)
-
     bloqueantes = sum(1 for h in hallazgos if h["severidad"] == "BLOQUEANTE")
-    # Atomicidad por archivo: con un solo bloqueante, no se normaliza nada.
     if filas_tipadas and bloqueantes == 0:
-        marcas = ", ".join(["%s"] * (2 + len(campos)))
+        con_adv = {h["fila"] for h in hallazgos if h["severidad"] == "ADVERTENCIA"}
+        marcas = ", ".join(["%s"] * (4 + len(campos)))
+        filas = [
+            (
+                imp,
+                nro,
+                "CON_ADVERTENCIA" if nro in con_adv else "VALIDA",
+                hashlib.sha1(
+                    "|".join("" if v is None else str(v) for v in resto).encode("utf-8")
+                ).hexdigest(),
+                *resto,
+            )
+            for (imp, nro, *resto) in filas_tipadas
+        ]
         cur.executemany(
-            f'INSERT INTO `{hoja["tabla_tipada"]}` (importacion_id, numero_fila, {cols}) VALUES ({marcas})',
-            filas_tipadas)
+            f'INSERT INTO `{hoja["tabla"]}` (importacion_id, numero_fila, estado, hash_contenido, {cols}) '
+            f"VALUES ({marcas})",
+            filas,
+        )
 
-    return {"hoja": hoja["nombre_esperado"], "total": total, "con_error": con_error,
-            "hallazgos": hallazgos, "bloqueantes": bloqueantes,
-            "advertencias": sum(1 for h in hallazgos if h["severidad"] == "ADVERTENCIA")}
+    return {
+        "hoja": hoja["nombre_esperado"],
+        "total": total,
+        "con_error": con_error,
+        "hallazgos": hallazgos,
+        "bloqueantes": bloqueantes,
+        "advertencias": sum(1 for h in hallazgos if h["severidad"] == "ADVERTENCIA"),
+    }
 
 
 class _Opciones:
-    """Los mismos datos que trae la línea de comandos, para poder llamar a la
-    importación desde otro lado (por ejemplo, desde una vista web)."""
+    """Los mismos datos que trae la linea de comandos, para poder llamar a la
+    importacion desde otro lado (por ejemplo, desde una vista web)."""
 
-    def __init__(self, carpeta, jurisdiccion, periodo, usuario, informe, asignacion=None, silencioso=False):
+    def __init__(
+        self,
+        carpeta,
+        jurisdiccion,
+        periodo,
+        usuario,
+        informe,
+        asignacion=None,
+        silencioso=False,
+    ):
         self.carpeta = carpeta
         self.jurisdiccion = jurisdiccion
         self.periodo = periodo
@@ -500,11 +683,20 @@ class _Opciones:
         self.silencioso = silencioso
 
 
-def procesar_carpeta(carpeta, jurisdiccion, periodo, usuario="prototipo",
-                     informe="/trabajo/capa1/informes", asignacion=None,
-                     conexion=None, silencioso=True):
+def procesar_carpeta(
+    carpeta,
+    jurisdiccion,
+    periodo,
+    usuario="prototipo",
+    informe="/trabajo/capa1/informes",
+    asignacion=None,
+    conexion=None,
+    silencioso=True,
+):
     """Importa una carpeta y devuelve el resumen. Es lo que usa el prototipo."""
-    args = _Opciones(carpeta, jurisdiccion, periodo, usuario, informe, asignacion, silencioso)
+    args = _Opciones(
+        carpeta, jurisdiccion, periodo, usuario, informe, asignacion, silencioso
+    )
     return _ejecutar(args, conexion or CONEXION)
 
 
@@ -523,6 +715,7 @@ def main():
 
 def _ejecutar(args, conexion):
     imprimir = (lambda *a, **k: None) if getattr(args, "silencioso", False) else print
+
     cn = mysql.connector.connect(**conexion)
     cur = cn.cursor(dictionary=True)
     archivos = leer_configuracion(cur, args.periodo)
@@ -531,12 +724,36 @@ def _ejecutar(args, conexion):
     imprimir(f"Jurisdicción: {args.jurisdiccion} · Período: {args.periodo}\n")
 
     reconocidos, sin_reconocer, faltantes, ambiguos = reconocer(args.carpeta, archivos)
+
+    if getattr(args, "asignacion", None):
+        por_codigo = {a["codigo"]: a for a in archivos}
+        forzados = []
+        for nombre, codigo in args.asignacion.items():
+            definicion = por_codigo.get(codigo)
+            ruta = os.path.join(args.carpeta, nombre)
+            if not definicion or not os.path.exists(ruta):
+                continue
+            forzados.append({"archivo": definicion, "nombre": nombre, "ruta": ruta})
+            if nombre in sin_reconocer:
+                sin_reconocer.remove(nombre)
+        if forzados:
+            codigos = {f["archivo"]["codigo"] for f in forzados}
+            nombres = {f["nombre"] for f in forzados}
+            reconocidos = forzados + [
+                r
+                for r in reconocidos
+                if r["archivo"]["codigo"] not in codigos and r["nombre"] not in nombres
+            ]
+            faltantes = [a for a in faltantes if a["codigo"] not in codigos]
+            ambiguos = []
     imprimir("== Reconocimiento ==")
     for r in sorted(reconocidos, key=lambda x: x["archivo"]["orden_importacion"]):
         imprimir(f'   OK   {r["nombre"][:52]:54} -> {r["archivo"]["codigo"]}')
     for am in ambiguos:
-        imprimir(f'   !!   {am["codigo"]}: hay {len(am["candidatos"])} archivos que podrían serlo, '
-              f"hay que elegir uno")
+        imprimir(
+            f'   !!   {am["codigo"]}: hay {len(am["candidatos"])} archivos que podrían serlo, '
+            f"hay que elegir uno"
+        )
         for c in am["candidatos"]:
             imprimir(f"          · {c}")
     for f in sin_reconocer:
@@ -555,11 +772,34 @@ def _ejecutar(args, conexion):
     if not fila:
         raise SystemExit(f"No existe el período {args.periodo}.")
     periodo_id = fila[0]
-    cur2.execute("""INSERT INTO runac_c2_presentacion (periodo_id, jurisdiccion, version, estado)
-                    VALUES (%s, %s, 1, 'BORRADOR')
-                    ON DUPLICATE KEY UPDATE estado = 'BORRADOR'""", (periodo_id, args.jurisdiccion))
-    cur2.execute("""SELECT id FROM runac_c2_presentacion
-                    WHERE periodo_id=%s AND jurisdiccion=%s AND version=1""", (periodo_id, args.jurisdiccion))
+
+    # La jurisdicción es una entidad: si no existe, se da de alta.
+    cur2.execute(
+        "SELECT id FROM runac_c2_jurisdiccion WHERE codigo=%s OR nombre=%s",
+        (args.jurisdiccion.upper(), args.jurisdiccion),
+    )
+    fila = cur2.fetchone()
+    if fila:
+        jurisdiccion_id = fila[0]
+    else:
+        cur2.execute(
+            """INSERT INTO runac_c2_jurisdiccion (codigo, nombre, modalidad, activa)
+                        VALUES (%s, %s, 'PRESENTACION_PERIODICA', 1)""",
+            (args.jurisdiccion.upper()[:20], args.jurisdiccion),
+        )
+        jurisdiccion_id = cur2.lastrowid
+
+    cur2.execute(
+        """INSERT INTO runac_c2_presentacion (periodo_id, jurisdiccion_id, version, estado)
+                    VALUES (%s, %s, 1, 'EN_CARGA')
+                    ON DUPLICATE KEY UPDATE estado = 'EN_CARGA'""",
+        (periodo_id, jurisdiccion_id),
+    )
+    cur2.execute(
+        """SELECT id FROM runac_c2_presentacion
+                    WHERE periodo_id=%s AND jurisdiccion_id=%s AND version=1""",
+        (periodo_id, jurisdiccion_id),
+    )
     presentacion_id = cur2.fetchone()[0]
 
     resumen_general = []
@@ -570,37 +810,63 @@ def _ejecutar(args, conexion):
         with open(r["ruta"], "rb") as fh:
             sha = hashlib.sha1(fh.read()).hexdigest()
 
-        cur2.execute("""INSERT INTO runac_c2_importacion
-            (presentacion_id, estructura_id, nombre_archivo, sha1, bytes, estado, usuario)
-            VALUES (%s, %s, %s, %s, %s, 'VALIDANDO_ESTRUCTURA', %s)""",
-                     (presentacion_id, a["hojas"][0]["estructura_id"] if a["hojas"] else None,
-                      r["nombre"], sha, os.path.getsize(r["ruta"]), args.usuario))
+        cur2.execute(
+            """INSERT INTO runac_c2_importacion
+            (presentacion_id, archivo_id, archivo_version_id, nombre_archivo, sha1, bytes,
+             ruta_archivo, estado, usuario)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'FALLIDA', %s)""",
+            (
+                presentacion_id,
+                a["archivo_id"],
+                a["version_id"],
+                r["nombre"],
+                sha,
+                os.path.getsize(r["ruta"]),
+                r["ruta"],
+                args.usuario,
+            ),
+        )
         importacion_id = cur2.lastrowid
 
+        # Nace FALLIDA y pasa a VALIDA sólo si supera todo: si el proceso se
+        # interrumpe, queda registrada como fallida y no como válida a medias.
         problemas = validar_estructura(r["ruta"], a)
         if problemas:
-            cur2.execute("""UPDATE runac_c2_importacion SET estado='ESTRUCTURA_INVALIDA',
-                            detalle_error=%s, terminada_el=NOW() WHERE id=%s""",
-                         ("\n".join(problemas), importacion_id))
+            # Los errores de estructura no van fila por fila: son del archivo
+            # entero, y se informan todos juntos para corregir una sola vez.
             for pr in problemas[:200]:
-                cur2.execute("""INSERT INTO runac_c2_hallazgo
-                    (importacion_id, codigo, severidad, descripcion) VALUES (%s,'ESTRUCTURA','BLOQUEANTE',%s)""",
-                             (importacion_id, pr))
+                cur2.execute(
+                    """INSERT INTO runac_c2_errores_de_importacion
+                    (importacion_id, tipo, descripcion) VALUES (%s,'COLUMNA_FALTANTE',%s)""",
+                    (importacion_id, pr),
+                )
+            cur2.execute(
+                "UPDATE runac_c2_importacion SET terminada_el=NOW() WHERE id=%s",
+                (importacion_id,),
+            )
             cn.commit()
-            imprimir(f'   {a["codigo"]:12} ESTRUCTURA INVÁLIDA — {len(problemas)} problemas')
+            imprimir(
+                f'   {a["codigo"]:12} ESTRUCTURA INVÁLIDA — {len(problemas)} problemas'
+            )
             for pr in problemas[:4]:
                 imprimir(f"                  · {pr}")
-            resumen_general.append({"codigo": a["codigo"], "estado": "ESTRUCTURA_INVALIDA",
-                                    "problemas": problemas, "hojas": []})
+            resumen_general.append(
+                {
+                    "codigo": a["codigo"],
+                    "estado": "ESTRUCTURA_INVALIDA",
+                    "problemas": problemas,
+                    "hojas": [],
+                }
+            )
             continue
 
-        cur2.execute("UPDATE runac_c2_importacion SET estado='VALIDANDO_CONTENIDO' WHERE id=%s",
-                     (importacion_id,))
         hojas_resumen = []
         for hoja in a["hojas"]:
-            if not hoja["tabla_cruda"]:
+            if not hoja.get("tabla"):
                 continue
-            hojas_resumen.append(procesar_hoja(cur2, r["ruta"], hoja, importacion_id, {}))
+            hojas_resumen.append(
+                procesar_hoja(cur2, r["ruta"], hoja, importacion_id, {})
+            )
 
         total = sum(h["total"] for h in hojas_resumen)
         con_error = sum(h["con_error"] for h in hojas_resumen)
@@ -609,32 +875,88 @@ def _ejecutar(args, conexion):
 
         for h in hojas_resumen:
             for hg in h["hallazgos"]:
-                cur2.execute("""INSERT INTO runac_c2_hallazgo
+                if hg.get("campo_id") is None:
+                    # Sin campo no hay dónde señalar: es un problema del archivo
+                    # entero y va a la otra tabla. Un incumplimiento CON campo y
+                    # SIN regla es una validación intrínseca del campo (tipo,
+                    # obligatoriedad, catálogo, longitud) y sí corresponde acá.
+                    tipo = (
+                        "FILA_VACIA_INTERCALADA"
+                        if hg["codigo"] == "FILA_VACIA_INTERCALADA"
+                        else "ARCHIVO_ILEGIBLE"
+                    )
+                    cur2.execute(
+                        """INSERT INTO runac_c2_errores_de_importacion
+                        (importacion_id, tipo, hoja, numero_fila, descripcion)
+                        VALUES (%s,%s,%s,%s,%s)""",
+                        (importacion_id, tipo, h["hoja"], hg["fila"], hg["detalle"]),
+                    )
+                    continue
+                cur2.execute(
+                    """INSERT INTO runac_c2_reglas_incumplidas
                     (importacion_id, campo_id, regla_id, codigo, severidad, nombre_hoja,
-                     numero_fila, nombre_campo, valor_encontrado, descripcion)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                             (importacion_id, hg["campo_id"], hg["regla_id"], hg["codigo"],
-                              hg["severidad"], h["hoja"], hg["fila"], hg["campo"],
-                              (hg["valor"] or "")[:1000], hg["detalle"]))
+                     numero_fila, columna, nombre_campo, valor_encontrado, descripcion)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    (
+                        importacion_id,
+                        hg["campo_id"],
+                        hg["regla_id"],
+                        hg["codigo"],
+                        hg["severidad"],
+                        h["hoja"],
+                        hg["fila"],
+                        hg.get("columna"),
+                        hg["campo"],
+                        (hg["valor"] or "")[:1000],
+                        hg["detalle"],
+                    ),
+                )
 
-        estado = "CON_ERRORES" if bloqueantes else ("REQUIERE_REVISION" if advertencias else "VALIDADO")
+        # Importación restrictiva: con un solo bloqueante el archivo no entra.
+        estado = "FALLIDA" if bloqueantes else "VALIDA"
+        incorporadas = 0 if bloqueantes else total
         ms = int((datetime.now() - inicio).total_seconds() * 1000)
-        cur2.execute("""UPDATE runac_c2_importacion SET estado=%s, filas_totales=%s, filas_validas=%s,
-                        filas_con_error=%s, bloqueantes=%s, advertencias=%s, terminada_el=NOW(),
+        cur2.execute(
+            """UPDATE runac_c2_importacion SET estado=%s, filas_leidas=%s, filas_incorporadas=%s,
+                        bloqueantes=%s, advertencias=%s, terminada_el=NOW(),
                         duracion_ms=%s WHERE id=%s""",
-                     (estado, total, total - con_error, con_error, bloqueantes, advertencias, ms, importacion_id))
+            (
+                estado,
+                total,
+                incorporadas,
+                bloqueantes,
+                advertencias,
+                ms,
+                importacion_id,
+            ),
+        )
         cn.commit()
 
-        marca = {"CON_ERRORES": "CON ERRORES", "REQUIERE_REVISION": "CON ADVERTENCIAS", "VALIDADO": "VALIDADO"}[estado]
-        imprimir(f'   {a["codigo"]:12} {marca:18} {total:5} filas · {total - con_error:5} sin problemas · '
-              f"{bloqueantes:4} bloqueantes · {advertencias:4} advertencias · {ms} ms")
-        resumen_general.append({"codigo": a["codigo"], "estado": estado, "total": total,
-                                "validas": total - con_error, "bloqueantes": bloqueantes,
-                                "advertencias": advertencias, "hojas": hojas_resumen, "problemas": []})
+        marca = (
+            "NO IMPORTADO"
+            if bloqueantes
+            else ("CON ADVERTENCIAS" if advertencias else "IMPORTADO")
+        )
+        imprimir(
+            f'   {a["codigo"]:12} {marca:18} {total:5} filas · {total - con_error:5} sin problemas · '
+            f"{bloqueantes:4} bloqueantes · {advertencias:4} advertencias · {ms} ms"
+        )
+        resumen_general.append(
+            {
+                "codigo": a["codigo"],
+                "estado": estado,
+                "total": total,
+                "validas": total - con_error,
+                "bloqueantes": bloqueantes,
+                "advertencias": advertencias,
+                "hojas": hojas_resumen,
+                "problemas": [],
+            }
+        )
 
     # --- informe ---
-    L = []
-    w = L.append
+    lineas = []
+    w = lineas.append
     w(f"# Resultado de la importación — {args.jurisdiccion}, período {args.periodo}")
     w("")
     w(f'**Fecha:** {datetime.now().strftime("%d/%m/%Y %H:%M")}  ')
@@ -644,10 +966,14 @@ def _ejecutar(args, conexion):
     w("|---|---|---|---|---|---|")
     for r in resumen_general:
         if r["estado"] == "ESTRUCTURA_INVALIDA":
-            w(f'| {r["codigo"]} | **Estructura inválida** | — | — | {len(r["problemas"])} | — |')
+            w(
+                f'| {r["codigo"]} | **Estructura inválida** | — | — | {len(r["problemas"])} | — |'
+            )
         else:
-            w(f'| {r["codigo"]} | {r["estado"]} | {r["total"]} | {r["validas"]} | '
-              f'{r["bloqueantes"]} | {r["advertencias"]} |')
+            w(
+                f'| {r["codigo"]} | {r["estado"]} | {r["total"]} | {r["validas"]} | '
+                f'{r["bloqueantes"]} | {r["advertencias"]} |'
+            )
     w("")
     if sin_reconocer or faltantes:
         w("## Archivos")
@@ -664,7 +990,9 @@ def _ejecutar(args, conexion):
         w(f'## {r["codigo"]}')
         w("")
         if r["problemas"]:
-            w("**La estructura del archivo no corresponde. No se procesó ninguna fila.**")
+            w(
+                "**La estructura del archivo no corresponde. No se procesó ninguna fila.**"
+            )
             w("")
             for pr in r["problemas"]:
                 w(f"- {pr}")
@@ -686,29 +1014,32 @@ def _ejecutar(args, conexion):
             w("| Fila | Campo | Severidad | Valor | Qué pasa |")
             w("|---|---|---|---|---|")
             for hg in h["hallazgos"][:300]:
-                w(f'| {hg["fila"]} | {hg["campo"] or "—"} | {hg["severidad"]} | '
-                  f'{(hg["valor"] or "—")[:40]} | {hg["detalle"]} |')
+                w(
+                    f'| {hg["fila"]} | {hg["campo"] or "—"} | {hg["severidad"]} | '
+                    f'{(hg["valor"] or "—")[:40]} | {hg["detalle"]} |'
+                )
             if len(h["hallazgos"]) > 300:
                 w("")
                 w(f'*(se muestran 300 de {len(h["hallazgos"])})*')
             w("")
 
     os.makedirs(args.informe, exist_ok=True)
-    destino = os.path.join(args.informe, f"importacion_{args.jurisdiccion}_{args.periodo}.md")
+    destino = os.path.join(
+        args.informe, f"importacion_{args.jurisdiccion}_{args.periodo}.md"
+    )
     with open(destino, "w", encoding="utf-8") as fh:
-        fh.write("\n".join(L))
+        fh.write("\n".join(lineas))
     imprimir(f"\ninforme: {destino}")
 
     cur.close()
     cur2.close()
     cn.close()
+
     return {
-        "reconocidos": [{"codigo": r["archivo"]["codigo"], "nombre": r["nombre"]} for r in reconocidos],
+        "resumen": resumen_general,
+        "presentacion_id": presentacion_id,
         "sin_reconocer": sin_reconocer,
         "faltantes": [a["codigo"] for a in faltantes],
-        "ambiguos": ambiguos,
-        "archivos": resumen_general,
-        "presentacion_id": presentacion_id,
         "informe": destino,
     }
 

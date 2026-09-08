@@ -36,7 +36,9 @@ def cargar_mapas(base: str) -> dict[str, dict]:
 
 
 def main():
-    p = argparse.ArgumentParser(description="Compara los catálogos entre archivos de RUNAC.")
+    p = argparse.ArgumentParser(
+        description="Compara los catálogos entre archivos de RUNAC."
+    )
     p.add_argument("base")
     args = p.parse_args()
 
@@ -49,10 +51,16 @@ def main():
     por_huella: dict[str, dict] = {}
     for codigo, m in mapas.items():
         for cat in m["catalogos"]:
-            reg = por_huella.setdefault(cat["huella"], {
-                "huella": cat["huella"], "valores": cat["valores"],
-                "cantidad": cat["cantidad"], "nombres": set(), "archivos": defaultdict(int),
-            })
+            reg = por_huella.setdefault(
+                cat["huella"],
+                {
+                    "huella": cat["huella"],
+                    "valores": cat["valores"],
+                    "cantidad": cat["cantidad"],
+                    "nombres": set(),
+                    "archivos": defaultdict(int),
+                },
+            )
             reg["nombres"].update(cat["nombres_vistos"])
             reg["archivos"][codigo] += len(cat["apariciones"])
 
@@ -65,10 +73,12 @@ def main():
     for c in por_huella.values():
         for n in c["nombres"]:
             por_nombre[clave(n)].append(c)
-    homonimos = {n: cs for n, cs in por_nombre.items() if len({c["huella"] for c in cs}) > 1}
+    homonimos = {
+        n: cs for n, cs in por_nombre.items() if len({c["huella"] for c in cs}) > 1
+    }
 
-    L: list[str] = []
-    w = L.append
+    lineas: list[str] = []
+    w = lineas.append
 
     w("# Catálogos comparados entre archivos")
     w("")
@@ -101,8 +111,10 @@ def main():
         w("|---|---|---|---|")
         for c in compartidos:
             nombres = " / ".join(sorted(c["nombres"])[:3])
-            arch = ", ".join(f'{a} ({n})' for a, n in sorted(c["archivos"].items()))
-            w(f'| {nombres} | {c["cantidad"]} | {arch} | {sum(c["archivos"].values())} |')
+            arch = ", ".join(f"{a} ({n})" for a, n in sorted(c["archivos"].items()))
+            w(
+                f'| {nombres} | {c["cantidad"]} | {arch} | {sum(c["archivos"].values())} |'
+            )
         w("")
         w("El número entre paréntesis es cuántas columnas de ese archivo lo usan.")
     w("")
@@ -114,7 +126,9 @@ def main():
         w("No hay nombres reutilizados para catálogos distintos.")
     else:
         w("**Acá hay que decidir.** Un mismo nombre identifica listas con contenidos")
-        w("diferentes. O son la misma lista que quedó desactualizada en algún archivo, o")
+        w(
+            "diferentes. O son la misma lista que quedó desactualizada en algún archivo, o"
+        )
         w("son dos listas legítimamente distintas que deberían llamarse distinto.")
         w("")
         for nombre, cs in sorted(homonimos.items()):
@@ -136,7 +150,9 @@ def main():
                 faltan = [v for v in base["valores"] if clave(v) not in sc]
                 sobran = [v for v in c["valores"] if clave(v) not in sb]
                 if faltan:
-                    w(f'   - le faltan respecto de la más completa: {", ".join(f"`{v}`" for v in faltan)}')
+                    w(
+                        f'   - le faltan respecto de la más completa: {", ".join(f"`{v}`" for v in faltan)}'
+                    )
                 if sobran:
                     w(f'   - tiene de más: {", ".join(f"`{v}`" for v in sobran)}')
             w("")
@@ -148,7 +164,7 @@ def main():
     parecidos = []
     lista = list(por_huella.values())
     for i, a in enumerate(lista):
-        for b in lista[i + 1:]:
+        for b in lista[i + 1 :]:
             if set(a["archivos"]) == set(b["archivos"]) and len(a["archivos"]) == 1:
                 continue  # los del mismo archivo ya se reportan en su propio informe
             sa = {clave(v) for v in a["valores"]}
@@ -162,15 +178,19 @@ def main():
     if not parecidos:
         w("No se encontraron listas parecidas entre archivos distintos.")
     else:
-        w("Comparten la mayoría de sus valores pero no todos. Vale revisarlas: puede ser")
+        w(
+            "Comparten la mayoría de sus valores pero no todos. Vale revisarlas: puede ser"
+        )
         w("que se hayan actualizado en un archivo y no en el otro.")
         w("")
         for solape, a, b in parecidos[:25]:
             na = sorted(a["nombres"])[0] if a["nombres"] else a["huella"]
             nb = sorted(b["nombres"])[0] if b["nombres"] else b["huella"]
-            w(f'- **{na}** ({", ".join(sorted(a["archivos"]))}, {a["cantidad"]} valores) '
-              f'y **{nb}** ({", ".join(sorted(b["archivos"]))}, {b["cantidad"]} valores) '
-              f"— coinciden en el {round(solape * 100)}%")
+            w(
+                f'- **{na}** ({", ".join(sorted(a["archivos"]))}, {a["cantidad"]} valores) '
+                f'y **{nb}** ({", ".join(sorted(b["archivos"]))}, {b["cantidad"]} valores) '
+                f"— coinciden en el {round(solape * 100)}%"
+            )
             sa = {clave(v) for v in a["valores"]}
             sb = {clave(v) for v in b["valores"]}
             solo_a = [v for v in a["valores"] if clave(v) not in sb]
@@ -200,7 +220,7 @@ def main():
     destino = os.path.join(args.base, "informes", "catalogos-comparados.md")
     os.makedirs(os.path.dirname(destino), exist_ok=True)
     with open(destino, "w", encoding="utf-8") as f:
-        f.write("\n".join(L))
+        f.write("\n".join(lineas))
 
     print(f"informe: {destino}")
     print(f"  catalogos distintos:  {len(por_huella)}")

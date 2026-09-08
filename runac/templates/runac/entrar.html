@@ -2,39 +2,51 @@
 {% block titulo %}Entrar{% endblock %}
 
 {% block contenido %}
-<div class="row justify-content-center mt-4">
-  <div class="col-md-5">
-    <div class="card">
-      <div class="card-header">Entrar a RUNAC</div>
-      <div class="card-body">
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">Entrar a RUNAC</div>
+                <div class="card-body">
 
-        {% if form.errors %}
-          <div class="alert alert-danger py-2">Usuario o contraseña incorrectos.</div>
-        {% endif %}
+                    {% if form.errors %}<div class="alert alert-danger py-2">Usuario o contraseña incorrectos.</div>{% endif %}
 
-        <form method="post">
-          {% csrf_token %}
-          <div class="mb-3">
-            <label class="form-label">Usuario</label>
-            <input type="text" name="username" class="form-control" autofocus required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Contraseña</label>
-            <input type="password" name="password" class="form-control" required>
-          </div>
-          <button class="btn btn-primary w-100">Entrar</button>
-        </form>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Usuario</label>
+                            <input type="text" name="username" class="form-control" autofocus required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Contraseña</label>
+                            <input type="password" name="password" class="form-control" required />
+                        </div>
+                        <button class="btn btn-primary w-100">Entrar</button>
+                    </form>
 
-        <hr class="my-4">
-        <p class="ayuda mb-1"><strong>Usuarios de prueba</strong> — la contraseña es <span class="mono">runac</span></p>
-        <table class="table table-sm tabla-compacta mb-0">
-          <tr><td class="mono">operador</td><td class="ayuda">Operador provincial · Chaco</td></tr>
-          <tr><td class="mono">responsable</td><td class="ayuda">Responsable provincial · Chaco</td></tr>
-          <tr><td class="mono">revisor</td><td class="ayuda">Revisor técnico nacional</td></tr>
-          <tr><td class="mono">admin</td><td class="ayuda">Administrador nacional</td></tr>
-        </table>
-      </div>
+                    <hr class="my-4" />
+                    <p class="ayuda mb-1">
+                        <strong>Usuarios de prueba</strong> — la contraseña es <span class="mono">runac</span>
+                    </p>
+                    <table class="table table-sm tabla-compacta mb-0 tabla-ficha">
+                        <tr>
+                            <td class="mono">operador</td>
+                            <td class="ayuda">Operador provincial · Chaco</td>
+                        </tr>
+                        <tr>
+                            <td class="mono">responsable</td>
+                            <td class="ayuda">Responsable provincial · Chaco</td>
+                        </tr>
+                        <tr>
+                            <td class="mono">revisor</td>
+                            <td class="ayuda">Revisor técnico nacional</td>
+                        </tr>
+                        <tr>
+                            <td class="mono">admin</td>
+                            <td class="ayuda">Administrador nacional</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
 {% endblock %}

@@ -1,112 +1,206 @@
 {% extends "runac/base.html" %}
 {% block titulo %}Detalle{% endblock %}
-{% block nav_resultado %}activo{% endblock %}
 
 {% block contenido %}
 
-<div class="mb-3">
-  <a href="{% url 'runac:resultado' %}" class="ayuda text-decoration-none">
-    <i class="bi bi-arrow-left"></i> Volver al resultado
-  </a>
-  <h5 class="mt-2 mb-0">
-    {{ importacion.archivo_codigo }} · {{ importacion.nombre_archivo }}
-    <span class="estado e-{{ importacion.estado }} ms-2">{{ importacion.estado }}</span>
-  </h5>
-  <div class="ayuda">
-    {{ importacion.filas_totales }} filas ·
-    {{ importacion.filas_validas }} sin problemas ·
-    {{ importacion.bloqueantes }} bloqueantes ·
-    {{ importacion.advertencias }} advertencias ·
-    {{ importacion.duracion_ms }} ms
-  </div>
-</div>
+    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <a href="{% url 'runac:resultado' %}" class="ayuda text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Volver al resultado
+        </a>
+        <h5 class="mt-2 mb-0">
+            {{ importacion.archivo_codigo }} · {{ importacion.nombre_archivo }}
+            <span class="estado e-{{ importacion.estado }} ms-2">{{ importacion.estado }}</span>
+        </h5>
+        <div class="ayuda">
+            {{ importacion.filas_leidas }} filas ·
+            {{ importacion.filas_incorporadas }} incorporadas ·
+            {{ importacion.bloqueantes }} bloqueantes ·
+            {{ importacion.advertencias }} advertencias ·
+            {{ importacion.duracion_ms }} ms
+        </div>
+    </div>
+    {% if importacion.bloqueantes or importacion.advertencias %}
+        <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+            <a class="btn btn-primary btn-sm"
+               href="{% url 'runac:archivo_marcado' importacion.id %}">
+                <i class="bi bi-file-earmark-excel"></i> Descargar mi archivo con los errores marcados
+            </a>
+            <a class="btn btn-outline-success btn-sm"
+               href="{% url 'runac:edicion' importacion.id %}">
+                <i class="bi bi-pencil-square"></i> Corregir datos en el sistema
+            </a>
+            <a class="btn btn-outline-primary btn-sm"
+               href="{% url 'runac:planilla_errores' importacion.id %}">
+                <i class="bi bi-list-check"></i> Descargar la lista de errores
+            </a>
+            <span class="ayuda">
+                El primero es el mismo Excel que subiste, con las celdas señaladas y la explicación
+                en cada una. Es el que conviene para corregir.
+            </span>
+        </div>
+    {% endif %}
 
-{% if importacion.detalle_error %}
-  <div class="alert alert-danger">
-    <strong>La estructura del archivo no corresponde. No se procesó ninguna fila.</strong>
-    <pre class="mb-0 mt-2 mono" style="white-space:pre-wrap">{{ importacion.detalle_error }}</pre>
-    <hr>
-    <p class="mb-0 ayuda">
-      Suele pasar cuando se usa una plantilla de un período anterior, o cuando se agregaron
-      o renombraron columnas.
-    </p>
-    <a class="btn btn-primary btn-sm mt-2" href="{% url 'runac:plantillas' %}">
-      Descargar la plantilla vigente
-    </a>
-  </div>
-{% endif %}
+    {% if importacion.estado == 'FALLIDA' %}
+        <div class="alert alert-danger py-2">
+            <i class="bi bi-x-octagon-fill"></i>
+            <strong>El archivo no se importó.</strong>
+            La importación es restrictiva: no se incorporó ninguna de sus filas.
+        </div>
+    {% endif %}
 
-{% if resumen %}
-<div class="card mb-3">
-  <div class="card-header">Problemas por tipo</div>
-  <div class="card-body p-0">
-    <table class="table table-sm tabla-compacta mb-0">
-      <tbody>
-      {% for r in resumen %}
-        <tr>
-          <td style="width:5rem" class="text-end fw-semibold sev-{{ r.severidad }}">{{ r.casos }}</td>
-          <td style="width:11rem"><span class="mono ayuda">{{ r.codigo }}</span></td>
-          <td>{{ r.ejemplo }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endif %}
+    {% comment %} Los problemas del ARCHIVO son de otra naturaleza que las reglas incumplidas:
+   no tienen un campo al que señalar, y se informan todos juntos para poder
+    corregir una sola vez. {% endcomment %}
+    {% if errores_archivo %}
+        <div class="card mb-3 border-danger">
+            <div class="card-header text-danger">
+                Problemas del archivo
+                <span class="ayuda fw-normal ms-2">No corresponden a un campo: impiden interpretar el archivo o su estructura.</span>
+            </div>
+            <div class="card-body p-0 tabla-scroll">
+                <table class="table table-sm tabla-compacta tabla-fija mb-0 tabla-ficha">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Hoja</th>
+                            <th class="text-end">Fila</th>
+                            <th>Se esperaba</th>
+                            <th>Se encontró</th>
+                            <th>Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in errores_archivo %}
+                            <tr>
+                                <td class="mono">{{ e.tipo }}</td>
+                                <td data-etiqueta="Hoja">{{ e.hoja|default:"—" }}</td>
+                                <td class="text-end" data-etiqueta="Fila">{{ e.numero_fila|default:"—" }}</td>
+                                <td class="mono" data-etiqueta="Se esperaba">{{ e.esperado|default:"—" }}</td>
+                                <td class="mono" data-etiqueta="Se encontró">{{ e.encontrado|default:"—" }}</td>
+                                <td data-etiqueta="Detalle">{{ e.descripcion }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-white">
+                <a class="btn btn-primary btn-sm" href="{% url 'runac:plantillas' %}">Descargar la plantilla vigente</a>
+                <span class="ayuda ms-2">
+                    Suele pasar cuando se usa una plantilla de un período anterior, o cuando se
+                    agregaron o renombraron columnas.
+                </span>
+            </div>
+        </div>
+    {% endif %}
 
-<form method="get" class="row g-2 align-items-end mb-3">
-  <div class="col-auto">
-    <label class="form-label mb-1 ayuda">Severidad</label>
-    <select name="severidad" class="form-select form-select-sm" onchange="this.form.submit()">
-      <option value="">Todas</option>
-      <option value="BLOQUEANTE" {% if filtro.severidad == "BLOQUEANTE" %}selected{% endif %}>Bloqueantes</option>
-      <option value="ADVERTENCIA" {% if filtro.severidad == "ADVERTENCIA" %}selected{% endif %}>Advertencias</option>
-    </select>
-  </div>
-  {% if hojas %}
-  <div class="col-auto">
-    <label class="form-label mb-1 ayuda">Hoja</label>
-    <select name="hoja" class="form-select form-select-sm" onchange="this.form.submit()">
-      <option value="">Todas</option>
-      {% for h in hojas %}<option value="{{ h }}" {% if filtro.hoja == h %}selected{% endif %}>{{ h }}</option>{% endfor %}
-    </select>
-  </div>
-  {% endif %}
-  <div class="col-auto">
-    <label class="form-label mb-1 ayuda">Buscar</label>
-    <input type="text" name="buscar" value="{{ filtro.buscar }}" class="form-control form-control-sm"
-           placeholder="campo o texto del error">
-  </div>
-  <div class="col-auto"><button class="btn btn-sm btn-outline-secondary">Filtrar</button></div>
-</form>
+    {% if resumen %}
+        <div class="card mb-3">
+            <div class="card-header">Reglas incumplidas, por tipo</div>
+            <div class="card-body p-0 tabla-scroll">
+                <table class="table table-sm tabla-compacta tabla-fija mb-0 tabla-ficha">
+                    <tbody>
+                        {% for r in resumen %}
+                            <tr>
+                                <td style="width:5rem" class="text-end fw-semibold sev-{{ r.severidad }}">{{ r.casos }}</td>
+                                <td style="width:11rem">
+                                    <span class="mono ayuda">{{ r.codigo }}</span>
+                                </td>
+                                <td>{{ r.ejemplo }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
 
-<div class="card">
-  <div class="card-header">{{ hallazgos|length }} resultado(s)</div>
-  <div class="card-body p-0">
-    <table class="table table-sm tabla-compacta mb-0">
-      <thead class="table-light">
-        <tr><th>Fila</th><th>Hoja</th><th>Campo</th><th>Sev.</th><th>Valor</th><th>Qué pasa</th></tr>
-      </thead>
-      <tbody>
-      {% for h in hallazgos %}
-        <tr>
-          <td class="fw-semibold">{{ h.numero_fila|default:"—" }}</td>
-          <td class="ayuda">{{ h.nombre_hoja|default:"—" }}</td>
-          <td>{{ h.nombre_campo|default:"—" }}</td>
-          <td class="sev-{{ h.severidad }}">{% if h.severidad == "BLOQUEANTE" %}◆{% else %}▲{% endif %}</td>
-          <td class="mono">{{ h.valor_encontrado|default:"—"|truncatechars:34 }}</td>
-          <td>{{ h.descripcion }}</td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="6" class="text-center ayuda py-4">No hay problemas con esos filtros.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-auto">
+            <label class="form-label mb-1 ayuda">Severidad</label>
+            <select name="severidad"
+                    class="form-select form-select-sm"
+                    onchange="this.form.submit()">
+                <option value="">Todas</option>
+                <option value="BLOQUEANTE"
+                        {% if filtro.severidad == "BLOQUEANTE" %}selected{% endif %}>Bloqueantes</option>
+                <option value="ADVERTENCIA"
+                        {% if filtro.severidad == "ADVERTENCIA" %}selected{% endif %}>Advertencias</option>
+            </select>
+        </div>
+        {% if hojas %}
+            <div class="col-auto">
+                <label class="form-label mb-1 ayuda">Hoja</label>
+                <select name="hoja"
+                        class="form-select form-select-sm"
+                        onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for h in hojas %}
+                        <option value="{{ h }}" {% if filtro.hoja == h %}selected{% endif %}>{{ h }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% endif %}
+        <div class="col-auto">
+            <label class="form-label mb-1 ayuda">Buscar</label>
+            <input type="text"
+                   name="buscar"
+                   value="{{ filtro.buscar }}"
+                   class="form-control form-control-sm"
+                   placeholder="campo o texto del error" />
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-sm btn-outline-secondary">Filtrar</button>
+        </div>
+    </form>
 
-<p class="ayuda mt-3">
-  El número de fila es el del Excel, tal como lo ves al abrirlo.
-</p>
+    {% comment %} El listado completo arranca plegado: primero el resumen, el detalle si se
+    lo pide. Con doscientos errores, abrir directo el detalle no orienta. {% endcomment %}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>{{ hallazgos|length }} resultado(s)</span>
+            <button class="btn btn-sm btn-outline-secondary"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#detalleErrores"
+                    aria-expanded="false">Ver el detalle fila por fila</button>
+        </div>
+        <div class="card-body p-0 collapse" id="detalleErrores">
+            <table class="table table-sm tabla-compacta tabla-fija mb-0 tabla-ficha">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fila</th>
+                        <th>Hoja</th>
+                        <th>Campo</th>
+                        <th>Sev.</th>
+                        <th>Valor</th>
+                        <th>Qué pasa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in hallazgos %}
+                        <tr>
+                            <td class="fw-semibold">{{ h.numero_fila|default:"—" }}</td>
+                            <td class="ayuda" data-etiqueta="Hoja">{{ h.nombre_hoja|default:"—" }}</td>
+                            <td data-etiqueta="Campo">{{ h.nombre_campo|default:"—" }}</td>
+                            <td class="sev-{{ h.severidad }}" data-etiqueta="Sev.">
+                                {% if h.severidad == "BLOQUEANTE" %}
+                                    ◆
+                                {% else %}
+                                    ▲
+                                {% endif %}
+                            </td>
+                            <td class="mono" data-etiqueta="Valor">{{ h.valor_encontrado|default:"—"|truncatechars:34 }}</td>
+                            <td data-etiqueta="Qué pasa">{{ h.descripcion }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center ayuda py-4">No hay problemas con esos filtros.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="ayuda mt-3">El número de fila es el del Excel, tal como lo ves al abrirlo.</p>
 {% endblock %}

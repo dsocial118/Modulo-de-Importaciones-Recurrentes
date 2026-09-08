@@ -37,7 +37,11 @@ def clave(valor) -> str:
     aunque para la computadora sean distintos.
     """
     texto = norm(valor).lower()
-    return "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn")
+    return "".join(
+        c
+        for c in unicodedata.normalize("NFD", texto)
+        if unicodedata.category(c) != "Mn"
+    )
 
 
 def es_placeholder(valor) -> bool:
@@ -92,6 +96,7 @@ def sha1_archivo(ruta) -> str:
 
 # --- formatos de celda ------------------------------------------------------
 
+
 def clase_de_formato(fmt: str | None) -> str:
     """Traduce el formato de celda de Excel a una categoría utilizable.
 
@@ -102,7 +107,11 @@ def clase_de_formato(fmt: str | None) -> str:
         return "general"
     f = re.sub(r"\[[^\]]*\]", "", str(fmt))
     f = re.sub(r'"[^"]*"', "", f)
-    if re.search(r"[dy]", f, re.I) and re.search(r"[dmy]", f, re.I) and not re.fullmatch(r"[hms:.\s]+", f, re.I):
+    if (
+        re.search(r"[dy]", f, re.I)
+        and re.search(r"[dmy]", f, re.I)
+        and not re.fullmatch(r"[hms:.\s]+", f, re.I)
+    ):
         return "fecha"
     if re.search(r"[hs]", f, re.I) and ":" in f:
         return "hora"
@@ -121,5 +130,41 @@ def sql_texto(valor) -> str:
         return "1" if valor else "0"
     if isinstance(valor, (int, float)):
         return str(valor)
-    escapado = str(valor).replace("\\", "\\\\").replace("'", "''").replace("\r\n", "\\n").replace("\n", "\\n")
+    escapado = (
+        str(valor)
+        .replace("\\", "\\\\")
+        .replace("'", "''")
+        .replace("\r\n", "\\n")
+        .replace("\n", "\\n")
+    )
     return f"'{escapado}'"
+
+
+# ---------------------------------------------------------------------------
+# Convención de nombres de las tablas receptoras de la Capa 2.
+#
+# Vive acá porque la usan dos scripts: capa2.py, que crea las tablas, e
+# importar.py, que inserta en ellas. El nombre NO se guarda en la base: se
+# deduce del archivo, la versión de estructura y la hoja.
+# ---------------------------------------------------------------------------
+
+MAX_IDENT = 64  # límite de MySQL para nombres de tabla
+
+
+def abrev(texto: str, largo: int) -> str:
+    return re.sub(r"[^a-z0-9_]", "", str(texto).lower())[:largo]
+
+
+def nombre_tabla_receptora(
+    codigo: str, hoja: str, varias_hojas: bool, version: int
+) -> str:
+    """runac_c2_<archivo>_v<n>[_<hoja>].
+
+    La versión va en el nombre porque cada versión de estructura tiene su propia
+    tabla: los datos de un período conservan la forma que tenían al cargarse.
+    """
+    if varias_hojas:
+        sufijo = f"{abrev(codigo, 12)}_v{version}_{abrev(hoja, 12)}"
+    else:
+        sufijo = f"{abrev(codigo, 20)}_v{version}"
+    return f"runac_c2_{sufijo}"[:MAX_IDENT]

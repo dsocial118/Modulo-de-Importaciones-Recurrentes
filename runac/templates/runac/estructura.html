@@ -1,75 +1,102 @@
 {% extends "runac/base.html" %}
 {% block titulo %}Estructura{% endblock %}
-{% block nav_estructura %}activo{% endblock %}
 
 {% block contenido %}
-<p class="ayuda mb-4">
-  Esto es la <strong>Capa 1</strong>: la descripción de los archivos que se esperan.
-  No son datos de personas, son metadatos. Es lo que el importador lee para saber qué validar.
-</p>
+    <p class="ayuda mb-4">
+        Esto es la <strong>Capa 1</strong>: la descripción de los archivos que se esperan.
+        No son datos de personas, son metadatos. Es lo que el importador lee para saber qué validar.
+    </p>
 
-<div class="card mb-4">
-  <div class="card-header">Archivos definidos</div>
-  <div class="card-body p-0">
-    <table class="table table-sm tabla-compacta align-middle mb-0">
-      <thead class="table-light">
-        <tr><th>Orden</th><th>Archivo</th><th>Hojas</th><th>Campos</th><th>Listas</th><th>Reglas</th><th></th></tr>
-      </thead>
-      <tbody>
-      {% for a in archivos %}
-        <tr>
-          <td class="ayuda">{{ a.orden_importacion }}</td>
-          <td><strong>{{ a.codigo }}</strong><div class="ayuda">{{ a.titulo|truncatechars:64 }}</div></td>
-          <td>{{ a.hojas }}</td><td>{{ a.campos }}</td><td>{{ a.catalogos }}</td><td>{{ a.reglas }}</td>
-          <td class="text-end">
-            <a class="btn btn-outline-secondary btn-sm" href="{% url 'runac:campos' a.codigo %}">Ver campos</a>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+    <div class="card mb-4">
+        <div class="card-header">Archivos definidos</div>
+        <div class="card-body p-0 tabla-scroll">
+            <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
+                <thead class="table-light">
+                    <tr>
+                        <th>Orden</th>
+                        <th>Archivo</th>
+                        <th>Hojas</th>
+                        <th>Campos</th>
+                        <th>Listas</th>
+                        <th>Reglas</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in archivos %}
+                        <tr>
+                            <td class="ayuda">{{ a.orden_importacion }}</td>
+                            <td data-etiqueta="Archivo">
+                                <strong>{{ a.codigo }}</strong>
+                                <div class="ayuda">{{ a.titulo|truncatechars:64 }}</div>
+                            </td>
+                            <td data-etiqueta="Hojas">{{ a.hojas }}</td>
+                            <td data-etiqueta="Campos">{{ a.campos }}</td>
+                            <td data-etiqueta="Listas">{{ a.catalogos }}</td>
+                            <td data-etiqueta="Reglas">{{ a.reglas }}</td>
+                            <td class="text-end">
+                                <a class="btn btn-outline-secondary btn-sm"
+                                   href="{% url 'runac:campos' a.codigo %}">Ver campos</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-<div class="row g-3">
-  <div class="col-md-7">
-    <div class="card h-100">
-      <div class="card-header">Listas de valores más usadas</div>
-      <div class="card-body p-0">
-        <table class="table table-sm tabla-compacta mb-0">
-          <thead class="table-light"><tr><th>Código</th><th>Nombre</th><th class="text-end">Opciones</th><th class="text-end">Campos que la usan</th></tr></thead>
-          <tbody>
-          {% for c in catalogos %}
-            <tr>
-              <td class="mono ayuda">{{ c.codigo|truncatechars:28 }}</td>
-              <td>{{ c.nombre|truncatechars:38 }}</td>
-              <td class="text-end">{{ c.opciones }}</td>
-              <td class="text-end">{{ c.usos }}</td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
+    <div class="row g-3">
+        <div class="col-md-7">
+            <div class="card h-100">
+                <div class="card-header">Listas de valores más usadas</div>
+                <div class="card-body p-0 tabla-scroll">
+                    <table class="table table-sm tabla-compacta mb-0 tabla-ficha">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th class="text-end">Opciones</th>
+                                <th class="text-end">Campos que la usan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in catalogos %}
+                                <tr>
+                                    <td class="mono ayuda">{{ c.codigo|truncatechars:28 }}</td>
+                                    <td data-etiqueta="Nombre">{{ c.nombre|truncatechars:38 }}</td>
+                                    <td class="text-end" data-etiqueta="Opciones">{{ c.opciones }}</td>
+                                    <td class="text-end" data-etiqueta="Campos que la usan">{{ c.usos }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card h-100">
+                <div class="card-header">Reglas de validación</div>
+                <div class="card-body p-0 tabla-scroll">
+                    <table class="table table-sm tabla-compacta mb-0 tabla-ficha">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Severidad</th>
+                                <th class="text-end">Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in reglas %}
+                                <tr>
+                                    <td class="mono">{{ r.tipo }}</td>
+                                    <td class="sev-{{ r.severidad }}" data-etiqueta="Severidad">{{ r.severidad|title }}</td>
+                                    <td class="text-end" data-etiqueta="Cantidad">{{ r.cantidad }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="col-md-5">
-    <div class="card h-100">
-      <div class="card-header">Reglas de validación</div>
-      <div class="card-body p-0">
-        <table class="table table-sm tabla-compacta mb-0">
-          <thead class="table-light"><tr><th>Tipo</th><th>Severidad</th><th class="text-end">Cantidad</th></tr></thead>
-          <tbody>
-          {% for r in reglas %}
-            <tr>
-              <td class="mono">{{ r.tipo }}</td>
-              <td class="sev-{{ r.severidad }}">{{ r.severidad|title }}</td>
-              <td class="text-end">{{ r.cantidad }}</td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}

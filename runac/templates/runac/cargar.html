@@ -1,82 +1,141 @@
 {% extends "runac/base.html" %}
 {% block titulo %}Cargar archivos{% endblock %}
-{% block nav_cargar %}activo{% endblock %}
 
 {% block contenido %}
-<form method="post" enctype="multipart/form-data" id="formCarga">
-  {% csrf_token %}
 
-  <div class="row g-2 align-items-end mb-4">
-    <div class="col-auto">
-      <label class="form-label mb-1 ayuda">Jurisdicción</label>
-      <select name="jurisdiccion" class="form-select">
-        {% for j in jurisdicciones %}
-          <option value="{{ j }}" {% if j == jurisdiccion %}selected{% endif %}>{{ j }}</option>
-        {% endfor %}
-      </select>
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h5 class="mb-1">Cargar archivos</h5>
+            <div class="ayuda">
+                Los archivos se cargan <strong>de a uno</strong>, indicando de cuál se trata.
+                El sistema no lo deduce del nombre. El orden lo controla el sistema:
+                los dispositivos antes que las nóminas, porque las nóminas los referencian.
+            </div>
+        </div>
+        <form method="get" class="d-flex gap-2">
+            <select class="form-select form-select-sm"
+                    name="jurisdiccion"
+                    onchange="this.form.submit()">
+                {% for j in jurisdicciones %}
+                    <option value="{{ j }}" {% if j == jurisdiccion %}selected{% endif %}>{{ j }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm"
+                    name="periodo"
+                    onchange="this.form.submit()">
+                {% for p in periodos %}
+                    <option value="{{ p.codigo }}"
+                            {% if p.codigo == periodo_elegido %}selected{% endif %}>{{ p.codigo }}</option>
+                {% endfor %}
+            </select>
+        </form>
     </div>
-    <div class="col-auto">
-      <label class="form-label mb-1 ayuda">Período</label>
-      <select name="periodo" class="form-select">
-        {% for p in periodos %}
-          <option value="{{ p.codigo }}" {% if p.codigo == periodo_elegido %}selected{% endif %}>{{ p.codigo }}</option>
-        {% endfor %}
-      </select>
+
+    {% if not carga_abierta %}
+        <div class="alert alert-info py-2">
+            <i class="bi bi-lock-fill"></i>
+            La carga de este período está en «{{ estado_legible }}». Para volver a importar un archivo,
+            el responsable provincial tiene que <strong>reabrir la carga</strong> desde la pantalla de
+            resultado. Así el revisor no queda trabajando sobre datos que cambiaron abajo.
+        </div>
+    {% elif not puede_cargar %}
+        <div class="alert alert-secondary py-2">
+            Tu rol no importa archivos. La importación la realiza el operador provincial.
+        </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-body p-0 tabla-scroll">
+            <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:3rem" class="text-center">#</th>
+                        <th>Archivo</th>
+                        <th>Estado</th>
+                        <th class="text-end">Filas</th>
+                        <th style="width:30rem">Importar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in archivos %}
+                        <tr>
+                            <td class="text-center ayuda">{{ a.orden_importacion }}</td>
+                            <td data-etiqueta="Archivo">
+                                <strong>{{ a.codigo }}</strong>
+                                {% if a.obligatorio %}<span class="ayuda">· obligatorio</span>{% endif %}
+                                <div class="ayuda">{{ a.titulo|truncatechars:60 }}</div>
+                                <div class="ayuda mono">{{ a.nombre_sugerido }}</div>
+                            </td>
+                            <td data-etiqueta="Estado">
+                                <span class="estado e-{{ a.estado }}">{{ a.estado }}</span>
+                                {% if a.version %}<div class="ayuda">estructura v{{ a.version }}</div>{% endif %}
+                            </td>
+                            <td class="text-end" data-etiqueta="Filas">{{ a.importacion.filas_incorporadas|default:"—" }}</td>
+                            <td data-etiqueta="Importar">
+                                {% if a.bloqueado_por %}
+                                    <span class="ayuda">
+                                        <i class="bi bi-lock"></i>
+                                        Primero hay que importar
+                                        <strong>{{ a.bloqueado_por|join:", " }}</strong>.
+                                    </span>
+                                {% elif carga_abierta and puede_cargar %}
+                                    <form method="post"
+                                          action="{% url 'runac:cargar_archivo' a.codigo %}"
+                                          enctype="multipart/form-data"
+                                          class="d-flex gap-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
+                                        <input type="hidden" name="jurisdiccion" value="{{ jurisdiccion }}" />
+                                        <input type="file"
+                                               name="archivo"
+                                               accept=".xlsx,.xlsm"
+                                               class="form-control form-control-sm"
+                                               required />
+                                        <button class="btn btn-sm btn-primary text-nowrap">
+                                            {% if a.importada %}
+                                                Reemplazar
+                                            {% else %}
+                                                Importar
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                    {% if a.importada %}
+                                        <div class="ayuda mt-1">
+                                            Volver a importar anula la importación anterior y descarta las ediciones
+                                            hechas sobre ella.
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="ayuda">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center ayuda py-4">El período no tiene archivos definidos en la Capa 1.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-  </div>
 
-  <div class="zona-suelta mb-3" id="zona">
-    <div class="fs-1 text-secondary mb-2"><i class="bi bi-folder2-open"></i></div>
-    <p class="mb-1"><strong>Arrastrá acá la carpeta con los archivos</strong></p>
-    <p class="ayuda mb-3">o</p>
-    <input type="file" name="archivos" id="archivos" multiple webkitdirectory directory
-           class="form-control d-none" accept=".xlsx,.xlsm">
-    <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('archivos').click()">
-      Seleccionar carpeta…
-    </button>
-    <div id="listado" class="mt-3 text-start ayuda"></div>
-  </div>
+    <div class="d-flex gap-2 align-items-center">
+        <a class="btn btn-outline-secondary"
+           href="{% url 'runac:resultado' %}?periodo={{ periodo_elegido }}&jurisdiccion={{ jurisdiccion }}">
+            Ver el estado del período
+        </a>
+        <a class="btn btn-outline-primary" href="{% url 'runac:plantillas' %}">
+            <i class="bi bi-download"></i> Plantillas del período
+        </a>
+        {% if listo %}<span class="ayuda">Todos los archivos obligatorios están importados.</span>{% endif %}
+    </div>
 
-  <p class="ayuda">
-    <i class="bi bi-info-circle"></i>
-    Se pueden subir todos juntos. El sistema los reconoce por el nombre y los procesa en el orden
-    que corresponde: los dispositivos antes que las nóminas, porque las nóminas los referencian.
-  </p>
+    <div class="ayuda mt-4">
+        <i class="bi bi-info-circle"></i>
+        La importación es <strong>restrictiva</strong>: si un archivo tiene errores bloqueantes, no se
+        incorpora ninguna de sus filas. Los bloqueantes se corrigen en el Excel y el archivo se vuelve
+        a importar; las advertencias se resuelven dentro del sistema.
+    </div>
 
-  <button class="btn btn-primary" id="btnSubir" disabled>Continuar</button>
-</form>
-
-{% endblock %}
-
-{% block scripts %}
-<script>
-  const zona = document.getElementById('zona');
-  const input = document.getElementById('archivos');
-  const listado = document.getElementById('listado');
-  const boton = document.getElementById('btnSubir');
-
-  function mostrar(archivos) {
-    const excels = [...archivos].filter(f => /\.xlsx?$/i.test(f.name) && !f.name.startsWith('~$'));
-    if (!excels.length) {
-      listado.innerHTML = '<span class="text-danger">No se encontró ningún Excel en la carpeta.</span>';
-      boton.disabled = true;
-      return;
-    }
-    listado.innerHTML = '<strong>' + excels.length + ' archivo(s):</strong><ul class="mb-0">' +
-      excels.map(f => '<li class="mono">' + f.name + '</li>').join('') + '</ul>';
-    boton.disabled = false;
-  }
-
-  input.addEventListener('change', () => mostrar(input.files));
-  ['dragenter','dragover'].forEach(e => zona.addEventListener(e, ev => {
-    ev.preventDefault(); zona.classList.add('encima');
-  }));
-  ['dragleave','drop'].forEach(e => zona.addEventListener(e, ev => {
-    ev.preventDefault(); zona.classList.remove('encima');
-  }));
-  zona.addEventListener('drop', ev => {
-    input.files = ev.dataTransfer.files;
-    mostrar(input.files);
-  });
-</script>
 {% endblock %}

@@ -18,7 +18,7 @@ PARA_LA_PLANILLA = {
     "listas_en_conflicto": {
         "titulo": "Columnas con más de una lista desplegable",
         "porque": "La misma columna tiene definidas listas distintas según la fila. El sistema no puede "
-                  "saber cuál es la correcta.",
+        "saber cuál es la correcta.",
         "pedido": "Dejar una sola lista por columna, aplicada a todo el rango de filas.",
     },
     "titulo_duplicado": {
@@ -29,13 +29,13 @@ PARA_LA_PLANILLA = {
     "lista_huerfana": {
         "titulo": "Listas escritas que ninguna columna usa",
         "porque": "La lista de valores está en la planilla pero no está asignada a ninguna columna, así "
-                  "que quien completa el archivo la escribe a mano.",
+        "que quien completa el archivo la escribe a mano.",
         "pedido": "Asignar la lista a la columna que corresponde, o quitarla si ya no se usa.",
     },
     "valor_con_espacios": {
         "titulo": "Valores con espacios de más",
         "porque": "El valor tiene espacios al principio o al final. A la vista no se nota, pero para el "
-                  "sistema es un valor distinto.",
+        "sistema es un valor distinto.",
         "pedido": "Quitar los espacios sobrantes.",
     },
     "variantes_entre_catalogos": {
@@ -46,7 +46,7 @@ PARA_LA_PLANILLA = {
     "catalogos_parecidos": {
         "titulo": "Listas casi iguales entre sí",
         "porque": "Dos listas comparten la mayoría de sus valores pero no todos. Puede ser intencional o "
-                  "quedar de una versión anterior.",
+        "quedar de una versión anterior.",
         "pedido": "Confirmar si son dos listas distintas o si deberían unificarse.",
     },
     "formato_contradice_al_nombre": {
@@ -57,13 +57,13 @@ PARA_LA_PLANILLA = {
     "formato_aplicado_en_bloque": {
         "titulo": "Formato aplicado a la hoja entera",
         "porque": "Un mismo formato está puesto sobre casi todas las columnas, incluidas las que no lo "
-                  "necesitan. Suele pasar al seleccionar toda la hoja y aplicar formato.",
+        "necesitan. Suele pasar al seleccionar toda la hoja y aplicar formato.",
         "pedido": "Aplicar el formato sólo a las columnas que corresponde.",
     },
     "ayuda_sin_campo": {
         "titulo": "Instrucciones que no coinciden con ninguna columna",
         "porque": "La hoja de instrucciones explica un campo cuyo título no existe en la planilla. Suele "
-                  "pasar cuando se renombra una columna.",
+        "pasar cuando se renombra una columna.",
         "pedido": "Actualizar el nombre en la hoja de instrucciones.",
     },
     "ayuda_ambigua": {
@@ -74,19 +74,23 @@ PARA_LA_PLANILLA = {
     "obligatoriedad_ambigua": {
         "titulo": "Columnas donde no queda claro si el dato es obligatorio",
         "porque": "La lista desplegable de esa columna no declara si admite dejar la celda vacía, mientras "
-                  "que las demás sí lo declaran.",
+        "que las demás sí lo declaran.",
         "pedido": "Definir si el campo admite quedar vacío.",
     },
 }
 
 
 def main():
-    p = argparse.ArgumentParser(description="Genera el listado de observaciones sobre una planilla.")
+    p = argparse.ArgumentParser(
+        description="Genera el listado de observaciones sobre una planilla."
+    )
     p.add_argument("base")
     p.add_argument("codigo")
     args = p.parse_args()
 
-    with open(os.path.join(args.base, "mapas", f"{args.codigo}.mapa.json"), encoding="utf-8") as fh:
+    with open(
+        os.path.join(args.base, "mapas", f"{args.codigo}.mapa.json"), encoding="utf-8"
+    ) as fh:
         mapa = json.load(fh)
 
     por_tipo: dict[str, list] = defaultdict(list)
@@ -95,8 +99,8 @@ def main():
             por_tipo[a["tipo"]].append(a)
     total = sum(len(v) for v in por_tipo.values())
 
-    L: list[str] = []
-    w = L.append
+    lineas: list[str] = []
+    w = lineas.append
     w(f"# Observaciones sobre la planilla {args.codigo}")
     w("")
     w(f'**Archivo revisado:** `{mapa["archivo"]["nombre_fisico"]}`  ')
@@ -110,7 +114,9 @@ def main():
     if total == 0:
         w("**No se encontraron observaciones.** La planilla está en condiciones.")
     else:
-        w(f"Se detectaron **{total} observaciones**, agrupadas en {len(por_tipo)} tipos.")
+        w(
+            f"Se detectaron **{total} observaciones**, agrupadas en {len(por_tipo)} tipos."
+        )
         w("")
         w("| # | Observación | Casos |")
         w("|---|---|---|")
@@ -134,15 +140,23 @@ def main():
                 for a in arr:
                     w(f'- **Columna {a["columna"]} — {a["titulo"]}**')
                     for o in a["opciones"]:
-                        v = ", ".join(o["valores"]) if o["valores"] else "lista de otra hoja"
+                        v = (
+                            ", ".join(o["valores"])
+                            if o["valores"]
+                            else "lista de otra hoja"
+                        )
                         w(f'   - filas {o["filas"]}: {v}')
             elif t == "catalogos_parecidos":
                 for a in arr:
                     w(f'- {a["detalle"]}')
                     if a.get("solo_en_el_primero"):
-                        w(f'   - sólo en la primera: {", ".join(a["solo_en_el_primero"][:10])}')
+                        w(
+                            f'   - sólo en la primera: {", ".join(a["solo_en_el_primero"][:10])}'
+                        )
                     if a.get("solo_en_el_segundo"):
-                        w(f'   - sólo en la segunda: {", ".join(a["solo_en_el_segundo"][:10])}')
+                        w(
+                            f'   - sólo en la segunda: {", ".join(a["solo_en_el_segundo"][:10])}'
+                        )
             elif t == "valor_con_espacios":
                 por_origen: dict[str, list] = defaultdict(list)
                 for a in arr:
@@ -153,12 +167,18 @@ def main():
                 for a in arr:
                     donde = f'**Columna {a["columna"]}**' if a.get("columna") else ""
                     if a.get("titulo"):
-                        donde = f'{donde} — {a["titulo"]}' if donde else f'**{a["titulo"]}**'
+                        donde = (
+                            f'{donde} — {a["titulo"]}'
+                            if donde
+                            else f'**{a["titulo"]}**'
+                        )
                     w(f'- {donde + ": " if donde else ""}{a.get("detalle", "")}')
             w("")
 
     # La cobertura de la ayuda se informa aparte: no es un error, es una falta.
-    cobertura = next((a for a in mapa["anomalias"] if a["tipo"] == "cobertura_de_ayuda"), None)
+    cobertura = next(
+        (a for a in mapa["anomalias"] if a["tipo"] == "cobertura_de_ayuda"), None
+    )
     if cobertura:
         w("---")
         w("")
@@ -166,11 +186,20 @@ def main():
         w("")
         w(cobertura["detalle"])
         w("")
-        w("La explicación de cada campo es la que después aparece en el sistema cuando el")
-        w("operador provincial lo completa. Un campo sin explicación se completa a criterio")
+        w(
+            "La explicación de cada campo es la que después aparece en el sistema cuando el"
+        )
+        w(
+            "operador provincial lo completa. Un campo sin explicación se completa a criterio"
+        )
         w("de cada provincia.")
         w("")
-        sin_ayuda = [(h["nombre"], c) for h in mapa["hojas"] for c in h["columnas"] if not c.get("ayuda")]
+        sin_ayuda = [
+            (h["nombre"], c)
+            for h in mapa["hojas"]
+            for c in h["columnas"]
+            if not c.get("ayuda")
+        ]
         if sin_ayuda:
             w("<details><summary>Ver los campos sin explicación</summary>")
             w("")
@@ -184,12 +213,16 @@ def main():
 
     w("---")
     w("")
-    w("*Listado generado automáticamente a partir del archivo. No se modificó la planilla original.*")
+    w(
+        "*Listado generado automáticamente a partir del archivo. No se modificó la planilla original.*"
+    )
 
-    destino = os.path.join(args.base, "informes", f"{args.codigo}.observaciones-planilla.md")
+    destino = os.path.join(
+        args.base, "informes", f"{args.codigo}.observaciones-planilla.md"
+    )
     os.makedirs(os.path.dirname(destino), exist_ok=True)
     with open(destino, "w", encoding="utf-8") as fh:
-        fh.write("\n".join(L))
+        fh.write("\n".join(lineas))
     print(f"observaciones: {destino}  ({total} observaciones)")
 
 

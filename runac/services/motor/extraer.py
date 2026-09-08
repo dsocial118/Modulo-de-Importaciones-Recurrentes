@@ -22,6 +22,7 @@ from reglas import sugerir_reglas, sugerir_reglas_de_hoja
 
 # --- detección de la estructura de una hoja --------------------------------
 
+
 def detectar_estructura(hoja: LX.Hoja) -> dict:
     """Ubica el título general, la fila de dimensiones y la de encabezados.
 
@@ -30,12 +31,15 @@ def detectar_estructura(hoja: LX.Hoja) -> dict:
     """
     llenas_por_fila = {}
     for fila in range(1, min(hoja.max_fila, 12) + 1):
-        llenas_por_fila[fila] = sum(1 for col in range(1, hoja.max_columna + 1)
-                                    if (fila, col) in hoja.celdas)
-    fila_encabezados = max(llenas_por_fila, key=lambda f: llenas_por_fila[f]) if llenas_por_fila else 1
+        llenas_por_fila[fila] = sum(
+            1 for col in range(1, hoja.max_columna + 1) if (fila, col) in hoja.celdas
+        )
+    fila_encabezados = (
+        max(llenas_por_fila, key=lambda f: llenas_por_fila[f]) if llenas_por_fila else 1
+    )
 
     horizontales = defaultdict(list)
-    for (f1, c1, f2, c2) in hoja.combinadas:
+    for f1, c1, f2, c2 in hoja.combinadas:
         if c2 > c1:
             horizontales[f1].append((f1, c1, f2, c2))
 
@@ -64,7 +68,9 @@ def detectar_estructura(hoja: LX.Hoja) -> dict:
                     continue
                 texto_nota = LX.texto(hoja, r[0], r[1])
                 if texto_nota:
-                    notas.append({"fila": r[0], "columna": LX.letra(r[1]), "texto": texto_nota})
+                    notas.append(
+                        {"fila": r[0], "columna": LX.letra(r[1]), "texto": texto_nota}
+                    )
 
     fila_titulo = encabezados[0][0] if encabezados else None
     titulo_general = encabezados[0][1] if encabezados else None
@@ -124,15 +130,23 @@ def extraer_listas(hoja: LX.Hoja) -> list[dict]:
     salida = []
     for col in range(1, hoja.max_columna + 1):
         titulo = LX.texto(hoja, 1, col)
-        valores = [str(hoja.celdas[(f, col)]) for f in range(2, hoja.max_fila + 1)
-                   if (f, col) in hoja.celdas]
+        valores = [
+            str(hoja.celdas[(f, col)])
+            for f in range(2, hoja.max_fila + 1)
+            if (f, col) in hoja.celdas
+        ]
         if not titulo and not valores:
             continue
-        salida.append({
-            "hoja": hoja.nombre, "columna": LX.letra(col), "titulo": titulo or None,
-            "rango": f"{LX.letra(col)}2:{LX.letra(col)}{hoja.max_fila}",
-            "cantidad": len(valores), "valores": valores,
-        })
+        salida.append(
+            {
+                "hoja": hoja.nombre,
+                "columna": LX.letra(col),
+                "titulo": titulo or None,
+                "rango": f"{LX.letra(col)}2:{LX.letra(col)}{hoja.max_fila}",
+                "cantidad": len(valores),
+                "valores": valores,
+            }
+        )
     return salida
 
 
@@ -151,10 +165,25 @@ def extraer_ayuda(hoja: LX.Hoja) -> dict:
             continue
         if not texto_ayuda:
             seccion = campo
-            entradas.append({"fila": f, "campo": campo, "ayuda": None, "es_seccion": True, "seccion": None})
+            entradas.append(
+                {
+                    "fila": f,
+                    "campo": campo,
+                    "ayuda": None,
+                    "es_seccion": True,
+                    "seccion": None,
+                }
+            )
         else:
-            entradas.append({"fila": f, "campo": campo, "ayuda": texto_ayuda,
-                             "es_seccion": False, "seccion": seccion})
+            entradas.append(
+                {
+                    "fila": f,
+                    "campo": campo,
+                    "ayuda": texto_ayuda,
+                    "es_seccion": False,
+                    "seccion": seccion,
+                }
+            )
     return {"hoja": hoja.nombre, "entradas": entradas}
 
 
@@ -167,17 +196,23 @@ def extraer_hoja_datos(hoja: LX.Hoja, extras: list[dict], anomalias: list) -> di
     dimensiones = []
     dim_de_col = {}
     if fila_dim is not None:
-        rangos = sorted([r for r in hoja.combinadas if r[0] == fila_dim and r[3] > r[1]],
-                        key=lambda r: r[1])
+        rangos = sorted(
+            [r for r in hoja.combinadas if r[0] == fila_dim and r[3] > r[1]],
+            key=lambda r: r[1],
+        )
         for orden, (f1, c1, _f2, c2) in enumerate(rangos, start=1):
             nombre = LX.texto(hoja, f1, c1)
             if not nombre:
                 continue
-            dimensiones.append({
-                "nombre": nombre, "orden": orden,
-                "col_desde": LX.letra(c1), "col_hasta": LX.letra(c2),
-                "cantidad_columnas": c2 - c1 + 1,
-            })
+            dimensiones.append(
+                {
+                    "nombre": nombre,
+                    "orden": orden,
+                    "col_desde": LX.letra(c1),
+                    "col_hasta": LX.letra(c2),
+                    "cantidad_columnas": c2 - c1 + 1,
+                }
+            )
             for c in range(c1, c2 + 1):
                 dim_de_col[c] = nombre
 
@@ -201,25 +236,46 @@ def extraer_hoja_datos(hoja: LX.Hoja, extras: list[dict], anomalias: list) -> di
             continue
 
         vals = val_por_col.get(c, [])
-        firmas = {json.dumps(v["literal"] or v["referencia"], sort_keys=True, ensure_ascii=False) for v in vals}
+        firmas = {
+            json.dumps(
+                v["literal"] or v["referencia"], sort_keys=True, ensure_ascii=False
+            )
+            for v in vals
+        }
         if len(firmas) > 1:
-            anomalias.append({
-                "tipo": "listas_en_conflicto", "hoja": hoja.nombre, "columna": LX.letra(c),
-                "titulo": titulo,
-                "detalle": f"La columna tiene {len(firmas)} listas distintas según el rango de filas.",
-                "opciones": [{
-                    "filas": f'{v["fila_desde"]}-{v["fila_hasta"]}',
-                    "valores": [norm(x) for x in v["literal"]] if v["literal"] else None,
-                    "referencia": v["referencia"],
-                } for v in vals],
-            })
+            anomalias.append(
+                {
+                    "tipo": "listas_en_conflicto",
+                    "hoja": hoja.nombre,
+                    "columna": LX.letra(c),
+                    "titulo": titulo,
+                    "detalle": f"La columna tiene {len(firmas)} listas distintas según el rango de filas.",
+                    "opciones": [
+                        {
+                            "filas": f'{v["fila_desde"]}-{v["fila_hasta"]}',
+                            "valores": (
+                                [norm(x) for x in v["literal"]]
+                                if v["literal"]
+                                else None
+                            ),
+                            "referencia": v["referencia"],
+                        }
+                        for v in vals
+                    ],
+                }
+            )
 
         k = clave(titulo)
         if k in vistos:
-            anomalias.append({
-                "tipo": "titulo_duplicado", "hoja": hoja.nombre, "columna": LX.letra(c), "titulo": titulo,
-                "detalle": f"El mismo título ya aparece en la columna {vistos[k]}.",
-            })
+            anomalias.append(
+                {
+                    "tipo": "titulo_duplicado",
+                    "hoja": hoja.nombre,
+                    "columna": LX.letra(c),
+                    "titulo": titulo,
+                    "detalle": f"El mismo título ya aparece en la columna {vistos[k]}.",
+                }
+            )
         else:
             vistos[k] = LX.letra(c)
 
@@ -243,22 +299,34 @@ def extraer_hoja_datos(hoja: LX.Hoja, extras: list[dict], anomalias: list) -> di
             for v in vals
         )
         if no_vacio_ambiguo:
-            anomalias.append({
-                "tipo": "obligatoriedad_ambigua", "hoja": hoja.nombre, "columna": LX.letra(c),
-                "titulo": titulo,
-                "detalle": "La validación de esta columna no declara si admite celdas vacías, "
-                           "mientras que el resto del archivo sí lo declara. Parece un descuido, "
-                           "no una marca de obligatoriedad.",
-            })
+            anomalias.append(
+                {
+                    "tipo": "obligatoriedad_ambigua",
+                    "hoja": hoja.nombre,
+                    "columna": LX.letra(c),
+                    "titulo": titulo,
+                    "detalle": "La validación de esta columna no declara si admite celdas vacías, "
+                    "mientras que el resto del archivo sí lo declara. Parece un descuido, "
+                    "no una marca de obligatoriedad.",
+                }
+            )
 
-        columnas.append({
-            "letra": LX.letra(c), "orden": c, "titulo": titulo, "titulo_desde": desde,
-            "nombre_tecnico": nombre_tecnico(titulo),
-            "dimension": dim_de_col.get(c),
-            "formato": LX.formato_de(hoja, c), "clase_formato": LX.clase_formato_de(hoja, c),
-            "no_admite_vacio_explicito": no_vacio_explicito,
-            "muestras": muestras, "listas": vals, "ayuda": None,
-        })
+        columnas.append(
+            {
+                "letra": LX.letra(c),
+                "orden": c,
+                "titulo": titulo,
+                "titulo_desde": desde,
+                "nombre_tecnico": nombre_tecnico(titulo),
+                "dimension": dim_de_col.get(c),
+                "formato": LX.formato_de(hoja, c),
+                "clase_formato": LX.clase_formato_de(hoja, c),
+                "no_admite_vacio_explicito": no_vacio_explicito,
+                "muestras": muestras,
+                "listas": vals,
+                "ayuda": None,
+            }
+        )
 
     # Nombres técnicos repetidos: se desambiguan con la dimensión.
     por_nombre = defaultdict(list)
@@ -268,14 +336,23 @@ def extraer_hoja_datos(hoja: LX.Hoja, extras: list[dict], anomalias: list) -> di
         if len(arr) < 2:
             continue
         for col in arr:
-            sufijo = nombre_tecnico(col["dimension"]) if col["dimension"] else f'col_{col["letra"].lower()}'
+            sufijo = (
+                nombre_tecnico(col["dimension"])
+                if col["dimension"]
+                else f'col_{col["letra"].lower()}'
+            )
             col["nombre_tecnico"] = nombre_tecnico(f"{n}_{sufijo}")
             col["nombre_desambiguado"] = True
-        anomalias.append({
-            "tipo": "nombre_tecnico_desambiguado", "hoja": hoja.nombre, "titulo": n,
-            "detalle": f'{len(arr)} columnas daban el mismo nombre técnico. Quedaron: '
-                       + ", ".join(f'{c["letra"]}={c["nombre_tecnico"]}' for c in arr) + ".",
-        })
+        anomalias.append(
+            {
+                "tipo": "nombre_tecnico_desambiguado",
+                "hoja": hoja.nombre,
+                "titulo": n,
+                "detalle": f"{len(arr)} columnas daban el mismo nombre técnico. Quedaron: "
+                + ", ".join(f'{c["letra"]}={c["nombre_tecnico"]}' for c in arr)
+                + ".",
+            }
+        )
 
     # Un formato aplicado a la mayoría de las columnas no es una decisión sobre
     # cada campo: es alguien que seleccionó la hoja entera y le puso formato.
@@ -289,11 +366,14 @@ def extraer_hoja_datos(hoja: LX.Hoja, extras: list[dict], anomalias: list) -> di
                 for col in columnas:
                     if col["formato"] == fmt:
                         col["formato_masivo"] = True
-                anomalias.append({
-                    "tipo": "formato_aplicado_en_bloque", "hoja": hoja.nombre,
-                    "detalle": f'El formato "{fmt}" está aplicado a {n} de las {len(columnas)} columnas. '
-                               f"No puede ser una decisión sobre cada campo: se ignora como evidencia del tipo de dato.",
-                })
+                anomalias.append(
+                    {
+                        "tipo": "formato_aplicado_en_bloque",
+                        "hoja": hoja.nombre,
+                        "detalle": f'El formato "{fmt}" está aplicado a {n} de las {len(columnas)} columnas. '
+                        f"No puede ser una decisión sobre cada campo: se ignora como evidencia del tipo de dato.",
+                    }
+                )
 
     con_dato = solo_placeholder = 0
     for f in range(fila_enc + 1, hoja.max_fila + 1):
@@ -312,19 +392,31 @@ def extraer_hoja_datos(hoja: LX.Hoja, extras: list[dict], anomalias: list) -> di
             solo_placeholder += 1
 
     return {
-        "nombre": hoja.nombre, "indice": hoja.indice, "estado": hoja.estado,
-        "ultima_fila": hoja.max_fila, "ultima_columna": LX.letra(hoja.max_columna),
-        "titulo_general": est["titulo_general"], "subtitulo_general": est.get("subtitulo_general"), "notas": est.get("notas", []), "fila_titulo": est["fila_titulo"],
-        "fila_dimensiones": fila_dim, "fila_encabezados": fila_enc,
-        "filas_con_datos": con_dato, "filas_solo_placeholder": solo_placeholder,
-        "dimensiones": dimensiones, "columnas": columnas,
+        "nombre": hoja.nombre,
+        "indice": hoja.indice,
+        "estado": hoja.estado,
+        "ultima_fila": hoja.max_fila,
+        "ultima_columna": LX.letra(hoja.max_columna),
+        "titulo_general": est["titulo_general"],
+        "subtitulo_general": est.get("subtitulo_general"),
+        "notas": est.get("notas", []),
+        "fila_titulo": est["fila_titulo"],
+        "fila_dimensiones": fila_dim,
+        "fila_encabezados": fila_enc,
+        "filas_con_datos": con_dato,
+        "filas_solo_placeholder": solo_placeholder,
+        "dimensiones": dimensiones,
+        "columnas": columnas,
     }
 
 
 # --- programa ---------------------------------------------------------------
 
+
 def main():
-    p = argparse.ArgumentParser(description="Extrae la estructura de un Excel de RUNAC.")
+    p = argparse.ArgumentParser(
+        description="Extrae la estructura de un Excel de RUNAC."
+    )
     p.add_argument("archivo")
     p.add_argument("salida")
     p.add_argument("--codigo", default=None)
@@ -359,11 +451,14 @@ def main():
         else:
             extras = rescatadas.get(hoja.nombre, [])
             if extras:
-                anomalias.append({
-                    "tipo": "validaciones_rescatadas", "hoja": hoja.nombre,
-                    "detalle": f"Se recuperaron {len(extras)} listas desplegables que openpyxl descarta "
-                               f"(las que apuntan a otra hoja del archivo).",
-                })
+                anomalias.append(
+                    {
+                        "tipo": "validaciones_rescatadas",
+                        "hoja": hoja.nombre,
+                        "detalle": f"Se recuperaron {len(extras)} listas desplegables que openpyxl descarta "
+                        f"(las que apuntan a otra hoja del archivo).",
+                    }
+                )
             hojas_datos.append(extraer_hoja_datos(hoja, extras, anomalias))
 
     # --- resolver las listas que apuntan a otra hoja ---
@@ -375,15 +470,23 @@ def main():
                 if not ref:
                     continue
                 from validaciones_x14 import _partes_rango
+
                 r = _partes_rango(ref["rango"])
-                lista = por_hoja_col.get(f'{ref["hoja"]}!{LX.letra(r[1])}') if r else None
+                lista = (
+                    por_hoja_col.get(f'{ref["hoja"]}!{LX.letra(r[1])}') if r else None
+                )
                 if lista and r:
-                    li["valores_resueltos"] = lista["valores"][r[0] - 2: r[2] - 1]
+                    li["valores_resueltos"] = lista["valores"][r[0] - 2 : r[2] - 1]
                 else:
-                    anomalias.append({
-                        "tipo": "referencia_no_resuelta", "hoja": h["nombre"], "columna": col["letra"],
-                        "titulo": col["titulo"], "detalle": f'No se pudo resolver {li["formula"]}',
-                    })
+                    anomalias.append(
+                        {
+                            "tipo": "referencia_no_resuelta",
+                            "hoja": h["nombre"],
+                            "columna": col["letra"],
+                            "titulo": col["titulo"],
+                            "detalle": f'No se pudo resolver {li["formula"]}',
+                        }
+                    )
 
     # --- cruzar la ayuda con los campos ---
     candidatos = defaultdict(list)
@@ -404,32 +507,55 @@ def main():
                 elegida = opciones[0]
             elif len(opciones) > 1:
                 if e["seccion"]:
-                    elegida = next((o for o in opciones
-                                    if o[1]["dimension"] and clave(o[1]["dimension"]) == clave(e["seccion"])), None)
+                    elegida = next(
+                        (
+                            o
+                            for o in opciones
+                            if o[1]["dimension"]
+                            and clave(o[1]["dimension"]) == clave(e["seccion"])
+                        ),
+                        None,
+                    )
                 if not elegida:
-                    anomalias.append({
-                        "tipo": "ayuda_ambigua", "hoja": a["hoja"], "titulo": e["campo"],
-                        "detalle": f'"{e["campo"]}" coincide con {len(opciones)} columnas '
-                                   f'({", ".join(o[1]["letra"] for o in opciones)}) y la sección '
-                                   f'"{e["seccion"] or "—"}" no permite decidir.',
-                    })
+                    anomalias.append(
+                        {
+                            "tipo": "ayuda_ambigua",
+                            "hoja": a["hoja"],
+                            "titulo": e["campo"],
+                            "detalle": f'"{e["campo"]}" coincide con {len(opciones)} columnas '
+                            f'({", ".join(o[1]["letra"] for o in opciones)}) y la sección '
+                            f'"{e["seccion"] or "—"}" no permite decidir.',
+                        }
+                    )
             if elegida:
-                e["campo_destino"] = {"hoja": elegida[0], "columna": elegida[1]["letra"]}
+                e["campo_destino"] = {
+                    "hoja": elegida[0],
+                    "columna": elegida[1]["letra"],
+                }
                 elegida[1]["ayuda"] = e["ayuda"]
                 elegida[1]["ayuda_origen"] = f'{a["hoja"]}, fila {e["fila"]}'
             else:
                 e["campo_destino"] = None
                 if not opciones:
-                    anomalias.append({
-                        "tipo": "ayuda_sin_campo", "hoja": a["hoja"], "titulo": e["campo"],
-                        "detalle": f'La hoja de instrucciones explica "{e["campo"]}", que no coincide con ninguna columna.',
-                    })
-        explicados = sum(1 for e in a["entradas"] if e.get("campo_destino") and e["ayuda"])
-        anomalias.append({
-            "tipo": "cobertura_de_ayuda", "hoja": a["hoja"],
-            "detalle": f"La hoja de instrucciones explica {explicados} de los {total_campos} campos. "
-                       f"Quedan {total_campos - explicados} sin texto de ayuda.",
-        })
+                    anomalias.append(
+                        {
+                            "tipo": "ayuda_sin_campo",
+                            "hoja": a["hoja"],
+                            "titulo": e["campo"],
+                            "detalle": f'La hoja de instrucciones explica "{e["campo"]}", que no coincide con ninguna columna.',
+                        }
+                    )
+        explicados = sum(
+            1 for e in a["entradas"] if e.get("campo_destino") and e["ayuda"]
+        )
+        anomalias.append(
+            {
+                "tipo": "cobertura_de_ayuda",
+                "hoja": a["hoja"],
+                "detalle": f"La hoja de instrucciones explica {explicados} de los {total_campos} campos. "
+                f"Quedan {total_campos - explicados} sin texto de ayuda.",
+            }
+        )
 
     # --- listas huérfanas ---
     usadas = set()
@@ -439,16 +565,21 @@ def main():
                 ref = li.get("referencia")
                 if ref:
                     from validaciones_x14 import _partes_rango
+
                     r = _partes_rango(ref["rango"])
                     if r:
                         usadas.add(f'{ref["hoja"]}!{LX.letra(r[1])}')
     for l in listas:
         if f'{l["hoja"]}!{l["columna"]}' not in usadas and l["titulo"]:
-            anomalias.append({
-                "tipo": "lista_huerfana", "hoja": l["hoja"], "columna": l["columna"],
-                "titulo": l["titulo"],
-                "detalle": f'Lista de {l["cantidad"]} valores que ninguna columna usa.',
-            })
+            anomalias.append(
+                {
+                    "tipo": "lista_huerfana",
+                    "hoja": l["hoja"],
+                    "columna": l["columna"],
+                    "titulo": l["titulo"],
+                    "detalle": f'Lista de {l["cantidad"]} valores que ninguna columna usa.',
+                }
+            )
 
     # --- catálogos, agrupados por huella ---
     por_huella: dict[str, dict] = {}
@@ -460,33 +591,49 @@ def main():
         if not reales:
             return
         hh = huella(reales)
-        cat = por_huella.setdefault(hh, {
-            "huella": hh, "nombres_vistos": [], "cantidad": len(reales),
-            "valores": reales,
-            # Los valores tal como venían, antes de recortar espacios. Sirven
-            # para detectar los que traen espacios de más.
-            "valores_crudos": [str(v) for v in valores_crudos],
-            "placeholders_descartados": [], "apariciones": [],
-        })
+        cat = por_huella.setdefault(
+            hh,
+            {
+                "huella": hh,
+                "nombres_vistos": [],
+                "cantidad": len(reales),
+                "valores": reales,
+                # Los valores tal como venían, antes de recortar espacios. Sirven
+                # para detectar los que traen espacios de más.
+                "valores_crudos": [str(v) for v in valores_crudos],
+                "placeholders_descartados": [],
+                "apariciones": [],
+            },
+        )
         if nombre_sug and nombre_sug not in cat["nombres_vistos"]:
             cat["nombres_vistos"].append(nombre_sug)
         for ph in placeholders:
             if ph not in cat["placeholders_descartados"]:
                 cat["placeholders_descartados"].append(ph)
-        cat["apariciones"].append({"archivo": codigo, "origen": origen, "usado_por": usado_por})
+        cat["apariciones"].append(
+            {"archivo": codigo, "origen": origen, "usado_por": usado_por}
+        )
 
     for l in listas:
         if l["titulo"]:
-            agregar_catalogo(l["titulo"], l["valores"], f'{l["hoja"]}!{l["rango"]}', None)
+            agregar_catalogo(
+                l["titulo"], l["valores"], f'{l["hoja"]}!{l["rango"]}', None
+            )
     for h in hojas_datos:
         for col in h["columnas"]:
             for li in col["listas"]:
                 usado = f'{h["nombre"]}!{col["letra"]} ({col["titulo"]})'
                 if li.get("literal"):
-                    agregar_catalogo(col["titulo"], li["literal"],
-                                     f'{h["nombre"]}!{col["letra"]} filas {li["fila_desde"]}-{li["fila_hasta"]}', usado)
+                    agregar_catalogo(
+                        col["titulo"],
+                        li["literal"],
+                        f'{h["nombre"]}!{col["letra"]} filas {li["fila_desde"]}-{li["fila_hasta"]}',
+                        usado,
+                    )
                 elif li.get("valores_resueltos"):
-                    agregar_catalogo(col["titulo"], li["valores_resueltos"], li["formula"], usado)
+                    agregar_catalogo(
+                        col["titulo"], li["valores_resueltos"], li["formula"], usado
+                    )
 
     catalogos = sorted(por_huella.values(), key=lambda c: -len(c["apariciones"]))
 
@@ -495,9 +642,17 @@ def main():
         # Se compara contra el valor CRUDO: el normalizado ya no tiene espacios.
         for v in cat.get("valores_crudos", []):
             if v and v != norm(v):
-                anomalias.append({"tipo": "valor_con_espacios",
-                                  "origen": cat["nombres_vistos"][0] if cat["nombres_vistos"] else cat["huella"],
-                                  "detalle": json.dumps(v, ensure_ascii=False)})
+                anomalias.append(
+                    {
+                        "tipo": "valor_con_espacios",
+                        "origen": (
+                            cat["nombres_vistos"][0]
+                            if cat["nombres_vistos"]
+                            else cat["huella"]
+                        ),
+                        "detalle": json.dumps(v, ensure_ascii=False),
+                    }
+                )
 
     formas = defaultdict(set)
     for cat in catalogos:
@@ -505,25 +660,37 @@ def main():
             formas[clave(v)].add(v)
     for _k, formas_v in formas.items():
         if len(formas_v) > 1:
-            anomalias.append({"tipo": "variantes_entre_catalogos",
-                              "detalle": " / ".join(json.dumps(v, ensure_ascii=False) for v in sorted(formas_v))})
+            anomalias.append(
+                {
+                    "tipo": "variantes_entre_catalogos",
+                    "detalle": " / ".join(
+                        json.dumps(v, ensure_ascii=False) for v in sorted(formas_v)
+                    ),
+                }
+            )
 
     for i, a in enumerate(catalogos):
-        for b in catalogos[i + 1:]:
+        for b in catalogos[i + 1 :]:
             sa = {clave(v) for v in a["valores"]}
             sb = {clave(v) for v in b["valores"]}
             comunes = len(sa & sb)
             union = len(sa | sb)
             solape = comunes / union if union else 0
             if 0.6 <= solape < 1:
-                anomalias.append({
-                    "tipo": "catalogos_parecidos",
-                    "detalle": f'"{a["nombres_vistos"][0]}" ({a["cantidad"]}) y "{b["nombres_vistos"][0]}" '
-                               f'({b["cantidad"]}) comparten el {round(solape * 100)}% de sus valores.',
-                    "solo_en_el_primero": [v for v in a["valores"] if clave(v) not in sb],
-                    "solo_en_el_segundo": [v for v in b["valores"] if clave(v) not in sa],
-                    "huellas": [a["huella"], b["huella"]],
-                })
+                anomalias.append(
+                    {
+                        "tipo": "catalogos_parecidos",
+                        "detalle": f'"{a["nombres_vistos"][0]}" ({a["cantidad"]}) y "{b["nombres_vistos"][0]}" '
+                        f'({b["cantidad"]}) comparten el {round(solape * 100)}% de sus valores.',
+                        "solo_en_el_primero": [
+                            v for v in a["valores"] if clave(v) not in sb
+                        ],
+                        "solo_en_el_segundo": [
+                            v for v in b["valores"] if clave(v) not in sa
+                        ],
+                        "huellas": [a["huella"], b["huella"]],
+                    }
+                )
 
     # --- inferencia de tipo, longitud y obligatoriedad ---
     cat_por_huella = {c["huella"]: c for c in catalogos}
@@ -540,26 +707,43 @@ def main():
                     if cat:
                         break
             col["catalogo_huella"] = cat["huella"] if cat else None
-            inf = inferir_campo(col, bool(cat), cat["cantidad"] if cat else 0,
-                                max((len(v) for v in cat["valores"]), default=0) if cat else 0)
+            inf = inferir_campo(
+                col,
+                bool(cat),
+                cat["cantidad"] if cat else 0,
+                max((len(v) for v in cat["valores"]), default=0) if cat else 0,
+            )
             col.update(inf)
             if inf["conflicto_de_tipo"]:
-                anomalias.append({
-                    "tipo": "formato_contradice_al_nombre", "hoja": h["nombre"], "columna": col["letra"],
-                    "titulo": col["titulo"], "detalle": inf["conflicto_de_tipo"]["detalle"],
-                })
+                anomalias.append(
+                    {
+                        "tipo": "formato_contradice_al_nombre",
+                        "hoja": h["nombre"],
+                        "columna": col["letra"],
+                        "titulo": col["titulo"],
+                        "detalle": inf["conflicto_de_tipo"]["detalle"],
+                    }
+                )
 
     # --- reglas sugeridas ---
     for h in hojas_datos:
         for col in h["columnas"]:
             col["reglas_sugeridas"] = sugerir_reglas(col, h["columnas"])
         for r in sugerir_reglas_de_hoja(h):
-            destino = next((c for c in h["columnas"] if c["nombre_tecnico"] == r["aplicar_a"]), None)
+            destino = next(
+                (c for c in h["columnas"] if c["nombre_tecnico"] == r["aplicar_a"]),
+                None,
+            )
             if destino:
                 destino["reglas_sugeridas"].append(r)
 
-    resumen = {"por_tipo": defaultdict(int), "por_confianza": defaultdict(int),
-               "obligatorios": 0, "reglas_sugeridas": 0, "por_tipo_regla": defaultdict(int)}
+    resumen = {
+        "por_tipo": defaultdict(int),
+        "por_confianza": defaultdict(int),
+        "obligatorios": 0,
+        "reglas_sugeridas": 0,
+        "por_tipo_regla": defaultdict(int),
+    }
     for h in hojas_datos:
         for col in h["columnas"]:
             resumen["por_tipo"][col["tipo_dato"]] += 1
@@ -569,7 +753,9 @@ def main():
             for r in col["reglas_sugeridas"]:
                 resumen["reglas_sugeridas"] += 1
                 resumen["por_tipo_regla"][r["tipo_regla"]] += 1
-    resumen = {k: (dict(v) if isinstance(v, defaultdict) else v) for k, v in resumen.items()}
+    resumen = {
+        k: (dict(v) if isinstance(v, defaultdict) else v) for k, v in resumen.items()
+    }
 
     # Las muestras no van al mapa: pueden traer datos personales.
     for h in hojas_datos:
@@ -577,17 +763,26 @@ def main():
             col["cantidad_muestras"] = len(col.pop("muestras", []))
 
     from datetime import datetime, timezone
+
     mapa = {
         "generado": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "archivo": {
-            "codigo": codigo, "nombre_fisico": nombre_fisico, "ruta_origen": args.archivo,
-            "bytes": os.path.getsize(args.archivo), "sha1": sha1_archivo(args.archivo),
+            "codigo": codigo,
+            "nombre_fisico": nombre_fisico,
+            "ruta_origen": args.archivo,
+            "bytes": os.path.getsize(args.archivo),
+            "sha1": sha1_archivo(args.archivo),
             "hojas_totales": len(hojas_excel),
             "hojas_de_datos": [h["nombre"] for h in hojas_datos],
-            "hojas_de_listas": hojas_listas, "hojas_de_ayuda": hojas_ayuda,
+            "hojas_de_listas": hojas_listas,
+            "hojas_de_ayuda": hojas_ayuda,
         },
-        "hojas": hojas_datos, "listas": listas, "ayudas": ayudas,
-        "catalogos": catalogos, "inferencia": resumen, "anomalias": anomalias,
+        "hojas": hojas_datos,
+        "listas": listas,
+        "ayudas": ayudas,
+        "catalogos": catalogos,
+        "inferencia": resumen,
+        "anomalias": anomalias,
     }
 
     destino = os.path.join(args.salida, "mapas", f"{codigo}.mapa.json")
@@ -597,16 +792,24 @@ def main():
 
     print(f"mapa: {destino}")
     print(f"  codigo:           {codigo}")
-    print(f'  hojas de datos:   {", ".join(h["nombre"] for h in hojas_datos) or "(ninguna)"}')
+    print(
+        f'  hojas de datos:   {", ".join(h["nombre"] for h in hojas_datos) or "(ninguna)"}'
+    )
     print(f'  hojas de listas:  {", ".join(hojas_listas) or "(ninguna)"}')
     print(f'  hojas de ayuda:   {", ".join(hojas_ayuda) or "(ninguna)"}')
     for h in hojas_datos:
         con_ayuda = sum(1 for c in h["columnas"] if c["ayuda"])
-        print(f'  - "{h["nombre"]}": {len(h["columnas"])} columnas ({con_ayuda} con instrucciones), '
-              f'{len(h["dimensiones"])} dimensiones, encabezados en fila {h["fila_encabezados"]}')
+        print(
+            f'  - "{h["nombre"]}": {len(h["columnas"])} columnas ({con_ayuda} con instrucciones), '
+            f'{len(h["dimensiones"])} dimensiones, encabezados en fila {h["fila_encabezados"]}'
+        )
     print(f"  catalogos distintos:  {len(catalogos)}")
-    print(f'  tipos propuestos:     {"  ".join(f"{k}={v}" for k, v in resumen["por_tipo"].items())}')
-    print(f'  confianza:            {"  ".join(f"{k}={v}" for k, v in resumen["por_confianza"].items())}')
+    print(
+        f'  tipos propuestos:     {"  ".join(f"{k}={v}" for k, v in resumen["por_tipo"].items())}'
+    )
+    print(
+        f'  confianza:            {"  ".join(f"{k}={v}" for k, v in resumen["por_confianza"].items())}'
+    )
     print(f'  obligatorios:         {resumen["obligatorios"]}')
     print(f'  reglas sugeridas:     {resumen["reglas_sugeridas"]}')
     print(f"  anomalias:            {len(anomalias)}")

@@ -28,7 +28,8 @@ class Command(BaseCommand):
         asegurar_grupos()
         for nombre, rol, jurisdiccion in USUARIOS:
             usuario, creado = User.objects.get_or_create(
-                username=nombre, defaults={"first_name": ROLES[rol]})
+                username=nombre, defaults={"first_name": ROLES[rol]}
+            )
             usuario.set_password(CLAVE)
             usuario.is_staff = rol == "administrador_nacional"
             usuario.is_superuser = rol == "administrador_nacional"
@@ -37,11 +38,15 @@ class Command(BaseCommand):
             usuario.groups.clear()
             usuario.groups.add(Group.objects.get(name=rol))
             if jurisdiccion:
-                grupo, _ = Group.objects.get_or_create(name=f"jurisdiccion:{jurisdiccion}")
+                grupo, _ = Group.objects.get_or_create(
+                    name=f"jurisdiccion:{jurisdiccion}"
+                )
                 usuario.groups.add(grupo)
 
             estado = "creado" if creado else "actualizado"
             donde = f" · {jurisdiccion}" if jurisdiccion else ""
             self.stdout.write(f"  {nombre:14} {ROLES[rol]}{donde}  ({estado})")
 
-        self.stdout.write(self.style.SUCCESS(f"\nListo. La contraseña de todos es: {CLAVE}"))
+        self.stdout.write(
+            self.style.SUCCESS(f"\nListo. La contraseña de todos es: {CLAVE}")
+        )

@@ -1,0 +1,95 @@
+{% extends "runac/base.html" %}
+{% block titulo %}Comprobante{% endblock %}
+
+{% block contenido %}
+
+    <div class="card" style="max-width: 52rem">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Comprobante de presentación</span>
+            <button class="btn btn-sm btn-outline-secondary d-print-none"
+                    onclick="window.print()">
+                <i class="bi bi-printer"></i> Imprimir
+            </button>
+        </div>
+        <div class="card-body">
+
+            <p class="ayuda">
+                Deja constancia formal de que la jurisdicción cumplió con la entrega de la información
+                del período. Constituye un resguardo para la provincia. Se remite por GDE, y el número
+                de expediente obtenido se incorpora al sistema.
+            </p>
+
+            <table class="table table-sm tabla-compacta tabla-ficha">
+                <tbody>
+                    <tr>
+                        <th style="width:14rem">Jurisdicción</th>
+                        <td>{{ comprobante.jurisdiccion }}</td>
+                    </tr>
+                    <tr>
+                        <th>Período</th>
+                        <td>
+                            {{ comprobante.periodo }}
+                            <span class="ayuda">({{ comprobante.fecha_desde|date:"d/m/Y" }} al
+                            {{ comprobante.fecha_hasta|date:"d/m/Y" }})</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Versión presentada</th>
+                        <td>{{ comprobante.version }}</td>
+                    </tr>
+                    <tr>
+                        <th>Estado</th>
+                        <td>{{ comprobante.estado }}</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha de presentación</th>
+                        <td>{{ comprobante.presentada_el|date:"d/m/Y H:i"|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Presentó</th>
+                        <td>{{ comprobante.usuario_presenta|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Expediente GDE</th>
+                        <td>{{ comprobante.expediente|default:"pendiente de incorporar" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h6 class="mt-4">Archivos comprendidos</h6>
+            <table class="table table-sm tabla-compacta tabla-ficha">
+                <thead class="table-light">
+                    <tr>
+                        <th>Archivo</th>
+                        <th>Nombre del archivo recibido</th>
+                        <th class="text-end">Filas incorporadas</th>
+                        <th>Importado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in comprobante.archivos %}
+                        <tr>
+                            <td>
+                                <strong>{{ a.codigo }}</strong>
+                            </td>
+                            <td class="mono" data-etiqueta="Nombre del archivo recibido">{{ a.nombre_archivo }}</td>
+                            <td class="text-end" data-etiqueta="Filas incorporadas">{{ a.filas_incorporadas }}</td>
+                            <td class="ayuda" data-etiqueta="Importado">{{ a.iniciada_el|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="ayuda text-center py-3">Sin archivos importados.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+
+    <a class="btn btn-outline-secondary mt-3 d-print-none"
+       href="{% url 'runac:resultado' %}?jurisdiccion={{ comprobante.jurisdiccion|urlencode }}&periodo={{ comprobante.periodo }}">
+        Volver
+    </a>
+
+{% endblock %}
