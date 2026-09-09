@@ -1,6 +1,6 @@
 """Los tipos de regla de validación de RUNAC, y la sugerencia por campo.
 
-Los ocho tipos salen del apartado técnico:
+Los tipos de regla salen del apartado técnico:
     C:\\CNCPS\\RUNAC\\analisis_funcional\\02_apartado_tecnico.docx
 
 Son configuración: van a las tablas runac_c1_tipo_regla y
@@ -115,6 +115,49 @@ TIPOS_REGLA = [
                 True,
                 "Nombre de la función habilitada, por ejemplo validar_cuil.",
             )
+        ],
+    },
+    {
+        "nombre": "PROHIBIDO_SI",
+        "descripcion": "Determina que un campo deba quedar vacío cuando otro campo cumple una condición.",
+        "parametros": [
+            (
+                "campo_condicion",
+                "CAMPO",
+                True,
+                "Campo cuyo valor prohíbe completar este.",
+            ),
+            (
+                "operador",
+                "TEXTO",
+                True,
+                "IGUAL, DISTINTO, ES_VACIO, NO_ES_VACIO, EN_LISTA o NO_EN_LISTA.",
+            ),
+            (
+                "valor_condicion",
+                "TEXTO",
+                False,
+                "Valor de la condición, cuando el operador lo requiere.",
+            ),
+        ],
+    },
+    {
+        "nombre": "EXISTE_EN_ARCHIVO",
+        "descripcion": "Verifica que el valor exista en otro archivo ya importado del mismo período.",
+        "parametros": [
+            ("archivo", "TEXTO", True, "Código del archivo referenciado."),
+            (
+                "hoja",
+                "TEXTO",
+                False,
+                "Hoja del archivo referenciado; se puede omitir si tiene una sola.",
+            ),
+            (
+                "campo",
+                "CAMPO",
+                True,
+                "Campo del archivo referenciado donde tiene que existir el valor.",
+            ),
         ],
     },
 ]

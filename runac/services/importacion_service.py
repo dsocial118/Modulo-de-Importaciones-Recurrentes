@@ -466,26 +466,53 @@ def resumen_de_hallazgos(importacion_id: int):
 # ---------------------------------------------------------------------------
 
 
+def archivos_referenciados(codigo_archivo: str, codigo_periodo: str) -> list[str]:
+    """Qué otros archivos necesita este, según lo que declara la Capa 1.
+
+    La dependencia no es el orden: es la referencia. Un archivo depende de otro
+    cuando alguno de sus campos tiene una regla que exige que el valor exista
+    allá —«el dispositivo que nombra la nómina tiene que estar declarado en el
+    archivo de dispositivos»—. Eso está en la configuración, se consulta, y no
+    hay que mantenerlo en dos lugares.
+    """
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT DISTINCT JSON_UNQUOTE(JSON_EXTRACT(r.parametros, '$.archivo'))
+            FROM runac_c2_periodo_archivo pa
+            JOIN runac_c2_periodo p ON p.id = pa.periodo_id
+            JOIN runac_c1_archivo_version av ON av.id = pa.archivo_version_id
+            JOIN runac_c1_archivo a ON a.id = av.archivo_id
+            JOIN runac_c1_hoja h ON h.archivo_version_id = av.id
+            JOIN runac_c1_campo c ON c.hoja_id = h.id
+            JOIN runac_c1_campo_regla cr ON cr.campo_id = c.id
+            JOIN runac_c1_regla r ON r.id = cr.regla_id
+            JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+            WHERE p.codigo = %s AND a.codigo = %s
+              AND tr.nombre = 'EXISTE_EN_ARCHIVO'
+            """,
+            [codigo_periodo, codigo_archivo],
+        )
+        return [f[0] for f in cur.fetchall() if f[0]]
+
+
 def dependencias_faltantes(codigo_archivo: str, jurisdiccion: str, codigo_periodo: str):
     """Archivos que deben estar importados antes que este.
 
-    La regla es el orden de importación declarado en la Capa 1: los dispositivos
-    se cargan antes que las nóminas, porque las nóminas los referencian.
+    Antes se pedían **todos** los obligatorios de orden anterior: para importar
+    la nómina penal había que haber importado las de protección, que no tienen
+    nada que ver. Ahora se piden los que este archivo efectivamente referencia.
+    El orden de importación sigue existiendo, pero para ordenar la pantalla, no
+    para trabar la carga.
     """
-    estado = estado_de_la_presentacion(jurisdiccion, codigo_periodo)
-    orden_de_este = None
-    for a in estado["archivos"]:
-        if a["codigo"] == codigo_archivo:
-            orden_de_este = a["orden_importacion"]
-            break
-    if orden_de_este is None:
+    referenciados = archivos_referenciados(codigo_archivo, codigo_periodo)
+    if not referenciados:
         return []
+    estado = estado_de_la_presentacion(jurisdiccion, codigo_periodo)
     return [
         a
         for a in estado["archivos"]
-        if a["obligatorio"]
-        and a["orden_importacion"] < orden_de_este
-        and not a.get("importada")
+        if a["codigo"] in referenciados and not a.get("importada")
     ]
 
 

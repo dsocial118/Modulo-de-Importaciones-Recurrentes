@@ -19,6 +19,7 @@ que no existe.
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from datetime import datetime
@@ -36,8 +37,17 @@ from comun import (  # noqa: E402  # pylint: disable=wrong-import-position
     nombre_tabla_receptora,
 )
 from importar import (  # noqa: E402  # pylint: disable=wrong-import-position
+    ReglaInvalida,
+    aplicar_regla,
+    clave,
+    norm,
     texto_a_numero,
 )
+
+# Reglas que no se pueden decidir mirando una sola fila: preguntan por el resto
+# de la hoja. Al corregir un dato se re-evalúa la fila, no la hoja entera, así
+# que estas quedan como estaban hasta la próxima importación.
+REGLAS_DE_HOJA_COMPLETA = ("UNICO_EN_HOJA", "UNICO_COMBINADO")
 
 # Estados de la presentación en los que la jurisdicción todavía puede corregir.
 ESTADOS_EDITABLES = ("EN_CARGA", "OBSERVADA", "SUBSANADA")
@@ -121,20 +131,69 @@ def campos_de_la_hoja(hoja_id: int) -> list[dict[str, Any]]:
         return _filas(cur)
 
 
-def opciones_de(catalogo: str) -> list[str]:
-    """Los valores admitidos de un campo con lista cerrada."""
+def opciones_de(catalogo: str, periodo: str | None = None) -> list[str]:
+    """Los valores admitidos de un campo con lista cerrada, en ese período.
+
+    La vigencia importa: una opción dada de baja en 2027 sigue siendo válida en
+    los períodos anteriores, y una agregada después no vale hacia atrás. Sin
+    esto, la pantalla de corrección ofrecía opciones que la importación rechaza
+    —o rechazaba las que el archivo traía con razón—. La comparación es de
+    texto porque el código de período está armado para eso: «2026_T1» <
+    «2026_T2» < «2027_T1».
+    """
     if not catalogo:
         return []
+    sql = """
+        SELECT o.valor_esperado FROM runac_c1_catalogo_opcion o
+        JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
+        WHERE c.codigo = %s AND o.activo = 1
+    """
+    parametros: list[Any] = [catalogo]
+    if periodo:
+        sql += """
+          AND (o.vigente_desde_periodo IS NULL OR o.vigente_desde_periodo <= %s)
+          AND (o.vigente_hasta_periodo IS NULL OR o.vigente_hasta_periodo >= %s)
+        """
+        parametros += [periodo, periodo]
+    with connection.cursor() as cur:
+        cur.execute(sql + " ORDER BY o.orden", parametros)
+        return [f[0] for f in cur.fetchall()]
+
+
+def reglas_de_los_campos(campos: list[dict]) -> dict[int, list[dict]]:
+    """Las reglas de Capa 1 de cada campo, para volver a aplicarlas al corregir.
+
+    Es la misma consulta que hace el motor al importar. Se repite acá y no se
+    reutiliza porque el motor lee con su propia conexión, fuera de Django; lo
+    que no se puede permitir es que difieran, y por eso las dos leen las mismas
+    tablas y no una copia.
+    """
+    if not campos:
+        return {}
+    marcas = ", ".join(["%s"] * len(campos))
     with connection.cursor() as cur:
         cur.execute(
-            """
-            SELECT o.valor_esperado FROM runac_c1_catalogo_opcion o
-            JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
-            WHERE c.codigo = %s AND o.activo = 1 ORDER BY o.orden
+            f"""
+            SELECT cr.campo_id, r.id, r.nombre, r.parametros,
+                   tr.nombre AS tipo_regla, cr.severidad,
+                   cr.mensaje AS mensaje_configurado
+            FROM runac_c1_campo_regla cr
+            JOIN runac_c1_regla r ON r.id = cr.regla_id
+            JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+            WHERE cr.campo_id IN ({marcas})
             """,
-            [catalogo],
+            [c["id"] for c in campos],
         )
-        return [f[0] for f in cur.fetchall()]
+        por_campo: dict[int, list[dict]] = {}
+        for regla in _filas(cur):
+            crudo = regla["parametros"]
+            if isinstance(crudo, (bytes, bytearray)):
+                crudo = crudo.decode("utf-8")
+            regla["parametros"] = (
+                crudo if isinstance(crudo, dict) else json.loads(crudo or "{}")
+            )
+            por_campo.setdefault(regla["campo_id"], []).append(regla)
+    return por_campo
 
 
 def _texto_del_valor(valor) -> str:
@@ -182,7 +241,7 @@ def datos_de_la_hoja(
             """
             SELECT numero_fila, nombre_campo, severidad, descripcion, valor_encontrado
             FROM runac_c2_reglas_incumplidas
-            WHERE importacion_id = %s AND nombre_hoja = %s
+            WHERE importacion_id = %s AND nombre_hoja = %s AND resuelta = 0
             """,
             [importacion_id, hoja["nombre_esperado"]],
         )
@@ -218,7 +277,9 @@ def datos_de_la_hoja(
 
     # Las opciones de cada campo con lista cerrada se leen una sola vez.
     opciones_por_campo = {
-        c["nombre"]: opciones_de(c["catalogo"]) for c in campos if c.get("catalogo")
+        c["nombre"]: opciones_de(c["catalogo"], contexto["periodo"])
+        for c in campos
+        if c.get("catalogo")
     }
 
     for fila in filas:
@@ -253,11 +314,168 @@ def datos_de_la_hoja(
 
 
 # ---------------------------------------------------------------------------
+# Revalidación de la fila corregida
+# ---------------------------------------------------------------------------
+
+
+def hallazgos_de_la_fila(
+    campos: list[dict], valores: dict, periodo: str | None = None
+) -> list[dict]:
+    """Vuelve a aplicar sobre una fila todo lo que se controló al importar.
+
+    Se re-evalúa la **fila entera** y no sólo el campo tocado: hay reglas que
+    miran otro campo —«la fecha de egreso no puede ser anterior a la de
+    ingreso», «si el vínculo es familiar el parentesco es obligatorio»—, así que
+    corregir un dato puede resolver la advertencia de otro, o crearla.
+    """
+    titulos = {c["nombre"]: c["titulo_esperado"] for c in campos}
+    contexto = {"unicos": {}, "fila_actual": 0, "titulos": titulos}
+    reglas = reglas_de_los_campos(campos)
+    hallazgos: list[dict] = []
+
+    def anotar(campo, codigo, severidad, detalle, regla_id=None, valor=None):
+        hallazgos.append(
+            {
+                "codigo": codigo,
+                "severidad": severidad,
+                "campo_id": campo["id"],
+                "regla_id": regla_id,
+                "nombre_campo": campo["titulo_esperado"],
+                "valor": valor,
+                "descripcion": detalle,
+            }
+        )
+
+    for campo in campos:
+        valor = valores.get(campo["nombre"])
+        vacio = valor is None or norm(valor) == ""
+
+        if campo["obligatorio"] and vacio:
+            anotar(
+                campo,
+                "OBLIGATORIO_VACIO",
+                "BLOQUEANTE",
+                "El campo es obligatorio y está vacío.",
+            )
+        if campo.get("catalogo") and not vacio:
+            admitidos = opciones_de(campo["catalogo"], periodo)
+            if admitidos and clave(valor) not in {clave(o) for o in admitidos}:
+                anotar(
+                    campo,
+                    "FUERA_DE_CATALOGO",
+                    "BLOQUEANTE",
+                    "El valor no está entre los admitidos para este campo.",
+                    valor=norm(valor),
+                )
+        largo = campo.get("longitud_maxima")
+        if (
+            largo
+            and not vacio
+            and campo["tipo_dato"] == "TEXTO"
+            and len(str(valor)) > largo
+        ):
+            anotar(
+                campo,
+                "TEXTO_MUY_LARGO",
+                "BLOQUEANTE",
+                f"El texto tiene {len(str(valor))} caracteres y el máximo "
+                f"admitido es {largo}.",
+            )
+
+        for regla in reglas.get(campo["id"], []):
+            if regla["tipo_regla"] in REGLAS_DE_HOJA_COMPLETA:
+                continue
+            try:
+                mensaje = aplicar_regla(regla, valor, valores, contexto)
+            except ReglaInvalida as falla:
+                anotar(
+                    campo,
+                    "REGLA_NO_APLICABLE",
+                    "BLOQUEANTE",
+                    f'La regla «{regla["nombre"]}» no se pudo evaluar: {falla}.',
+                    regla_id=regla["id"],
+                )
+                continue
+            if mensaje:
+                anotar(
+                    campo,
+                    regla["tipo_regla"],
+                    regla["severidad"],
+                    regla.get("mensaje_configurado") or mensaje,
+                    regla_id=regla["id"],
+                    valor=norm(valor),
+                )
+    return hallazgos
+
+
+def _reconciliar_advertencias(
+    cur, importacion_id: int, nombre_hoja: str, numero_fila: int, hallazgos: list[dict]
+) -> None:
+    """Deja los incumplimientos de la fila como quedaron después de corregir.
+
+    Antes se marcaba como resuelta cualquier advertencia de esa fila y ese
+    campo, sin volver a evaluar la regla y **sin mirar de qué hoja era**: en un
+    archivo de varias hojas, corregir la fila 5 de una hoja daba por resuelta la
+    fila 5 de la otra. Ahora se resuelve lo que efectivamente dejó de
+    incumplirse, se vuelve a abrir lo que sigue incumpliéndose y se registra lo
+    que la corrección haya creado.
+    """
+    cur.execute(
+        """
+        SELECT id, codigo, campo_id, regla_id, resuelta
+        FROM runac_c2_reglas_incumplidas
+        WHERE importacion_id = %s AND nombre_hoja = %s AND numero_fila = %s
+        """,
+        [importacion_id, nombre_hoja, numero_fila],
+    )
+    registrados = _filas(cur)
+
+    def sena(dato) -> tuple:
+        return (dato["codigo"], dato["campo_id"], dato["regla_id"])
+
+    vigentes = {sena(h) for h in hallazgos}
+    for reg in registrados:
+        sigue = sena(reg) in vigentes
+        if bool(reg["resuelta"]) is not sigue:
+            continue  # ya está como corresponde
+        cur.execute(
+            "UPDATE runac_c2_reglas_incumplidas SET resuelta = %s WHERE id = %s",
+            [0 if sigue else 1, reg["id"]],
+        )
+
+    conocidos = {sena(r) for r in registrados}
+    for hallazgo in hallazgos:
+        if sena(hallazgo) in conocidos:
+            continue
+        cur.execute(
+            """
+            INSERT INTO runac_c2_reglas_incumplidas
+                (importacion_id, campo_id, regla_id, codigo, severidad,
+                 nombre_hoja, numero_fila, nombre_campo, valor_encontrado,
+                 descripcion)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            [
+                importacion_id,
+                hallazgo["campo_id"],
+                hallazgo["regla_id"],
+                hallazgo["codigo"],
+                hallazgo["severidad"],
+                nombre_hoja,
+                numero_fila,
+                hallazgo["nombre_campo"],
+                hallazgo["valor"],
+                hallazgo["descripcion"],
+            ],
+        )
+
+
+# ---------------------------------------------------------------------------
 # Edición
 # ---------------------------------------------------------------------------
 
 
-def _convertir(valor: str, campo: dict):
+def _convertir(valor: str, campo: dict, periodo: str | None = None):
     """Convierte lo que escribió el operador al tipo del campo.
 
     Devuelve (valor, error). Es la misma exigencia que en la importación: no se
@@ -301,7 +519,7 @@ def _convertir(valor: str, campo: dict):
         return None, f"El texto tiene {len(texto)} caracteres y el máximo es {maximo}."
 
     if campo.get("catalogo"):
-        admitidos = opciones_de(campo["catalogo"])
+        admitidos = opciones_de(campo["catalogo"], periodo)
         if admitidos and texto not in admitidos:
             return None, "El valor no está entre los admitidos para este campo."
 
@@ -342,7 +560,7 @@ def editar(
     if not campo:
         raise EdicionNoPermitida("El campo no pertenece a esta hoja.")
 
-    valor, error = _convertir(valor_nuevo, campo)
+    valor, error = _convertir(valor_nuevo, campo, contexto["periodo"])
     if error:
         raise EdicionNoPermitida(error)
 
@@ -358,21 +576,37 @@ def editar(
     columna = _identificador_seguro(campo["nombre"])
 
     with connection.cursor() as cur:
+        # La fila entera, no sólo la celda: hace falta para volver a aplicar las
+        # reglas que comparan un campo con otro.
+        todas = ", ".join(f"`{_identificador_seguro(c['nombre'])}`" for c in campos)
         cur.execute(
-            f"SELECT `{columna}` FROM `{tabla}` "
+            f"SELECT {todas} FROM `{tabla}` "
             "WHERE importacion_id = %s AND numero_fila = %s",
             [importacion_id, numero_fila],
         )
         actual = cur.fetchone()
         if actual is None:
             raise EdicionNoPermitida("No existe esa fila en la importación.")
-        valor_anterior = actual[0]
+        fila_actual = dict(zip([c["nombre"] for c in campos], actual))
+        valor_anterior = fila_actual[campo["nombre"]]
 
         if str(valor_anterior or "") == str(valor or ""):
             return {"sin_cambios": True, "valor": valor_anterior}
 
+        # Antes de guardar: cómo queda la fila con el valor nuevo. Un dato que
+        # deja la fila con un error bloqueante no se guarda —el archivo entró
+        # porque no tenía ninguno, y una corrección no puede romper eso—.
+        fila_nueva = {**fila_actual, campo["nombre"]: valor}
+        hallazgos = hallazgos_de_la_fila(campos, fila_nueva, contexto["periodo"])
+        bloqueantes = [h for h in hallazgos if h["severidad"] == "BLOQUEANTE"]
+        if bloqueantes:
+            raise EdicionNoPermitida(
+                "Con ese valor la fila queda con un error que impide la carga: "
+                + bloqueantes[0]["descripcion"]
+            )
+
         cur.execute(
-            f"UPDATE `{tabla}` SET `{columna}` = %s, estado = 'EDITADA' "
+            f"UPDATE `{tabla}` SET `{columna}` = %s "
             "WHERE importacion_id = %s AND numero_fila = %s",
             [valor, importacion_id, numero_fila],
         )
@@ -396,19 +630,31 @@ def editar(
             ],
         )
 
-        # Si el valor corregido era el que disparaba una advertencia, se marca
-        # como resuelta. No se re-evalúa la regla: eso ocurre al reimportar.
-        cur.execute(
-            """
-            UPDATE runac_c2_reglas_incumplidas
-               SET resuelta = 1
-             WHERE importacion_id = %s AND numero_fila = %s
-               AND nombre_campo = %s AND severidad = 'ADVERTENCIA'
-            """,
-            [importacion_id, numero_fila, campo["titulo_esperado"]],
+        # Qué advertencias quedan realmente incumplidas después de la
+        # corrección, en esta hoja y en esta fila.
+        _reconciliar_advertencias(
+            cur, importacion_id, hoja["nombre_esperado"], numero_fila, hallazgos
         )
 
-    return {"sin_cambios": False, "valor": valor, "anterior": valor_anterior}
+        # El estado de la fila lo deciden las advertencias que quedan, no el
+        # hecho de haberla tocado: una fila corregida del todo vuelve a ser
+        # VALIDA y deja de aparecer en el filtro «sólo con advertencias».
+        cur.execute(
+            f"UPDATE `{tabla}` SET estado = %s "
+            "WHERE importacion_id = %s AND numero_fila = %s",
+            [
+                "CON_ADVERTENCIA" if hallazgos else "EDITADA",
+                importacion_id,
+                numero_fila,
+            ],
+        )
+
+    return {
+        "sin_cambios": False,
+        "valor": valor,
+        "anterior": valor_anterior,
+        "advertencias": len(hallazgos),
+    }
 
 
 def historial_de(importacion_id: int, numero_fila: int | None = None) -> list[dict]:

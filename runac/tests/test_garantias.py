@@ -217,3 +217,94 @@ def test_el_nombre_del_archivo_decide_si_entra():
     assert _nombre_corresponde(
         "MPI_2026_T1_EntreRios.xlsx", "MPI", "2026_T1", "Entre Ríos"
     )
+
+
+def test_al_corregir_se_vuelve_a_evaluar_la_fila_entera(monkeypatch):
+    """Una advertencia se da por resuelta sólo si dejó de incumplirse.
+
+    Antes bastaba con tocar el campo: la corrección marcaba resuelta cualquier
+    advertencia de esa fila y ese campo sin volver a aplicar la regla. Un dato
+    cambiado por otro igual de inválido quedaba «resuelto» y nadie lo miraba.
+
+    Y se evalúa la fila entera, no la celda: hay reglas que preguntan por otro
+    campo, así que corregir un dato puede resolver la advertencia de otro —o
+    crearla—.
+    """
+    from runac.services import edicion_service as edicion
+
+    identifica = {
+        "id": 1,
+        "nombre": "identifica",
+        "titulo_esperado": "¿Se identifica con algún pueblo originario?",
+        "tipo_dato": "TEXTO",
+        "obligatorio": False,
+        "longitud_maxima": None,
+        "catalogo": None,
+    }
+    cual = {**identifica, "id": 2, "nombre": "cual", "titulo_esperado": "Cuál"}
+    regla = {
+        "id": 10,
+        "nombre": "pueblo originario declarado",
+        "tipo_regla": "OBLIGATORIO_SI",
+        "severidad": "ADVERTENCIA",
+        "mensaje_configurado": None,
+        "parametros": {
+            "campo_condicion": "identifica",
+            "operador": "IGUAL",
+            "valor_condicion": "Sí",
+        },
+    }
+    monkeypatch.setattr(edicion, "reglas_de_los_campos", lambda campos: {2: [regla]})
+    campos = [identifica, cual]
+
+    def hallazgos(valores):
+        return edicion.hallazgos_de_la_fila(campos, valores, "2026_T1")
+
+    assert hallazgos({"identifica": "Sí", "cual": ""}), "declara y no dice cuál"
+    assert not hallazgos({"identifica": "Sí", "cual": "Qom"}), "completó el dato"
+    # Lo que la marca por campo no podía resolver: se corrigió el OTRO campo.
+    assert not hallazgos({"identifica": "No", "cual": ""}), "ya no corresponde"
+
+
+def test_la_advertencia_resuelta_se_busca_en_su_propia_hoja():
+    """En un archivo de varias hojas, la fila 5 de una no es la fila 5 de otra.
+
+    Sin el nombre de la hoja, corregir un dato de la nómina daba por resueltas
+    las advertencias de la misma fila de la otra hoja del archivo. Afecta a
+    MPJ/DAE y a los dispositivos penales.
+    """
+    import inspect
+
+    from runac.services import edicion_service as edicion
+
+    fuente = inspect.getsource(edicion._reconciliar_advertencias)
+    assert "nombre_hoja = %s" in fuente
+    assert "numero_fila = %s" in fuente
+
+
+def test_una_regla_que_el_motor_no_sabe_evaluar_no_pasa_en_silencio():
+    """Es la peor forma de fallar: la validación apagada sin que nadie se entere.
+
+    Un tipo de regla mal escrito en la Capa 1, o un operador que no existe,
+    devolvían «se cumple». El archivo entraba como si lo hubieran controlado.
+    """
+    import pytest as _pytest
+
+    import importar
+
+    with _pytest.raises(importar.ReglaInvalida):
+        importar.aplicar_regla(
+            {"tipo_regla": "LO_QUE_SEA", "parametros": {}}, "x", {}, {}
+        )
+    with _pytest.raises(importar.ReglaInvalida):
+        importar.comparar("a", "PARECIDO_A", "b")
+    with _pytest.raises(importar.ReglaInvalida):
+        importar.aplicar_regla(
+            {
+                "tipo_regla": "EJECUTAR_FUNCION",
+                "parametros": {"funcion": "validar_lo_que_sea"},
+            },
+            "x",
+            {},
+            {},
+        )

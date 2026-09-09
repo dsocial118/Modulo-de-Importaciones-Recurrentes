@@ -70,7 +70,7 @@
                                           action="{% url 'runac:cargar_archivo' a.codigo %}"
                                           enctype="multipart/form-data"
                                           class="d-flex flex-wrap gap-2 align-items-center"
-                                          {% if a.importada %}onsubmit="return confirm('Volver a importar anula la importación anterior y descarta las ediciones hechas sobre ella. ¿Continuar?')"{% endif %}>
+                                          {% if a.importada %}onsubmit="return confirm('Si la nueva importación entra, reemplaza a la anterior y se pierden las correcciones hechas sobre ella. ¿Continuar?')"{% endif %}>
                                         {% csrf_token %}
                                         <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
                                         <input type="hidden" name="jurisdiccion" value="{{ jurisdiccion }}" />

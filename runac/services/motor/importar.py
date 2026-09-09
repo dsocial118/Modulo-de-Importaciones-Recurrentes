@@ -46,6 +46,16 @@ CONEXION = dict(
 PLACEHOLDERS = {"seleccionar", "elegir", "elija una opcion", "seleccione", "-", "--"}
 
 
+class ReglaInvalida(Exception):
+    """Una regla que el motor no sabe evaluar.
+
+    Es un problema de configuración de la Capa 1, no del archivo de la
+    provincia. Se levanta para que se vea: si el motor devolviera «se cumple»
+    ante un tipo de regla o un operador desconocido, la validación quedaría
+    apagada sin que nadie se entere, que es la peor forma de fallar.
+    """
+
+
 def clave(v) -> str:
     t = re.sub(r"\s+", " ", str(v or "").replace("\xa0", " ").strip()).lower()
     return "".join(
@@ -175,7 +185,33 @@ def comparar(a, operador: str, b) -> bool:
         return clave(a) in {clave(x) for x in (b if isinstance(b, list) else [b])}
     if operador == "NO_EN_LISTA":
         return clave(a) not in {clave(x) for x in (b if isinstance(b, list) else [b])}
-    return True
+    raise ReglaInvalida(f"El operador «{operador}» no existe.")
+
+
+def condicion_se_cumple(par: dict, fila_valores: dict) -> bool:
+    """¿Se cumple la condición que dispara la regla?
+
+    La comparten OBLIGATORIO_SI y PROHIBIDO_SI: una exige que el campo esté
+    completo y la otra que esté vacío, pero la condición que las dispara se lee
+    igual, y por eso se calcula en un solo lugar.
+    """
+    cond = fila_valores.get(par.get("campo_condicion"))
+    operador = par.get("operador", "IGUAL")
+    if operador == "ES_VACIO":
+        return cond is None or norm(cond) == ""
+    if operador == "NO_ES_VACIO":
+        return cond is not None and norm(cond) != ""
+    return comparar(cond, operador, par.get("valor_condicion"))
+
+
+def condicion_legible(par: dict) -> str:
+    """Cómo se lee la condición en el mensaje que ve quien carga."""
+    operador = par.get("operador", "IGUAL").lower().replace("_", " ")
+    valor = par.get("valor_condicion")
+    if isinstance(valor, list):
+        valor = " o ".join(f"«{v}»" for v in valor)
+        return f"{operador} {valor}"
+    return operador if valor in (None, "") else f"{operador} «{valor}»"
 
 
 def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str | None:
@@ -208,8 +244,8 @@ def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str
             if not isinstance(valor, date):
                 return None
         if not comparar(valor, par.get("operador", "IGUAL"), objetivo):
-            legible = "hoy" if par.get("valor") == "HOY" else par.get("valor")
-            return f'El valor no cumple la condición: debe ser {par.get("operador", "").lower().replace("_", " ")} {legible}.'
+            objetivo_legible = "hoy" if par.get("valor") == "HOY" else par.get("valor")
+            return f'El valor no cumple la condición: debe ser {par.get("operador", "").lower().replace("_", " ")} {objetivo_legible}.'
         return None
 
     if tipo == "COMPARAR_CAMPO":
@@ -225,21 +261,44 @@ def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str
         return None
 
     if tipo == "OBLIGATORIO_SI":
-        cond = fila_valores.get(par.get("campo_condicion"))
-        op = par.get("operador", "IGUAL")
-        dispara = (
-            (cond is None or norm(cond) == "")
-            if op == "ES_VACIO"
-            else (
-                (cond is not None and norm(cond) != "")
-                if op == "NO_ES_VACIO"
-                else comparar(cond, op, par.get("valor_condicion"))
-            )
-        )
-        if dispara and vacio:
+        if condicion_se_cumple(par, fila_valores) and vacio:
             return (
                 f'El campo es obligatorio cuando «{titulo(par.get("campo_condicion"))}» '
-                f'{op.lower().replace("_", " ")} «{par.get("valor_condicion")}».'
+                f"{condicion_legible(par)}."
+            )
+        return None
+
+    if tipo == "PROHIBIDO_SI":
+        # El reverso de OBLIGATORIO_SI: hay campos que no pueden estar
+        # completos. Si la planilla declara que la persona no tiene documento,
+        # el número de documento tiene que estar vacío; con las dos cosas
+        # cargadas no se sabe cuál de las dos es la verdadera.
+        if condicion_se_cumple(par, fila_valores) and not vacio:
+            return (
+                f'El campo no se completa cuando «{titulo(par.get("campo_condicion"))}» '
+                f"{condicion_legible(par)}, y acá dice «{norm(valor)}»."
+            )
+        return None
+
+    if tipo == "EXISTE_EN_ARCHIVO":
+        # La referencia entre archivos: la nómina nombra un dispositivo que
+        # tiene que existir en el archivo de dispositivos ya importado. Es la
+        # razón por la que hay un orden de importación.
+        #
+        # Los valores válidos no se consultan fila por fila: se leen una vez
+        # antes de procesar el archivo y viajan en el contexto.
+        if vacio:
+            return None
+        conocidos = (contexto.get("referencias") or {}).get(regla["id"])
+        if conocidos is None:
+            raise ReglaInvalida(
+                "no se pudieron leer los valores del archivo referenciado "
+                f'({par.get("archivo")}).'
+            )
+        if clave(valor) not in conocidos:
+            return (
+                f'No hay ningún registro con «{norm(valor)}» en {par.get("archivo")}. '
+                "Hay que corregir el dato o importar antes ese archivo."
             )
         return None
 
@@ -276,13 +335,16 @@ def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str
         return None
 
     if tipo == "EJECUTAR_FUNCION":
-        return (
-            FUNCIONES.get(par.get("funcion"), lambda v: None)(valor)
-            if not vacio
-            else None
-        )
+        if vacio:
+            return None
+        funcion = FUNCIONES.get(par.get("funcion"))
+        if funcion is None:
+            raise ReglaInvalida(
+                f'La función «{par.get("funcion")}» no está implementada.'
+            )
+        return funcion(valor)
 
-    return None
+    raise ReglaInvalida(f"El tipo de regla «{tipo}» no está implementado.")
 
 
 def validar_cuil(valor) -> str | None:
@@ -361,20 +423,30 @@ def leer_configuracion(cur, periodo: str) -> list[dict]:
             for campo in h["campos"]:
                 campo["opciones"] = {}
                 if campo["catalogo"]:
+                    # La vigencia se compara como texto porque el código de
+                    # período está armado para eso: «2026_T1» < «2026_T2» <
+                    # «2027_T1». Una opción que se dio de baja en 2027 sigue
+                    # siendo válida en los períodos anteriores, y una que se
+                    # agregó después no vale hacia atrás.
                     cur.execute(
                         """
                         SELECT o.id, o.valor_esperado FROM runac_c1_catalogo_opcion o
                         JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
                         WHERE c.codigo = %s AND o.activo = 1
+                          AND (o.vigente_desde_periodo IS NULL
+                               OR o.vigente_desde_periodo <= %s)
+                          AND (o.vigente_hasta_periodo IS NULL
+                               OR o.vigente_hasta_periodo >= %s)
                     """,
-                        (campo["catalogo"],),
+                        (campo["catalogo"], periodo, periodo),
                     )
                     campo["opciones"] = {
                         clave(r["valor_esperado"]): r for r in cur.fetchall()
                     }
                 cur.execute(
                     """
-                    SELECT r.id, r.nombre, r.parametros, tr.nombre AS tipo_regla, cr.severidad
+                    SELECT r.id, r.nombre, r.parametros, tr.nombre AS tipo_regla,
+                           cr.severidad, cr.mensaje AS mensaje_configurado
                     FROM runac_c1_campo_regla cr
                     JOIN runac_c1_regla r ON r.id = cr.regla_id
                     JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
@@ -472,6 +544,61 @@ def validar_estructura(ruta: str, definicion: dict) -> list[str]:
     return problemas
 
 
+def identificador_seguro(nombre: str) -> str:
+    """Lo que se interpola en un SQL tiene que ser lo que la Capa 1 declaró."""
+    if not re.fullmatch(r"[a-z0-9_]{1,64}", nombre or ""):
+        raise ReglaInvalida(f"«{nombre}» no es un nombre de tabla o columna válido.")
+    return nombre
+
+
+def valores_referenciados(cur, archivos, archivo, presentacion_id) -> dict:
+    """Los identificadores que ya existen en los archivos que este referencia.
+
+    Se leen una sola vez, antes de procesar el archivo, y sólo de la
+    importación **vigente** de cada archivo referenciado: si la provincia
+    reimportó los dispositivos, los identificadores válidos son los de la
+    última importación, no los de la que quedó anulada.
+    """
+    referencias: dict[int, set] = {}
+    for hoja in archivo["hojas"]:
+        for campo in hoja["campos"]:
+            for regla in campo["reglas"]:
+                if regla["tipo_regla"] != "EXISTE_EN_ARCHIVO":
+                    continue
+                par = regla["parametros"] or {}
+                destino = next(
+                    (a for a in archivos if a["codigo"] == par.get("archivo")), None
+                )
+                if destino is None:
+                    continue
+                # Sin hoja declarada se buscan TODAS las del archivo: el
+                # dispositivo penal se declara en la hoja que corresponde a su
+                # tipo —CRC, CRSC, CAD, MPT…—, y quien nombra el dispositivo en
+                # la nómina no tiene por qué saber en cuál está.
+                hojas = [
+                    h
+                    for h in destino["hojas"]
+                    if h.get("tabla")
+                    and (not par.get("hoja") or h["nombre_esperado"] == par["hoja"])
+                ]
+                columna = identificador_seguro(par.get("campo"))
+                conocidos: set = set()
+                for hoja_destino in hojas:
+                    tabla = identificador_seguro(hoja_destino["tabla"])
+                    if not any(c["nombre"] == columna for c in hoja_destino["campos"]):
+                        continue
+                    cur.execute(
+                        f"""SELECT DISTINCT t.`{columna}` FROM `{tabla}` t
+                            JOIN runac_c2_importacion i ON i.id = t.importacion_id
+                            WHERE i.presentacion_id = %s AND i.archivo_id = %s
+                              AND i.estado = 'VALIDA'""",
+                        (presentacion_id, destino["archivo_id"]),
+                    )
+                    conocidos |= {clave(f[0]) for f in cur.fetchall()}
+                referencias[regla["id"]] = conocidos
+    return referencias
+
+
 def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
     """Lee una hoja, la valida y la deja en staging. Devuelve el resumen."""
     wb = load_workbook(ruta, data_only=True, read_only=True)
@@ -488,6 +615,10 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
         "unicos": {},
         "fila_actual": 0,
         "titulos": {c["nombre"]: c["titulo_esperado"] for c in hoja["campos"]},
+        # Una regla que no se puede evaluar se informa una vez, no una por fila.
+        "reglas_rotas": set(),
+        # Los identificadores que existen en los archivos ya importados.
+        "referencias": (contexto_global or {}).get("referencias") or {},
     }
     total = 0
     con_error = 0
@@ -605,12 +736,45 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
         # --- reglas ---
         for campo in campos:
             for regla in campo["reglas"]:
-                mensaje = aplicar_regla(
-                    regla,
-                    valores_tipados.get(campo["nombre"]),
-                    valores_tipados,
-                    contexto,
-                )
+                try:
+                    mensaje = aplicar_regla(
+                        regla,
+                        valores_tipados.get(campo["nombre"]),
+                        valores_tipados,
+                        contexto,
+                    )
+                except ReglaInvalida as falla:
+                    # Una regla mal configurada no puede pasar en silencio: el
+                    # archivo entraría sin haber sido controlado. Se informa una
+                    # sola vez —no una por fila— y bloquea, porque nadie puede
+                    # afirmar que estos datos cumplen lo que la regla pedía.
+                    if regla["id"] in contexto["reglas_rotas"]:
+                        continue
+                    contexto["reglas_rotas"].add(regla["id"])
+                    hallazgos.append(
+                        dict(
+                            codigo="REGLA_NO_APLICABLE",
+                            severidad="BLOQUEANTE",
+                            campo_id=campo["id"],
+                            regla_id=regla["id"],
+                            fila=nro,
+                            campo=campo["titulo_esperado"],
+                            columna=get_column_letter(campo["orden"]),
+                            valor=None,
+                            detalle=(
+                                f'La regla «{regla["nombre"]}» no se pudo evaluar: '
+                                f"{falla}. Es un problema de configuración: hay que "
+                                "avisar a Nación antes de volver a importar."
+                            ),
+                        )
+                    )
+                    errores_fila += 1
+                    continue
+                # El mensaje que redactó la Capa 1 para esta combinación de campo
+                # y regla manda sobre el que arma el motor: es el que entiende
+                # quien carga, y por eso se puede configurar.
+                if mensaje and regla.get("mensaje_configurado"):
+                    mensaje = regla["mensaje_configurado"]
                 if mensaje:
                     hallazgos.append(
                         dict(
@@ -916,12 +1080,17 @@ def _ejecutar(args, conexion):
             )
             continue
 
+        # Los identificadores que este archivo puede referenciar se leen una vez
+        # —no fila por fila— de la importación vigente del archivo referenciado.
+        contexto_global = {
+            "referencias": valores_referenciados(cur2, archivos, a, presentacion_id)
+        }
         hojas_resumen = []
         for hoja in a["hojas"]:
             if not hoja.get("tabla"):
                 continue
             hojas_resumen.append(
-                procesar_hoja(cur2, r["ruta"], hoja, importacion_id, {})
+                procesar_hoja(cur2, r["ruta"], hoja, importacion_id, contexto_global)
             )
 
         total = sum(h["total"] for h in hojas_resumen)
@@ -995,6 +1164,23 @@ def _ejecutar(args, conexion):
                 importacion_id,
             ),
         )
+
+        # Una sola importación vigente por archivo. Cuando la nueva entra, la
+        # anterior se anula: si no, las dos quedaban VALIDAS y no había forma de
+        # decir cuál manda. Las filas de la anulada siguen en la tabla receptora
+        # —son la constancia de lo que se cargó—, y por eso todo lo que las lea
+        # tiene que hacerlo por importación vigente y no por presentación.
+        #
+        # Se anula cuando la nueva se incorpora, no cuando se intenta: un
+        # archivo que vuelve a importarse con errores no puede hacerle perder a
+        # la provincia lo que ya tenía cargado.
+        if estado == "VALIDA":
+            cur2.execute(
+                """UPDATE runac_c2_importacion SET estado='ANULADA'
+                    WHERE presentacion_id=%s AND archivo_id=%s AND id<>%s
+                      AND estado='VALIDA'""",
+                (presentacion_id, a["archivo_id"], importacion_id),
+            )
         cn.commit()
 
         marca = (

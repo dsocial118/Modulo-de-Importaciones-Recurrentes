@@ -1,8 +1,8 @@
-"""Tests de la importación: orden de carga y convención de tablas receptoras.
+"""Tests de la importación: dependencias entre archivos y tablas receptoras.
 
 Son las dos reglas que el documento funcional pone del lado del sistema y no del
-operador: el orden lo controla el sistema, y el nombre de la tabla receptora se
-deduce en vez de guardarse.
+operador: qué archivo necesita a cuál lo dice la configuración, y el nombre de
+la tabla receptora se deduce en vez de guardarse.
 """
 
 import sys
@@ -52,39 +52,63 @@ def _estado(importados=()):
 
 @pytest.fixture(name="sin_base")
 def _sin_base(monkeypatch):
-    """Reemplaza la consulta a la base por un estado armado en memoria."""
+    """Reemplaza las consultas a la base por una configuración en memoria.
 
-    def fabricar(importados=()):
+    «referencias» es lo que la Capa 1 declara: qué archivos nombra cada uno.
+    """
+
+    def fabricar(importados=(), referencias=None):
+        referencias = referencias or {}
         monkeypatch.setattr(
             svc, "estado_de_la_presentacion", lambda *a, **k: _estado(importados)
+        )
+        monkeypatch.setattr(
+            svc,
+            "archivos_referenciados",
+            lambda codigo, periodo: referencias.get(codigo, []),
         )
 
     return fabricar
 
 
 # ---------------------------------------------------------------------------
-# Orden de importación
+# Dependencias entre archivos
+#
+# La dependencia es la REFERENCIA, no el orden. Antes se pedían todos los
+# archivos obligatorios de orden anterior: para importar la nómina penal había
+# que haber importado las de protección, que no tienen nada que ver con ella.
 # ---------------------------------------------------------------------------
 
+REFERENCIAS = {"MPJ_DAE": ["DISP_PENAL"], "MPE": ["DISP_SCP"]}
 
-def test_el_primer_archivo_no_tiene_dependencias(sin_base):
-    sin_base()
+
+def test_un_archivo_que_no_referencia_a_ninguno_no_tiene_dependencias(sin_base):
+    sin_base(referencias=REFERENCIAS)
     assert svc.dependencias_faltantes("DISP_PENAL", "Salta", "2026_T1") == []
 
 
-def test_una_nomina_sin_dispositivos_no_se_puede_importar(sin_base):
-    sin_base()
-    faltan = svc.dependencias_faltantes("MPE", "Salta", "2026_T1")
-    assert [f["codigo"] for f in faltan] == ["DISP_PENAL", "DISP_SCP", "MPI"]
+def test_una_nomina_sin_sus_dispositivos_no_se_puede_importar(sin_base):
+    sin_base(referencias=REFERENCIAS)
+    faltan = svc.dependencias_faltantes("MPJ_DAE", "Salta", "2026_T1")
+    assert [f["codigo"] for f in faltan] == ["DISP_PENAL"]
 
 
 def test_con_las_dependencias_cargadas_se_habilita(sin_base):
-    sin_base(importados=("DISP_PENAL", "DISP_SCP", "MPI"))
-    assert svc.dependencias_faltantes("MPE", "Salta", "2026_T1") == []
+    sin_base(importados=("DISP_PENAL",), referencias=REFERENCIAS)
+    assert svc.dependencias_faltantes("MPJ_DAE", "Salta", "2026_T1") == []
+
+
+def test_el_orden_por_si_solo_no_traba_la_carga(sin_base):
+    """MPI y MPE van antes que la nómina penal, y no tienen nada que ver."""
+    sin_base(referencias=REFERENCIAS)
+    faltan = [
+        f["codigo"] for f in svc.dependencias_faltantes("MPJ_DAE", "Salta", "2026_T1")
+    ]
+    assert "MPI" not in faltan and "MPE" not in faltan
 
 
 def test_un_archivo_que_no_existe_no_bloquea_nada(sin_base):
-    sin_base()
+    sin_base(referencias=REFERENCIAS)
     assert svc.dependencias_faltantes("INVENTADO", "Salta", "2026_T1") == []
 
 
