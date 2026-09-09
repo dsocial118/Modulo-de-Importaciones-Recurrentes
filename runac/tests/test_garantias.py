@@ -378,3 +378,27 @@ def test_el_destino_de_vuelta_es_de_esta_aplicacion():
     fuente = inspect.getsource(circuito._volver)
     assert "url_has_allowed_host_and_scheme" in fuente
     assert "request.get_host()" in fuente
+
+
+def test_las_filas_vacias_del_final_no_son_un_problema():
+    """Una planilla termina con filas en blanco: es lo normal, no un error.
+
+    Lo que sí es un problema es un hueco **en el medio** de los datos: suele
+    ser contenido borrado que dejó la fila, o un segundo bloque de registros
+    más abajo que nadie miró. Bloquea, porque no se puede saber cuál de las dos
+    cosas es sin abrir el archivo.
+
+    La diferencia está en cómo se detecta: sólo se anota el hueco cuando
+    después aparece otra fila con datos.
+    """
+    import inspect
+
+    import importar
+
+    fuente = inspect.getsource(importar.procesar_hoja)
+    assert "if ultima_con_datos and nro > ultima_con_datos + 1:" in fuente, (
+        "el hueco se anota al encontrar la fila con datos que viene después; "
+        "si no viene ninguna, no hay hueco que anotar"
+    )
+    # Y lo que se anota es lo que quedó entre dos filas con datos.
+    assert "range(ultima_con_datos + 1, nro)" in fuente

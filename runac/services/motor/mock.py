@@ -2,10 +2,23 @@
 
     python mock.py --archivo MPI --filas 50
     python mock.py --todos --filas 30 --con-errores
+    python mock.py --todos --filas 30 --con-advertencias
 
-Sirve para probar el importador sin datos reales. Con --con-errores agrega filas
-deliberadamente inválidas, una por cada tipo de problema que el importador
-debería detectar, para verificar que efectivamente las agarre.
+Sirve para probar el importador sin datos reales. Hay tres juegos de archivos y
+cada uno prueba una cosa distinta:
+
+  - **limpio**: no tiene que producir ni un hallazgo. Es el que dice que el
+    importador no inventa problemas donde no los hay.
+  - **--con-advertencias**: sólo advertencias. Es el que sirve para mostrar la
+    corrección dentro del sistema, que es lo que se hace con una advertencia.
+  - **--con-errores**: errores bloqueantes, uno de cada tipo, para verificar
+    que el importador los agarre y que el archivo no entre.
+
+Para que el archivo limpio salga limpio, el generador **lee las reglas de la
+Capa 1 y las respeta**: si la situación de documentación dice que no hay número
+de DNI, no escribe uno. Es el mismo principio que el resto del módulo —la
+lógica está en los datos—, y si no fuera así habría que acordarse de actualizar
+el generador cada vez que se agrega una regla.
 
 Los datos son inventados. Los nombres salen de una lista corta y los documentos
 de un rango que no corresponde a personas reales.
@@ -14,6 +27,7 @@ de un rango que no corresponde a personas reales.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import os
 import random
@@ -21,6 +35,10 @@ from datetime import date, timedelta
 
 import mysql.connector
 from openpyxl import load_workbook
+
+# El generador aplica las MISMAS condiciones que el importador: si usara una
+# copia propia, un archivo "limpio" podría no serlo.
+from importar import condicion_se_cumple
 
 CONEXION = dict(
     host=os.environ.get("RUNAC_DB_HOST", "mysql"),
@@ -154,6 +172,58 @@ def digito_cuil(diez: str) -> int:
     return 0 if resto == 11 else (9 if resto == 10 else resto)
 
 
+def es_de_dispositivo(titulo: str) -> bool:
+    """¿El campo nombra un dispositivo o un programa, y no a una persona?
+
+    «disposit» y no «dispositivo» porque las planillas traen «dispositvo», sin
+    la i, y ese es justamente el campo que la nómina referencia.
+    """
+    return "disposit" in titulo or "programa" in titulo
+
+
+def valor_condicionado(
+    campo: dict, fila: dict, candidato, rnd: random.Random, sembrar_aviso: bool = False
+):
+    """Ajusta el valor para que respete las reglas condicionales de la Capa 1.
+
+    Devuelve (valor, motivo_del_aviso). Sin esto, el archivo «limpio» salía con
+    incumplimientos: se sorteaba «no posee N° DNI» y a continuación se escribía
+    un número de DNI, o se declaraba un pueblo originario y se dejaba en blanco
+    cuál. Son contradicciones que el importador detecta —y hace bien—, pero que
+    no tienen que estar en el archivo que se usa para probar que todo anda.
+
+    Con `sembrar_aviso`, las de severidad ADVERTENCIA se dejan incumplidas a
+    propósito: es lo que hace falta para mostrar la corrección dentro del
+    sistema, que es lo que se hace con una advertencia y no con un bloqueante.
+    """
+    for regla in campo.get("reglas") or []:
+        par = regla.get("parametros") or {}
+        tipo, severidad = regla["tipo_regla"], regla["severidad"]
+        es_aviso = severidad == "ADVERTENCIA"
+
+        if tipo == "EXISTE_EN_ARCHIVO" and sembrar_aviso and es_aviso:
+            return "Dispositivo no declarado", regla["nombre"]
+
+        if tipo not in ("PROHIBIDO_SI", "OBLIGATORIO_SI"):
+            continue
+        if not condicion_se_cumple(par, fila):
+            continue
+        vacio = candidato is None or str(candidato).strip() == ""
+        if sembrar_aviso and es_aviso:
+            # Se incumple a propósito, y de forma segura: la regla que exige el
+            # dato lo deja vacío y la que lo prohíbe se asegura de que haya uno.
+            if tipo == "OBLIGATORIO_SI":
+                return None, regla["nombre"]
+            return (candidato if not vacio else f"Dato {rnd.randint(1, 99)}"), regla[
+                "nombre"
+            ]
+        if tipo == "PROHIBIDO_SI":
+            return None, None
+        if vacio:
+            return f"Dato requerido {rnd.randint(1, 99)}", None
+    return candidato, None
+
+
 def valor_inventado(
     campo: dict,
     opciones: list[str],
@@ -216,7 +286,11 @@ def valor_inventado(
 
     if "apellido" in t:
         return rnd.choice(APELLIDOS)
-    if "nombre" in t and "dispositivo" not in t and "programa" not in t:
+    # «Nombre del dispositvo» viene así, sin la i, en las planillas de
+    # dispositivos penales. Con «dispositivo» escrito completo, ese campo caía
+    # en la rama de las personas y se llenaba con un nombre de pila: la nómina
+    # nombraba dispositivos que no existían en el archivo de dispositivos.
+    if "nombre" in t and not es_de_dispositivo(t):
         return rnd.choice(NOMBRES)
     if "dni" in t or "documento" in t:
         return str(DOC_DESDE + i * 137 + rnd.randint(0, 90))
@@ -231,7 +305,7 @@ def valor_inventado(
         return f"{rnd.choice(CALLES)} {rnd.randint(100, 4999)}"
     if "codigo postal" in t or "código postal" in t:
         return f"{rnd.choice('BCDEHKLMNPQRSTUWXYZ')}{rnd.randint(1000, 9999)}{rnd.choice('ABCDEFGHIJ')}"
-    if "dispositivo" in t or "programa" in t or "residencia" in t or "hogar" in t:
+    if es_de_dispositivo(t) or "residencia" in t or "hogar" in t:
         return rnd.choice(DISPOSITIVOS)
     if "localidad" in t or "partido" in t or "municipio" in t:
         return rnd.choice(LOCALIDADES.get(jurisdiccion or "", LOCALIDAD_POR_DEFECTO))
@@ -298,6 +372,26 @@ def leer_definicion(cur, codigo: str):
                     (campo["catalogo"],),
                 )
                 campo["opciones"] = [r["valor_esperado"] for r in cur.fetchall()]
+            # Las reglas se leen para respetarlas al generar: el archivo limpio
+            # tiene que salir limpio sin que nadie mantenga una lista aparte.
+            cur.execute(
+                """SELECT r.id, r.nombre, r.parametros, tr.nombre AS tipo_regla,
+                          cr.severidad
+                     FROM runac_c1_campo_regla cr
+                     JOIN runac_c1_regla r ON r.id = cr.regla_id
+                     JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+                    WHERE cr.campo_id = %s""",
+                (campo["id"],),
+            )
+            campo["reglas"] = []
+            for r in cur.fetchall():
+                crudo = r["parametros"]
+                if isinstance(crudo, (bytes, bytearray)):
+                    crudo = crudo.decode("utf-8")
+                r["parametros"] = (
+                    crudo if isinstance(crudo, dict) else json.loads(crudo or "{}")
+                )
+                campo["reglas"].append(r)
     archivo["hojas"] = hojas
     return archivo
 
@@ -310,6 +404,11 @@ def main():
     p.add_argument("--todos", action="store_true")
     p.add_argument("--filas", type=int, default=30)
     p.add_argument("--con-errores", action="store_true")
+    p.add_argument(
+        "--con-advertencias",
+        action="store_true",
+        help="deja incumplidas a proposito las reglas de severidad ADVERTENCIA",
+    )
     p.add_argument("--plantillas", default="/trabajo/capa1/plantillas")
     p.add_argument("--salida", default="/trabajo/entregables/06_Archivos_de_prueba")
     p.add_argument("--periodo", default="2026_T1")
@@ -387,16 +486,35 @@ def main():
                 continue
             fila = fila_enc + 1
 
+            avisos_puestos = []
             for i in range(1, args.filas + 1):
+                # Una de cada tres filas lleva advertencias: así el archivo
+                # tiene también filas correctas y se ve la diferencia.
+                sembrar = bool(args.con_advertencias) and i % 3 == 0
                 generados: dict = {}
                 for k, campo in enumerate(campos, start=1):
                     v = valor_inventado(
                         campo, campo["opciones"], i, rnd, generados, args.jurisdiccion
                     )
+                    v, aviso = valor_condicionado(campo, generados, v, rnd, sembrar)
+                    if aviso:
+                        avisos_puestos.append(
+                            (nombre, fila, campo["titulo_esperado"], aviso)
+                        )
                     generados[campo["nombre"]] = v
                     ws.cell(row=fila, column=k, value=v)
                 fila += 1
-            resumen.append((nombre, args.filas, 0))
+            resumen.append((nombre, args.filas, len(avisos_puestos)))
+
+            if avisos_puestos:
+                # Una hoja aparte deja constancia de qué se dejó incumplido.
+                if "ADVERTENCIAS_ESPERADAS" not in wb.sheetnames:
+                    wa = wb.create_sheet("ADVERTENCIAS_ESPERADAS")
+                    wa.append(["Hoja", "Fila", "Campo", "Regla que se incumple"])
+                    for col, ancho in zip("ABCD", (18, 8, 40, 46)):
+                        wa.column_dimensions[col].width = ancho
+                for aviso in avisos_puestos:
+                    wb["ADVERTENCIAS_ESPERADAS"].append(list(aviso))
 
             if args.con_errores:
                 errores_puestos = []
@@ -486,7 +604,11 @@ def main():
         # Formato de nombre propuesto en el análisis funcional:
         #   MPI_2026_T1_NombreProvincia.xlsx
         prov = re.sub(r"[^A-Za-z0-9]", "", clave_simple(args.jurisdiccion).title())
-        sufijo = "_CON_ERRORES" if args.con_errores else ""
+        sufijo = ""
+        if args.con_errores:
+            sufijo = "_CON_ERRORES"
+        elif args.con_advertencias:
+            sufijo = "_CON_ADVERTENCIAS"
         destino_archivo = os.path.join(
             args.salida, f"{codigo}_{args.periodo}_{prov}{sufijo}.xlsx"
         )
