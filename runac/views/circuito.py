@@ -36,18 +36,22 @@ def _volver(request, presentacion_id=None):
     )
 
 
-class AccionView(LoginRequiredMixin, View):
+class AccionView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     """Ejecuta una transición del circuito."""
 
+    seccion = "resultado"
+
     def post(self, request, presentacion_id, accion):
-        jurisdiccion = request.POST.get("jurisdiccion") or ""
-        periodo = request.POST.get("periodo") or "2026_T1"
-        estado = (
-            svc.estado_de_la_presentacion(jurisdiccion, periodo) if jurisdiccion else {}
-        )
+        # La completitud se calcula desde la presentación de la URL y no desde
+        # lo que manda el formulario. Antes salía de la jurisdicción enviada por
+        # el navegador y, si faltaba, el valor por defecto era «listo»: bastaba
+        # omitir un parámetro para cerrar una carga incompleta.
         try:
             nuevo = circuito.ejecutar(
-                presentacion_id, accion, request.user, listo=estado.get("listo", True)
+                presentacion_id,
+                accion,
+                request.user,
+                listo=svc.presentacion_completa(presentacion_id),
             )
             messages.success(
                 request,
@@ -59,8 +63,10 @@ class AccionView(LoginRequiredMixin, View):
         return _volver(request, presentacion_id)
 
 
-class ObservarView(LoginRequiredMixin, View):
+class ObservarView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     """El revisor nacional formula una observación. No modifica el dato."""
+
+    seccion = "revision"
 
     def post(self, request, presentacion_id):
         try:
@@ -86,8 +92,10 @@ class ObservarView(LoginRequiredMixin, View):
         return _volver(request, presentacion_id)
 
 
-class ResponderView(LoginRequiredMixin, View):
+class ResponderView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     """La jurisdicción responde una observación."""
+
+    seccion = "resultado"
 
     def post(self, request, observacion_id):
         try:
@@ -100,8 +108,10 @@ class ResponderView(LoginRequiredMixin, View):
         return _volver(request)
 
 
-class ExpedienteView(LoginRequiredMixin, View):
+class ExpedienteView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     """Registra el número GDE, después de remitir el comprobante."""
+
+    seccion = "resultado"
 
     def post(self, request, presentacion_id):
         try:
@@ -114,8 +124,10 @@ class ExpedienteView(LoginRequiredMixin, View):
         return _volver(request, presentacion_id)
 
 
-class ComprobanteView(LoginRequiredMixin, TemplateView):
+class ComprobanteView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
     """El comprobante de presentación: constancia de la entrega."""
+
+    seccion = "resultado"
 
     template_name = "runac/comprobante.html"
 
@@ -173,8 +185,10 @@ class RevisionView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
         return ctx
 
 
-class PlanillaDeErroresView(LoginRequiredMixin, View):
+class PlanillaDeErroresView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     """Descarga un Excel con los errores, una hoja por cada hoja del archivo."""
+
+    seccion = "resultado"
 
     def get(self, request, importacion_id):
         contenido = informes.planilla_de_errores(importacion_id)
@@ -183,12 +197,14 @@ class PlanillaDeErroresView(LoginRequiredMixin, View):
         return _descarga(contenido, f"errores_importacion_{importacion_id}.xlsx")
 
 
-class ArchivoMarcadoView(LoginRequiredMixin, View):
+class ArchivoMarcadoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     """Descarga el archivo que subió el operador, con las celdas marcadas.
 
     Es la salida que sirve para corregir: se abre, se ve qué está mal y dónde,
     se corrige y se vuelve a importar.
     """
+
+    seccion = "resultado"
 
     def get(self, request, importacion_id):
         contenido, nombre = informes.archivo_marcado(importacion_id)

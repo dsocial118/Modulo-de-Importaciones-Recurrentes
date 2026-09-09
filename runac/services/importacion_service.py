@@ -107,6 +107,39 @@ def campos_de(codigo_archivo: str):
         return _fila_a_dict(cur)
 
 
+def presentacion_completa(presentacion_id: int) -> bool:
+    """Si están importados todos los archivos obligatorios de la presentación.
+
+    Se calcula **desde la presentación**, no desde parámetros de la petición: es
+    la condición para cerrar la carga, y un dato que llega del navegador no
+    puede decidirla.
+    """
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT COUNT(*) AS obligatorios,
+                   SUM(EXISTS (
+                       SELECT 1 FROM runac_c2_importacion i
+                        WHERE i.presentacion_id = s.id
+                          AND i.archivo_version_id = av.id
+                          AND i.estado = 'VALIDA')) AS importados
+              FROM runac_c2_presentacion s
+              JOIN runac_c2_periodo_archivo pa ON pa.periodo_id = s.periodo_id
+              JOIN runac_c1_archivo_version av ON av.id = pa.archivo_version_id
+             WHERE s.id = %s AND av.obligatorio = 1
+            """,
+            [presentacion_id],
+        )
+        fila = cur.fetchone()
+
+    if not fila:
+        return False
+    obligatorios, importados = fila[0] or 0, fila[1] or 0
+    # Sin archivos obligatorios declarados no hay nada que dar por completo: una
+    # presentación inexistente no puede considerarse cerrable.
+    return obligatorios > 0 and importados == obligatorios
+
+
 def hojas_disponibles():
     """Las hojas de datos, para el selector de la pantalla de reglas.
 

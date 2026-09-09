@@ -105,6 +105,57 @@ def test_la_interpretacion_numerica_esta_en_un_solo_lugar():
 # ---------------------------------------------------------------------------
 
 
+def test_ninguna_operacion_del_circuito_queda_sin_control_de_seccion():
+    """Pedir sesión no es controlar el acceso.
+
+    Ocho vistas —las acciones del circuito, observar, responder, expediente,
+    comprobante, las dos descargas y editar un campo— sólo verificaban que
+    hubiera sesión iniciada. Cualquier usuario autenticado podía invocarlas
+    escribiendo la dirección.
+    """
+    from runac.permissions import SeccionPermitidaMixin
+    from runac.views import circuito, edicion
+
+    for modulo in (circuito, edicion):
+        for nombre in dir(modulo):
+            clase = getattr(modulo, nombre)
+            if not (isinstance(clase, type) and nombre.endswith("View")):
+                continue
+            if clase.__module__ != modulo.__name__:
+                continue  # importada de otro lado
+            assert issubclass(
+                clase, SeccionPermitidaMixin
+            ), f"{nombre} no declara control de sección"
+            assert getattr(clase, "seccion", ""), (
+                f"{nombre} tiene el control pero no declara a qué sección "
+                "pertenece, de modo que no verifica nada"
+            )
+
+
+def test_la_completitud_no_puede_llegar_del_navegador():
+    """La condición para cerrar la carga se calcula desde la presentación.
+
+    Salía de la jurisdicción enviada en el formulario y, si el parámetro
+    faltaba, el valor por defecto era «listo»: bastaba omitirlo para cerrar una
+    carga incompleta.
+    """
+    import inspect
+
+    from runac.services import importacion_service as svc
+    from runac.views.circuito import AccionView
+
+    cuerpo = inspect.getsource(AccionView.post)
+    assert "presentacion_completa" in cuerpo
+    assert 'get("listo", True)' not in cuerpo, "vuelve el valor por defecto permisivo"
+
+    # Una presentación que no existe no puede estar completa. Es la trampa en la
+    # que cae un COUNT sin filas: cero faltantes se lee como «está todo».
+    fuente = inspect.getsource(svc.presentacion_completa)
+    assert (
+        "obligatorios > 0" in fuente
+    ), "sin archivos obligatorios declarados no hay nada que dar por completo"
+
+
 def test_la_hoja_prepara_su_insercion_pero_no_la_ejecuta():
     """Es lo que hace restrictiva a la importación en archivos de varias hojas.
 

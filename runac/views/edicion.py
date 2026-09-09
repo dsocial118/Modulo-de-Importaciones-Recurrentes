@@ -67,8 +67,10 @@ class EdicionView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
         return ctx
 
 
-class EditarCampoView(LoginRequiredMixin, View):
+class EditarCampoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     """Guarda la corrección de un dato. Responde en JSON o redirige."""
+
+    seccion = "resultado"
 
     def post(self, request, importacion_id):
         if not puede_editar_datos(request.user):
