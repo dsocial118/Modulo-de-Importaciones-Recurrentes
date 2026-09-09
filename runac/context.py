@@ -13,7 +13,13 @@ def datos_de_sesion(request):
         "aviso_prototipo": settings.RUNAC_AVISO_PROTOTIPO,
         # El rol define qué puede hacer; la jurisdicción, sobre qué datos.
         "rol": nombre_del_rol(usuario) if autenticado else None,
-        "jurisdiccion": jurisdiccion_de(usuario) if autenticado else None,
+        # Sólo la de quien pertenece a una: el nivel nacional no es de ninguna,
+        # y el selector ya indica sobre cuál se está trabajando.
+        "jurisdiccion": (
+            jurisdiccion_de(usuario)
+            if autenticado and not es_nacional(usuario)
+            else None
+        ),
         "es_nacional": es_nacional(usuario) if autenticado else False,
         # Cada rol ve sólo las secciones que le corresponden.
         "menu": menu_de(usuario) if autenticado else [],

@@ -9,7 +9,9 @@ no sabe nada de Django ni de web.
 
 from __future__ import annotations
 
+import re
 import sys
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -487,6 +489,36 @@ def dependencias_faltantes(codigo_archivo: str, jurisdiccion: str, codigo_period
     ]
 
 
+def _comparable(texto: str) -> str:
+    """Forma comparable de un texto: sin tildes, sin separadores, en minúsculas.
+
+    Sirve para que «Entre Ríos» y «EntreRios» sean la misma jurisdicción y para
+    que no importe si el archivo usa guiones, guiones bajos o espacios.
+    """
+    limpio = unicodedata.normalize("NFD", str(texto or "").lower())
+    limpio = "".join(c for c in limpio if unicodedata.category(c) != "Mn")
+    return re.sub(r"[^a-z0-9]", "", limpio)
+
+
+def _nombre_corresponde(
+    nombre: str, codigo_archivo: str, codigo_periodo: str, jurisdiccion: str
+) -> bool:
+    """¿El nombre del archivo es el que corresponde a esta celda de la grilla?
+
+    Se pide que **empiece** por el código del archivo y que nombre el período y
+    la jurisdicción en curso. Se admite lo que venga después —por ejemplo el
+    sufijo `_CON_ERRORES` de los archivos de prueba—, porque lo que importa es
+    que el archivo no sea de otro trimestre, de otra provincia ni de otra
+    planilla.
+    """
+    limpio = _comparable(Path(nombre).stem)
+    return (
+        limpio.startswith(_comparable(codigo_archivo))
+        and _comparable(codigo_periodo) in limpio
+        and _comparable(jurisdiccion) in limpio
+    )
+
+
 def importar_uno(
     codigo_archivo: str, fichero, jurisdiccion: str, codigo_periodo: str, usuario: str
 ):
@@ -504,6 +536,25 @@ def importar_uno(
                 "No se puede importar %s todavía: primero hay que importar %s, "
                 "porque este archivo los referencia."
                 % (codigo_archivo, ", ".join(f["codigo"] for f in faltan))
+            ),
+        }
+
+    # El nombre del archivo se controla ANTES de guardarlo y de procesarlo: un
+    # archivo que no corresponde a este período o a esta jurisdicción no entra.
+    # Era una advertencia y se procesaba igual, de modo que un archivo de otra
+    # provincia podía incorporarse a la presentación en curso.
+    esperado = f"{codigo_archivo}_{codigo_periodo}_{jurisdiccion}.xlsx"
+    if not _nombre_corresponde(
+        fichero.name, codigo_archivo, codigo_periodo, jurisdiccion
+    ):
+        return {
+            "rechazado": True,
+            "codigo": codigo_archivo,
+            "nombre_sugerido": esperado,
+            "mensaje": (
+                f"El nombre «{fichero.name}» no corresponde a este archivo, "
+                f"este período y esta jurisdicción. Se espera «{esperado}». "
+                "El archivo no se importó."
             ),
         }
 
@@ -529,14 +580,5 @@ def importar_uno(
     )
     resultado["rechazado"] = False
     resultado["codigo"] = codigo_archivo
-    # Advertencia temprana por el nombre: no impide la importación.
-    esperado = f"{codigo_archivo}_{codigo_periodo}_{jurisdiccion}"
-    resultado["nombre_inesperado"] = codigo_periodo.replace(
-        "_", ""
-    ) not in fichero.name.replace("_", "") or jurisdiccion.lower().replace(
-        " ", ""
-    ) not in fichero.name.lower().replace(
-        " ", ""
-    )
-    resultado["nombre_sugerido"] = f"{esperado}.xlsx"
+    resultado["nombre_sugerido"] = esperado
     return resultado

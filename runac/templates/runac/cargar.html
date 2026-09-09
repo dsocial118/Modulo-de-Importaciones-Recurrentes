@@ -8,7 +8,8 @@
             <h5 class="mb-1">Cargar archivos</h5>
             <div class="ayuda">
                 Los archivos se cargan <strong>de a uno</strong>, indicando de cuál se trata.
-                El sistema no lo deduce del nombre. El orden lo controla el sistema:
+                El nombre tiene que ser el esperado: si es de otro archivo, otro período u otra
+                jurisdicción, no se importa. El orden lo controla el sistema:
                 los dispositivos antes que las nóminas, porque las nóminas los referencian.
             </div>
         </div>
@@ -49,7 +50,7 @@
                                 <strong>{{ a.codigo }}</strong>
                                 {% if a.obligatorio %}<span class="ayuda">· obligatorio</span>{% endif %}
                                 <div class="ayuda">{{ a.titulo }}</div>
-                                <div class="ayuda mono">{{ a.nombre_sugerido }}</div>
+                                <div class="ayuda mono" title="Nombre esperado del archivo">{{ a.nombre_sugerido }}</div>
                             </td>
                             <td data-etiqueta="Estado">
                                 <span class="estado e-{{ a.estado }}">{{ a.estado }}</span>
@@ -64,10 +65,12 @@
                                         <strong>{{ a.bloqueado_por|join:", " }}</strong>.
                                     </span>
                                 {% elif carga_abierta and puede_cargar %}
+                                    {% comment %} El aviso de que reimportar descarta lo anterior se pregunta al confirmar: como texto fijo ocupaba media grilla. {% endcomment %}
                                     <form method="post"
                                           action="{% url 'runac:cargar_archivo' a.codigo %}"
                                           enctype="multipart/form-data"
-                                          class="d-flex flex-wrap gap-2 align-items-center">
+                                          class="d-flex flex-wrap gap-2 align-items-center"
+                                          {% if a.importada %}onsubmit="return confirm('Volver a importar anula la importación anterior y descarta las ediciones hechas sobre ella. ¿Continuar?')"{% endif %}>
                                         {% csrf_token %}
                                         <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
                                         <input type="hidden" name="jurisdiccion" value="{{ jurisdiccion }}" />
@@ -87,12 +90,6 @@
                                             {% endif %}
                                         </button>
                                     </form>
-                                    {% if a.importada %}
-                                        <div class="ayuda mt-1">
-                                            Volver a importar anula la importación anterior y descarta las ediciones
-                                            hechas sobre ella.
-                                        </div>
-                                    {% endif %}
                                 {% else %}
                                     <span class="ayuda">—</span>
                                 {% endif %}

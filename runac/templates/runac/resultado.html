@@ -11,12 +11,12 @@
              aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
-                    <div class="modal-header {% if recien_bloqueantes %}bg-danger{% else %}bg-success{% endif %} text-white">
+                    <div class="modal-header {% if recien_estado == 'VALIDA' %}bg-success{% else %}bg-danger{% endif %} text-white">
                         <h5 class="modal-title">
-                            {% if recien_bloqueantes %}
-                                <i class="bi bi-x-octagon-fill"></i> No se pudo importar
-                            {% else %}
+                            {% if recien_estado == 'VALIDA' %}
                                 <i class="bi bi-check-circle-fill"></i> Importación correcta
+                            {% else %}
+                                <i class="bi bi-x-octagon-fill"></i> No se pudo importar
                             {% endif %}
                         </h5>
                         <button type="button"
@@ -28,10 +28,16 @@
                         <p class="mb-2">
                             Archivo <strong>{{ recien_importado }}</strong>.
                         </p>
-                        {% if recien_bloqueantes %}
-                            <p class="mb-1">
-                                <span class="sev-BLOQUEANTE">{{ recien_bloqueantes }} errores bloqueantes</span>
-                            </p>
+                        {% if recien_estado != 'VALIDA' %}
+                            {% if recien_bloqueantes %}
+                                <p class="mb-1">
+                                    <span class="sev-BLOQUEANTE">{{ recien_bloqueantes }} errores bloqueantes</span>
+                                </p>
+                            {% else %}
+                                <p class="mb-1">
+                                    <span class="sev-BLOQUEANTE">El archivo no se corresponde con la estructura esperada.</span>
+                                </p>
+                            {% endif %}
                             {% if recien_advertencias %}
                                 <p class="mb-1">
                                     <span class="sev-ADVERTENCIA">{{ recien_advertencias }} advertencias</span>
@@ -155,6 +161,19 @@
                                     {% if a.importada and puede_responder %}
                                         <a class="btn btn-outline-success btn-sm"
                                            href="{% url 'runac:edicion' a.importacion.id %}">Editar datos</a>
+                                    {% endif %}
+                                    {% comment %} Los informes se descargan desde acá cuantas veces haga falta: si sólo estuvieran en el aviso emergente, cerrarlo sin bajarlos los perdía. {% endcomment %}
+                                    {% if a.importacion.bloqueantes or a.importacion.advertencias %}
+                                        <a class="btn btn-outline-danger btn-sm"
+                                           href="{% url 'runac:planilla_errores' a.importacion.id %}"
+                                           title="Descargar la lista de errores en Excel">
+                                            <i class="bi bi-file-earmark-excel"></i>
+                                        </a>
+                                        <a class="btn btn-outline-warning btn-sm"
+                                           href="{% url 'runac:archivo_marcado' a.importacion.id %}"
+                                           title="Descargar el archivo con las celdas marcadas">
+                                            <i class="bi bi-highlighter"></i>
+                                        </a>
                                     {% endif %}
                                 {% endif %}
                             </td>

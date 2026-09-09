@@ -188,3 +188,32 @@ def test_la_hoja_prepara_su_insercion_pero_no_la_ejecuta():
     assert cuerpo_archivo.index("bloqueantes = sum(") < cuerpo_archivo.index(
         "if not bloqueantes:"
     ), "los bloqueantes de todas las hojas se suman ANTES de decidir la inserción"
+
+
+def test_el_nombre_del_archivo_decide_si_entra():
+    """Un archivo de otra provincia, otro trimestre u otra planilla no entra.
+
+    Era una advertencia: el sistema avisaba «el nombre no se corresponde» y lo
+    importaba igual, de modo que los datos de Chaco podían quedar dentro de la
+    presentación de Chubut. Ahora la comprobación se hace antes de guardar el
+    archivo y rechaza.
+
+    Se admite lo que venga después del nombre esperado —el sufijo
+    `_CON_ERRORES` de los archivos de prueba— porque eso no cambia de qué
+    archivo, período ni jurisdicción se trata.
+    """
+    from runac.services.importacion_service import _nombre_corresponde
+
+    def corresponde(nombre):
+        return _nombre_corresponde(nombre, "MPI", "2026_T1", "Chaco")
+
+    assert corresponde("MPI_2026_T1_Chaco.xlsx")
+    assert corresponde("MPI_2026_T1_Chaco_CON_ERRORES.xlsx"), "sufijo admitido"
+    assert not corresponde("MPI_2026_T1_Chubut.xlsx"), "otra jurisdicción"
+    assert not corresponde("MPI_2025_T4_Chaco.xlsx"), "otro período"
+    assert not corresponde("MPE_2026_T1_Chaco.xlsx"), "otra planilla"
+
+    # Las tildes y los separadores no son el problema que se quiere detectar.
+    assert _nombre_corresponde(
+        "MPI_2026_T1_EntreRios.xlsx", "MPI", "2026_T1", "Entre Ríos"
+    )

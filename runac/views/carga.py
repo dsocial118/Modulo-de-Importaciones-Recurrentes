@@ -2,8 +2,10 @@
 
 La modalidad es la que define el análisis funcional para la primera versión:
 **los archivos se cargan de a uno, y el operador indica de qué archivo se trata**.
-El sistema no lo deduce del nombre, y el orden de importación lo controla el
-sistema, no el operador.
+El sistema no lo deduce del nombre: lo usa para verificar que el archivo sea el
+declarado y que corresponda al período y a la jurisdicción en curso. Si no
+corresponde, no se importa. El orden de importación lo controla el sistema, no
+el operador.
 """
 
 from django.contrib import messages
@@ -47,21 +49,39 @@ def jurisdiccion_en_curso(request) -> str:
 _jurisdiccion = jurisdiccion_en_curso
 
 
-def _entero(valor) -> int:
-    try:
-        return int(valor)
-    except (TypeError, ValueError):
-        return 0
+def _ultima_importacion(filas, codigo) -> dict:
+    """Cómo le fue al archivo que se acaba de importar.
 
-
-def _importacion_de(filas, codigo):
-    """El id de la importación recién hecha, para enlazar sus dos informes."""
+    Se lee del registro de la importación y no de contadores calculados en la
+    vista: un archivo rechazado por estructura no trae conteo de bloqueantes, y
+    contar cero llevaba a anunciar «importación correcta» sobre algo que había
+    fallado. El estado registrado es el que sabe la verdad.
+    """
+    vacio = {
+        "recien_importado": None,
+        "recien_estado": None,
+        "recien_bloqueantes": 0,
+        "recien_advertencias": 0,
+        "recien_importacion_id": None,
+    }
     if not codigo:
-        return None
+        return vacio
+
     for fila in filas:
-        if fila.get("codigo") == codigo and fila.get("importacion"):
-            return fila["importacion"]["id"]
-    return None
+        if fila.get("codigo") != codigo:
+            continue
+        imp = fila.get("importacion")
+        if not imp:
+            # Rechazado antes de registrarse: no hay importación que mostrar.
+            return {**vacio, "recien_importado": codigo, "recien_estado": "FALLIDA"}
+        return {
+            "recien_importado": codigo,
+            "recien_estado": imp.get("estado"),
+            "recien_bloqueantes": imp.get("bloqueantes") or 0,
+            "recien_advertencias": imp.get("advertencias") or 0,
+            "recien_importacion_id": imp.get("id"),
+        }
+    return vacio
 
 
 class CargarView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
@@ -136,35 +156,13 @@ class CargarArchivoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
             messages.error(request, resultado["mensaje"])
             return redirect(volver)
 
-        if resultado.get("nombre_inesperado"):
-            messages.warning(
-                request,
-                f"El nombre «{fichero.name}» no se corresponde con el período o la "
-                f'jurisdicción en curso. Se esperaba «{resultado["nombre_sugerido"]}». '
-                f"Es una advertencia: el archivo se procesó igual.",
-            )
-
-        resumen = resultado.get("resumen") or []
-        bloqueantes = sum((r or {}).get("bloqueantes", 0) or 0 for r in resumen)
-        advertencias = sum((r or {}).get("advertencias", 0) or 0 for r in resumen)
-
-        if bloqueantes:
-            messages.error(
-                request,
-                f"{codigo}: se detectaron {bloqueantes} errores bloqueantes. "
-                f"No se incorporó ningún registro de este archivo. "
-                f"Hay que corregir el Excel y volver a importarlo.",
-            )
-        else:
-            messages.success(request, f"{codigo}: se importó correctamente.")
-
-        # El resultado se muestra además como aviso al llegar a la pantalla: si
-        # sólo va en la franja de mensajes, se pierde entre el resto.
+        # El resultado se lee de la importación registrada y no de contadores
+        # armados acá: un rechazo por estructura no trae conteo de bloqueantes,
+        # y el aviso terminaba anunciando «importación correcta» sobre un
+        # archivo que había fallado.
         return redirect(
             f'{reverse("runac:resultado")}?periodo={periodo}'
-            f"&jurisdiccion={jurisdiccion}"
-            f"&importado={codigo}&bloqueantes={bloqueantes}"
-            f"&advertencias={advertencias}"
+            f"&jurisdiccion={jurisdiccion}&importado={codigo}"
         )
 
 
@@ -205,10 +203,7 @@ class ResultadoView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
                 "presentacion": pres,
                 "listo": estado["listo"],
                 # Lo que se acaba de importar, para el aviso de resultado.
-                "recien_importado": recien,
-                "recien_bloqueantes": _entero(self.request.GET.get("bloqueantes")),
-                "recien_advertencias": _entero(self.request.GET.get("advertencias")),
-                "recien_importacion_id": _importacion_de(filas, recien),
+                **_ultima_importacion(filas, recien),
                 "estado_legible": nombre,
                 "estado_ayuda": ayuda,
                 "pasos": _pasos_del_circuito(estado_codigo),

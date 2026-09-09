@@ -178,6 +178,14 @@
 
       .tabla-compacta td, .tabla-compacta th { padding: .42rem .55rem; vertical-align: middle; }
 
+      /* Los anchos declarados en cada `th` son una SUGERENCIA mientras el
+         navegador reparte el espacio según el contenido: con un título largo,
+         una columna se lleva todo y el resto queda amontonado contra el borde.
+         Con el reparto fijo, el ancho declarado se respeta y el texto se parte
+         donde corresponde. */
+      .tabla-ficha { table-layout: fixed; width: 100%; }
+      .tabla-ficha td, .tabla-ficha th { overflow-wrap: anywhere; }
+
       .accion-circuito { flex-direction: row; flex-wrap: wrap; align-items: center; }
       .accion-circuito form, .accion-circuito .btn, .accion-circuito form .btn { width: auto; }
 
