@@ -54,7 +54,37 @@ def clave(v) -> str:
 
 
 def norm(v) -> str:
-    return re.sub(r"\s+", " ", str(v or "").replace("\xa0", " ").strip())
+    """Texto normalizado del valor.
+
+    `str(v or "")` sería más corto y estaría mal: en Python el cero es falso, de
+    modo que un «0» informado —una capacidad, una cantidad de personal— se
+    convertiría en vacío y el dato desaparecería. El cero es un dato.
+    """
+    if v is None:
+        return ""
+    return re.sub(r"\s+", " ", str(v).replace("\xa0", " ").strip())
+
+
+def texto_a_numero(valor) -> str | None:
+    """Pasa un número escrito a mano al formato que entiende Python.
+
+    Las provincias escriben en formato argentino: la coma separa decimales y el
+    punto separa miles. Pero el punto también se usa como decimal, así que
+    borrarlo siempre convertía «1.5» en 15.
+
+    El criterio: un punto es separador de miles **sólo si lo siguen exactamente
+    tres dígitos y nada más que dígitos**. En cualquier otro caso es decimal.
+    Devuelve None si el texto no parece un número.
+    """
+    t = norm(valor).replace(" ", "")
+    if not t:
+        return None
+    if "," in t:
+        # Con coma presente, el punto sólo puede ser separador de miles.
+        return t.replace(".", "").replace(",", ".")
+    if re.fullmatch(r"-?\d{1,3}(\.\d{3})+", t):
+        return t.replace(".", "")
+    return t
 
 
 def es_placeholder(v) -> bool:
@@ -95,17 +125,21 @@ def convertir(valor, tipo: str):
                 if valor == int(valor)
                 else (None, f"{valor} tiene decimales y se esperaba un número entero.")
             )
-        t = norm(valor).replace(".", "").replace(" ", "")
+        t = texto_a_numero(valor) or ""
         if re.fullmatch(r"-?\d+", t):
             return int(t), None
+        if re.fullmatch(r"-?\d+\.\d+", t):
+            return (
+                None,
+                f'"{norm(valor)}" tiene decimales y se esperaba un número entero.',
+            )
         return None, f'"{norm(valor)}" no es un número entero.'
 
     if tipo == "DECIMAL":
         if isinstance(valor, (int, float)):
             return float(valor), None
-        t = norm(valor).replace(".", "").replace(",", ".")
         try:
-            return float(t), None
+            return float(texto_a_numero(valor) or ""), None
         except ValueError:
             return None, f'"{norm(valor)}" no es un número.'
 
@@ -641,7 +675,15 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
     # en runac_c2_reglas_incumplidas.
     cols = ", ".join(f"`{c['nombre']}`" for c in campos)
     bloqueantes = sum(1 for h in hallazgos if h["severidad"] == "BLOQUEANTE")
-    if filas_tipadas and bloqueantes == 0:
+
+    # La hoja PREPARA su inserción; no la ejecuta. Quien decide es el archivo,
+    # después de sumar los bloqueantes de todas sus hojas.
+    #
+    # Es lo que hace restrictiva a la importación de verdad: si cada hoja
+    # insertara por su cuenta, un archivo de varias hojas podía quedar declarado
+    # fallido y conservar igual las filas de las hojas que no tenían errores.
+    insercion = None
+    if filas_tipadas:
         con_adv = {h["fila"] for h in hallazgos if h["severidad"] == "ADVERTENCIA"}
         marcas = ", ".join(["%s"] * (4 + len(campos)))
         filas = [
@@ -656,8 +698,9 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
             )
             for (imp, nro, *resto) in filas_tipadas
         ]
-        cur.executemany(
-            f'INSERT INTO `{hoja["tabla"]}` (importacion_id, numero_fila, estado, hash_contenido, {cols}) '
+        insercion = (
+            f'INSERT INTO `{hoja["tabla"]}` '
+            f"(importacion_id, numero_fila, estado, hash_contenido, {cols}) "
             f"VALUES ({marcas})",
             filas,
         )
@@ -669,6 +712,7 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
         "hallazgos": hallazgos,
         "bloqueantes": bloqueantes,
         "advertencias": sum(1 for h in hallazgos if h["severidad"] == "ADVERTENCIA"),
+        "insercion": insercion,
     }
 
 
@@ -884,6 +928,15 @@ def _ejecutar(args, conexion):
         con_error = sum(h["con_error"] for h in hojas_resumen)
         bloqueantes = sum(h["bloqueantes"] for h in hojas_resumen)
         advertencias = sum(h["advertencias"] for h in hojas_resumen)
+
+        # Importación restrictiva: recién ahora, con el archivo entero evaluado,
+        # se sabe si corresponde incorporar. Un bloqueante en cualquier hoja
+        # impide que entre una fila de todo el archivo.
+        if not bloqueantes:
+            for h in hojas_resumen:
+                if h.get("insercion"):
+                    sql, filas = h["insercion"]
+                    cur2.executemany(sql, filas)
 
         for h in hojas_resumen:
             for hg in h["hallazgos"]:

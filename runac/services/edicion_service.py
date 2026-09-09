@@ -35,6 +35,9 @@ if str(_MOTOR) not in sys.path:
 from comun import (  # noqa: E402  # pylint: disable=wrong-import-position
     nombre_tabla_receptora,
 )
+from importar import (  # noqa: E402  # pylint: disable=wrong-import-position
+    texto_a_numero,
+)
 
 # Estados de la presentación en los que la jurisdicción todavía puede corregir.
 ESTADOS_EDITABLES = ("EN_CARGA", "OBSERVADA", "SUBSANADA")
@@ -274,15 +277,22 @@ def _convertir(valor: str, campo: dict):
                 continue
         return None, f'"{texto}" no es una fecha válida. Se espera dd/mm/aaaa.'
 
-    if campo["tipo_dato"] == "ENTERO":
-        limpio = texto.replace(".", "").replace(" ", "")
-        if not re.fullmatch(r"-?\d+", limpio):
+    # La interpretación numérica es la MISMA que la de la importación, y por eso
+    # se toma de allá: si cada pantalla la resolviera por su cuenta, un valor
+    # corregido a mano podría guardarse distinto del que entró por el archivo.
+    if campo["tipo_dato"] in ("ENTERO", "DECIMAL"):
+        limpio = texto_a_numero(texto) or ""
+        if campo["tipo_dato"] == "ENTERO":
+            if re.fullmatch(r"-?\d+", limpio):
+                return int(limpio), None
+            if re.fullmatch(r"-?\d+\.\d+", limpio):
+                return (
+                    None,
+                    f'"{texto}" tiene decimales y se esperaba un número entero.',
+                )
             return None, f'"{texto}" no es un número entero.'
-        return int(limpio), None
-
-    if campo["tipo_dato"] == "DECIMAL":
         try:
-            return float(texto.replace(".", "").replace(",", ".")), None
+            return float(limpio), None
         except ValueError:
             return None, f'"{texto}" no es un número.'
 
