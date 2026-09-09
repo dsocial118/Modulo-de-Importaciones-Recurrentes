@@ -31,7 +31,7 @@ import re
 
 from django.db import connection
 
-from runac.permissions import puede_presentar, puede_revisar
+from runac.permissions import puede_administrar, puede_presentar, puede_revisar
 
 
 # Que accion puede ejecutarse desde cada estado, y quien.
@@ -330,6 +330,32 @@ def registrar_expediente(presentacion_id: int, numero: str, usuario):
             "UPDATE runac_c2_presentacion SET expediente = %s WHERE id = %s",
             [(numero or "").strip()[:100], presentacion_id],
         )
+
+
+# Lo que puede pasar a ser un período. PREPARACION es hacia atrás: se usa
+# mientras la estructura todavía se puede tocar.
+ESTADOS_DE_PERIODO = ("PREPARACION", "ABIERTO", "CERRADO")
+
+
+def cambiar_estado_del_periodo(codigo: str, estado: str, usuario) -> str:
+    """Abre o cierra un período para todas las jurisdicciones.
+
+    Es la ventana de presentación: mientras el período no está ABIERTO no se
+    recibe ningún archivo, y una vez CERRADO tampoco. Lo decide el nivel
+    nacional, no la provincia.
+    """
+    if not puede_administrar(usuario):
+        raise TransicionInvalida("Sólo el nivel nacional abre y cierra un período.")
+    if estado not in ESTADOS_DE_PERIODO:
+        raise TransicionInvalida(f"«{estado}» no es un estado de período.")
+    with connection.cursor() as cur:
+        cur.execute(
+            "UPDATE runac_c2_periodo SET estado = %s WHERE codigo = %s",
+            [estado, codigo],
+        )
+        if not cur.rowcount:
+            raise TransicionInvalida(f"El período {codigo} no está definido.")
+    return estado
 
 
 def borrar_todas_las_importaciones() -> dict:

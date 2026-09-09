@@ -21,6 +21,122 @@ Para regenerar este archivo:
 from django.db import models
 
 
+class AuthGroup(models.Model):
+    name = models.CharField(unique=True, max_length=150)
+
+    class Meta:
+        managed = False
+        db_table = "auth_group"
+
+
+class AuthGroupPermissions(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    group = models.ForeignKey(AuthGroup, models.DO_NOTHING)
+    permission = models.ForeignKey("AuthPermission", models.DO_NOTHING)
+
+    class Meta:
+        managed = False
+        db_table = "auth_group_permissions"
+        unique_together = (("group", "permission"),)
+
+
+class AuthPermission(models.Model):
+    name = models.CharField(max_length=255)
+    content_type = models.ForeignKey("DjangoContentType", models.DO_NOTHING)
+    codename = models.CharField(max_length=100)
+
+    class Meta:
+        managed = False
+        db_table = "auth_permission"
+        unique_together = (("content_type", "codename"),)
+
+
+class AuthUser(models.Model):
+    password = models.CharField(max_length=128)
+    last_login = models.DateTimeField(blank=True, null=True)
+    is_superuser = models.IntegerField()
+    username = models.CharField(unique=True, max_length=150)
+    first_name = models.CharField(max_length=150)
+    last_name = models.CharField(max_length=150)
+    email = models.CharField(max_length=254)
+    is_staff = models.IntegerField()
+    is_active = models.IntegerField()
+    date_joined = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "auth_user"
+
+
+class AuthUserGroups(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
+    group = models.ForeignKey(AuthGroup, models.DO_NOTHING)
+
+    class Meta:
+        managed = False
+        db_table = "auth_user_groups"
+        unique_together = (("user", "group"),)
+
+
+class AuthUserUserPermissions(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
+    permission = models.ForeignKey(AuthPermission, models.DO_NOTHING)
+
+    class Meta:
+        managed = False
+        db_table = "auth_user_user_permissions"
+        unique_together = (("user", "permission"),)
+
+
+class DjangoAdminLog(models.Model):
+    action_time = models.DateTimeField()
+    object_id = models.TextField(blank=True, null=True)
+    object_repr = models.CharField(max_length=200)
+    action_flag = models.PositiveSmallIntegerField()
+    change_message = models.TextField()
+    content_type = models.ForeignKey(
+        "DjangoContentType", models.DO_NOTHING, blank=True, null=True
+    )
+    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
+
+    class Meta:
+        managed = False
+        db_table = "django_admin_log"
+
+
+class DjangoContentType(models.Model):
+    app_label = models.CharField(max_length=100)
+    model = models.CharField(max_length=100)
+
+    class Meta:
+        managed = False
+        db_table = "django_content_type"
+        unique_together = (("app_label", "model"),)
+
+
+class DjangoMigrations(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    app = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
+    applied = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "django_migrations"
+
+
+class DjangoSession(models.Model):
+    session_key = models.CharField(primary_key=True, max_length=40)
+    session_data = models.TextField()
+    expire_date = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "django_session"
+
+
 class RunacC1Archivo(models.Model):
     id = models.BigAutoField(primary_key=True, db_comment="Identificador interno.")
     codigo = models.CharField(
@@ -153,8 +269,8 @@ class RunacC1Campo(models.Model):
         managed = False
         db_table = "runac_c1_campo"
         unique_together = (
-            ("hoja", "nombre"),
             ("hoja", "orden"),
+            ("hoja", "nombre"),
         )
         db_table_comment = "Define los campos o columnas esperados dentro de cada hoja."
 
@@ -249,9 +365,9 @@ class RunacC1CatalogoOpcion(models.Model):
         managed = False
         db_table = "runac_c1_catalogo_opcion"
         unique_together = (
-            ("catalogo", "codigo"),
-            ("catalogo", "valor_esperado"),
             ("catalogo", "orden"),
+            ("catalogo", "valor_esperado"),
+            ("catalogo", "codigo"),
         )
         db_table_comment = "Cada valor permitido dentro de un catálogo, con su vigencia. Permite validar cada archivo contra las opciones que regían en su período."
 
@@ -315,8 +431,8 @@ class RunacC1Hoja(models.Model):
         managed = False
         db_table = "runac_c1_hoja"
         unique_together = (
-            ("archivo_version", "nombre_esperado"),
             ("archivo_version", "orden_procesamiento"),
+            ("archivo_version", "nombre_esperado"),
         )
         db_table_comment = (
             "Define las hojas que deben encontrarse dentro de cada versión de archivo."
@@ -395,8 +511,8 @@ class RunacC1TipoReglaParametro(models.Model):
         managed = False
         db_table = "runac_c1_tipo_regla_parametro"
         unique_together = (
-            ("tipo_regla", "nombre"),
             ("tipo_regla", "orden"),
+            ("tipo_regla", "nombre"),
         )
         db_table_comment = "Define los parámetros esperados por cada tipo de regla."
 
@@ -521,6 +637,12 @@ class RunacC2Importacion(models.Model):
     )
     bytes = models.BigIntegerField(
         blank=True, null=True, db_comment="Tamaño del archivo."
+    )
+    ruta_archivo = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        db_comment="Ubicación del archivo recibido, tal como llegó. Es lo que permite devolver al operador su propio Excel con las celdas marcadas, y el respaldo documental de lo presentado.",
     )
     estado = models.CharField(
         max_length=7,
@@ -852,379 +974,569 @@ class RunacC2ReglasIncumplidas(models.Model):
 
 
 class RunacC3Cambio(models.Model):
-    id = models.BigAutoField(primary_key=True, db_comment="Identificador interno.")
-    entidad = models.CharField(
-        max_length=40, db_comment="Tabla de Capa 3 donde ocurrió el cambio."
-    )
-    entidad_id = models.BigIntegerField(db_comment="Registro modificado.")
-    campo = models.CharField(max_length=100, db_comment="Columna que cambió.")
-    valor_anterior = models.TextField(
-        blank=True, null=True, db_comment="Contenido antes del cambio."
-    )
-    valor_nuevo = models.TextField(
-        blank=True, null=True, db_comment="Contenido después del cambio."
-    )
+    id = models.BigAutoField(primary_key=True)
+    entidad = models.CharField(max_length=40)
+    entidad_id = models.BigIntegerField()
+    campo = models.CharField(max_length=100)
+    valor_anterior = models.TextField(blank=True, null=True)
+    valor_nuevo = models.TextField(blank=True, null=True)
     presentacion = models.ForeignKey(
-        RunacC2Presentacion,
-        models.DO_NOTHING,
-        blank=True,
-        null=True,
-        db_comment="Presentación que produjo el cambio. Queda vacío en las correcciones manuales.",
+        RunacC2Presentacion, models.DO_NOTHING, blank=True, null=True
     )
-    usuario = models.CharField(
-        max_length=150,
-        blank=True,
-        null=True,
-        db_comment="Usuario responsable, cuando el cambio fue manual.",
-    )
-    motivo = models.TextField(
-        blank=True, null=True, db_comment="Justificación del cambio."
-    )
-    fecha = models.DateTimeField(db_comment="Momento del cambio.")
+    usuario = models.CharField(max_length=150, blank=True, null=True)
+    motivo = models.CharField(max_length=13, blank=True, null=True)
+    justificacion = models.TextField(blank=True, null=True)
+    fecha = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = "runac_c3_cambio"
-        db_table_comment = "Historial campo a campo. Permite reconstruir cómo estaba un registro en cualquier momento y saber qué presentación lo modificó."
+        db_table_comment = "El historial campo a campo. No es un accesorio de auditoria: es la fuente de las series historicas, porque la base guarda una sola fila por chico con el dato vigente. Por eso registra el valor ANTERIOR y la presentacion que produjo el cambio."
 
 
 class RunacC3Coincidencia(models.Model):
-    id = models.BigAutoField(primary_key=True, db_comment="Identificador interno.")
-    importacion = models.ForeignKey(
-        RunacC2Importacion,
-        models.DO_NOTHING,
-        db_comment="Importación que produjo la duda.",
-    )
-    numero_fila = models.IntegerField(db_comment="Fila del Excel en cuestión.")
+    id = models.BigAutoField(primary_key=True)
+    importacion = models.ForeignKey(RunacC2Importacion, models.DO_NOTHING)
+    numero_fila = models.IntegerField(blank=True, null=True)
     persona_candidata = models.ForeignKey(
-        "RunacC3Persona",
-        models.DO_NOTHING,
-        blank=True,
-        null=True,
-        db_comment="Persona del padrón que podría ser la misma.",
+        "RunacC3Persona", models.DO_NOTHING, blank=True, null=True
     )
-    motivo = models.CharField(
-        max_length=255,
-        db_comment="Por qué se sospecha que son la misma persona, o por qué no se pudo decidir.",
-    )
-    puntaje = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        blank=True,
-        null=True,
-        db_comment="Grado de similitud calculado, de 0 a 100.",
-    )
-    estado = models.CharField(max_length=10, db_comment="Resolución de la ambigüedad.")
-    resuelta_por = models.CharField(
-        max_length=150, blank=True, null=True, db_comment="Usuario que la resolvió."
-    )
-    resuelta_el = models.DateTimeField(
-        blank=True, null=True, db_comment="Momento de la resolución."
-    )
+    motivo = models.CharField(max_length=255)
+    puntaje = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+    estado = models.CharField(max_length=10)
+    resuelta_por = models.CharField(max_length=150, blank=True, null=True)
+    resuelta_el = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = "runac_c3_coincidencia"
-        db_table_comment = "Coincidencias de identidad que requieren revisión humana, como pide el circuito de importación. Ninguna se resuelve sola."
+        db_table_comment = "Coincidencias de identidad que no se pueden decidir solas: documento y nombre que coinciden parcialmente, o nombre y fecha de nacimiento sin documento."
+
+
+class RunacC3DispAlcanceTerritorial(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    dispositivo = models.ForeignKey("RunacC3Dispositivo", models.DO_NOTHING)
+    jurisdiccion_alcanzada = models.CharField(max_length=120)
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_disp_alcance_territorial"
+        unique_together = (("dispositivo", "jurisdiccion_alcanzada"),)
+        db_table_comment = "MPT, CAD y guardia informan VARIAS jurisdicciones de alcance. Por eso es una relacion y no un campo de texto: permite responder que dispositivos alcanzan a un municipio determinado."
+
+
+class RunacC3DispCad(models.Model):
+    dispositivo = models.OneToOneField(
+        "RunacC3Dispositivo", models.DO_NOTHING, primary_key=True
+    )
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_disp_cad"
+        db_table_comment = "27 campos, 22 compartidos con CRC. Propios: resolucion de creacion, articulacion interministerial, alcance territorial y tiempo maximo de permanencia en horas."
+
+
+class RunacC3DispCrc(models.Model):
+    dispositivo = models.OneToOneField(
+        "RunacC3Dispositivo", models.DO_NOTHING, primary_key=True
+    )
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_disp_crc"
+        db_table_comment = "36 campos. Grupos: capacidad por genero, proyecto institucional y normativa convivencial, personal por funcion, 6 protocolos, contacto socioafectivo, educacion obligatoria por nivel y horas, formacion profesional y talleres, espacios, condiciones de las celdas."
+
+
+class RunacC3DispCrsc(models.Model):
+    dispositivo = models.OneToOneField(
+        "RunacC3Dispositivo", models.DO_NOTHING, primary_key=True
+    )
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_disp_crsc"
+        db_table_comment = "36 campos IDENTICOS a los de CRC: mismos nombres, misma cantidad. Se mantiene como registro propio porque son regimenes distintos y sus cuestionarios pueden diferenciarse. Consulta abierta a la DNPYPI: corresponde relevar lo mismo?"
+
+
+class RunacC3DispGuardia(models.Model):
+    dispositivo = models.OneToOneField(
+        "RunacC3Dispositivo", models.DO_NOTHING, primary_key=True
+    )
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_disp_guardia"
+        db_table_comment = "9 campos, todos contenidos en CAD: es un subconjunto exacto. Consulta abierta a la DNPYPI: faltan campos propios de la guardia?"
+
+
+class RunacC3DispMpt(models.Model):
+    dispositivo = models.OneToOneField(
+        "RunacC3Dispositivo", models.DO_NOTHING, primary_key=True
+    )
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_disp_mpt"
+        db_table_comment = "10 campos, 8 de ellos tambien en CRC. Propios: espacio de grupalidad y alcance territorial. Es un programa en territorio, no un lugar de alojamiento."
+
+
+class RunacC3DispResidencial(models.Model):
+    dispositivo = models.OneToOneField(
+        "RunacC3Dispositivo", models.DO_NOTHING, primary_key=True
+    )
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_disp_residencial"
+        db_table_comment = "61 campos. Grupos: datos institucionales, gestion y convenio con el OPN, el establecimiento cuenta con..., protocolos, capacidad y cobertura, perfiles poblacionales admitidos, personal por funcion, 14 capacitaciones, proyecto de restitucion de derechos, insercion familiar y comunitaria. Comparte con los penales solo 5 de sus 61 campos, los de identificacion: son instrumentos distintos."
 
 
 class RunacC3Dispositivo(models.Model):
     id = models.BigAutoField(
         primary_key=True,
-        db_comment="ID SISOC del dispositivo. Se asigna en la primera carga y las plantillas siguientes deben traerlo.",
+        db_comment="ID SISOC del dispositivo. Las plantillas siguientes deben traerlo.",
     )
-    jurisdiccion = models.CharField(
-        max_length=120, db_comment="Provincia a la que pertenece."
-    )
-    nombre = models.CharField(
-        max_length=255, db_comment="Nombre del dispositivo, residencia, hogar o centro."
-    )
-    tipo = models.CharField(
-        max_length=11,
-        db_comment="Tipo de dispositivo. Determina qué archivo lo puede referenciar.",
-    )
-    dependencia = models.CharField(
-        max_length=255, blank=True, null=True, db_comment="Organismo del que depende."
-    )
-    gestion = models.CharField(
-        max_length=60,
-        blank=True,
-        null=True,
-        db_comment="Tipo de gestión: estatal, convenio, mixta.",
-    )
-    localidad = models.CharField(
-        max_length=120, blank=True, null=True, db_comment="Localidad donde funciona."
-    )
-    domicilio = models.CharField(
-        max_length=255, blank=True, null=True, db_comment="Domicilio del dispositivo."
-    )
-    capacidad = models.IntegerField(
-        blank=True, null=True, db_comment="Capacidad declarada."
-    )
-    activo = models.IntegerField(db_comment="Indica si sigue en funcionamiento.")
-    creado_el = models.DateTimeField(db_comment="Alta en el registro maestro.")
-    actualizado_el = models.DateTimeField(db_comment="Última modificación.")
+    jurisdiccion = models.ForeignKey(RunacC2Jurisdiccion, models.DO_NOTHING)
+    tipo = models.CharField(max_length=11)
+    denominacion = models.CharField(max_length=255)
+    dependencia_institucional = models.CharField(max_length=255, blank=True, null=True)
+    localidad = models.CharField(max_length=120, blank=True, null=True)
+    direccion = models.CharField(max_length=255, blank=True, null=True)
+    telefono = models.CharField(max_length=60, blank=True, null=True)
+    estado = models.CharField(max_length=15)
+    creado_el = models.DateTimeField(blank=True, null=True)
+    actualizado_el = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = "runac_c3_dispositivo"
-        unique_together = (("jurisdiccion", "nombre", "tipo"),)
-        db_table_comment = "Registro maestro de dispositivos. Regla del requerimiento: en la primera carga se relaciona por provincia, nombre y tipo; una vez asignado el ID SISOC, las plantillas futuras deben incorporarlo para evitar errores de escritura y duplicados."
+        unique_together = (("jurisdiccion", "denominacion", "tipo"),)
+        db_table_comment = "El lugar donde se lleva a cabo la medida. Identificacion comun a los seis tipos: un identificador unico que el resto del sistema referencia sin conocer el tipo. Son los cinco campos que efectivamente aparecen en las seis hojas. Localidad y direccion faltan en la hoja Guardia Comisaria: omision senalada a la DNPYPI."
 
 
-class RunacC3Familia(models.Model):
-    id = models.BigAutoField(primary_key=True, db_comment="ID SISOC de la familia.")
-    jurisdiccion = models.CharField(
-        max_length=120, db_comment="Provincia que la registra."
-    )
-    id_provincial = models.CharField(
-        max_length=60,
+class RunacC3FamiliaAcogimiento(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    jurisdiccion = models.ForeignKey(RunacC2Jurisdiccion, models.DO_NOTHING)
+    modalidad = models.CharField(max_length=8)
+    id_provincial = models.CharField(max_length=60, blank=True, null=True)
+    denominacion = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_familia_acogimiento"
+        unique_together = (("jurisdiccion", "modalidad", "id_provincial"),)
+        db_table_comment = "La planilla MPE informa dos modalidades en columnas paralelas, y hoy reune identificador y apellido de los cuidadores en un mismo campo. La separacion fue solicitada a la DNPYPI."
+
+
+class RunacC3MedidaDae(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    nino_adolescente = models.ForeignKey("RunacC3NinoAdolescente", models.DO_NOTHING)
+    jurisdiccion = models.ForeignKey(RunacC2Jurisdiccion, models.DO_NOTHING)
+    dispositivo = models.ForeignKey(
+        RunacC3Dispositivo,
+        models.DO_NOTHING,
         blank=True,
         null=True,
-        db_comment="Identificador que usa la provincia.",
+        db_comment="CAD o guardia especializada.",
     )
-    tipo = models.CharField(
-        max_length=22,
-        blank=True,
-        null=True,
-        db_comment="Modalidad de cuidado familiar.",
-    )
-    descripcion = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        db_comment="Referencia para identificarla.",
+    fecha_hora_ingreso = models.DateTimeField(blank=True, null=True)
+    fecha_hora_egreso = models.DateTimeField(blank=True, null=True)
+    fuerza_interviniente = models.CharField(max_length=120, blank=True, null=True)
+    dependencia = models.CharField(max_length=255, blank=True, null=True)
+    tiempo_permanencia = models.CharField(max_length=60, blank=True, null=True)
+    destino = models.CharField(max_length=120, blank=True, null=True)
+    denuncia_por_apremios = models.CharField(max_length=30, blank=True, null=True)
+    presentacion = models.ForeignKey(
+        RunacC2Presentacion, models.DO_NOTHING, blank=True, null=True
     )
 
     class Meta:
         managed = False
-        db_table = "runac_c3_familia"
-        unique_together = (("jurisdiccion", "id_provincial"),)
-        db_table_comment = "Familias vinculadas a modalidades de cuidado del MPE, cuando la modalidad no es residencial."
+        db_table = "runac_c3_medida_dae"
+        unique_together = (("nino_adolescente", "dispositivo", "fecha_hora_ingreso"),)
+        db_table_comment = "Ingreso y egreso de CAD o permanencia en dependencia policial. A diferencia de las otras tres, describe un HECHO ya ocurrido: se acumula, no se actualiza. Puede haber varios por chico. El requerimiento advierte que no debe confundirse con una medida penal prolongada."
 
 
-class RunacC3Medida(models.Model):
-    id = models.BigAutoField(
-        primary_key=True, db_comment="ID SISOC de la medida o episodio."
-    )
-    persona = models.ForeignKey(
-        "RunacC3Persona",
+class RunacC3MedidaMpe(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    nino_adolescente = models.ForeignKey("RunacC3NinoAdolescente", models.DO_NOTHING)
+    jurisdiccion = models.ForeignKey(RunacC2Jurisdiccion, models.DO_NOTHING)
+    fecha_inicio = models.DateField(blank=True, null=True)
+    fecha_cese = models.DateField(blank=True, null=True)
+    estado = models.CharField(max_length=12, blank=True, null=True)
+    motivo_cese = models.CharField(max_length=255, blank=True, null=True)
+    modalidad_cuidado = models.CharField(max_length=16, blank=True, null=True)
+    dispositivo = models.ForeignKey(
+        RunacC3Dispositivo,
         models.DO_NOTHING,
-        db_comment="Persona sobre la que recae. Una persona puede tener varias medidas a lo largo del tiempo.",
+        blank=True,
+        null=True,
+        db_comment="Solo cuando la modalidad es residencial.",
     )
-    universo = models.CharField(
-        max_length=3,
-        db_comment="Tipo de medida o evento, según el archivo del que proviene.",
+    familia = models.ForeignKey(
+        RunacC3FamiliaAcogimiento,
+        models.DO_NOTHING,
+        blank=True,
+        null=True,
+        db_comment="Familia de acogimiento formal.",
     )
-    jurisdiccion = models.CharField(
-        max_length=120, db_comment="Provincia que la informa."
+    familia_ampliada = models.ForeignKey(
+        RunacC3FamiliaAcogimiento,
+        models.DO_NOTHING,
+        related_name="runacc3medidampe_familia_ampliada_set",
+        blank=True,
+        null=True,
+        db_comment="Familia ampliada.",
     )
-    id_provincial = models.CharField(
+    motivo = models.CharField(max_length=255, blank=True, null=True)
+    proyecto_restitucion = models.CharField(max_length=120, blank=True, null=True)
+    participa_nya_en_per = models.CharField(max_length=30, blank=True, null=True)
+    articulacion_per_plan_estadia = models.CharField(
+        max_length=30, blank=True, null=True
+    )
+    intervencion_judicial = models.CharField(max_length=120, blank=True, null=True)
+    control_legalidad_juzgado_familia = models.CharField(
+        max_length=30, blank=True, null=True
+    )
+    adoptabilidad = models.CharField(max_length=60, blank=True, null=True)
+    autonomia = models.CharField(max_length=60, blank=True, null=True)
+    pae = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+        db_comment="Programa de Acompanamiento para el Egreso.",
+    )
+    presentacion_alta = models.ForeignKey(
+        RunacC2Presentacion, models.DO_NOTHING, blank=True, null=True
+    )
+    presentacion_actualizacion = models.ForeignKey(
+        RunacC2Presentacion,
+        models.DO_NOTHING,
+        related_name="runacc3medidampe_presentacion_actualizacion_set",
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_medida_mpe"
+        unique_together = (("nino_adolescente", "jurisdiccion", "fecha_inicio"),)
+        db_table_comment = "Medida de Proteccion Excepcional. La modalidad determina si se enlaza a un dispositivo residencial o a una familia."
+
+
+class RunacC3MedidaMpi(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    nino_adolescente = models.ForeignKey("RunacC3NinoAdolescente", models.DO_NOTHING)
+    jurisdiccion = models.ForeignKey(RunacC2Jurisdiccion, models.DO_NOTHING)
+    fecha_inicio = models.DateField(blank=True, null=True)
+    fecha_cese = models.DateField(blank=True, null=True)
+    estado = models.CharField(max_length=12, blank=True, null=True)
+    motivo_cese = models.CharField(max_length=255, blank=True, null=True)
+    origen_demanda = models.CharField(max_length=120, blank=True, null=True)
+    causas = models.CharField(max_length=255, blank=True, null=True)
+    destinatario = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        db_comment="La planilla lo agrupa entre los datos del chico, pero describe la medida.",
+    )
+    linea_de_accion = models.CharField(
+        max_length=120, blank=True, null=True, db_comment="Idem."
+    )
+    plazo_previsto = models.CharField(max_length=120, blank=True, null=True)
+    referente_adulto = models.ForeignKey(
+        "RunacC3ReferenteAdulto", models.DO_NOTHING, blank=True, null=True
+    )
+    relacion_vincular = models.CharField(
         max_length=60,
         blank=True,
         null=True,
-        db_comment="Identificador que la provincia usa para la medida.",
+        db_comment="Vinculo del referente con este chico.",
+    )
+    unidad_interviniente = models.ForeignKey(
+        "RunacC3UnidadInterviniente",
+        models.DO_NOTHING,
+        blank=True,
+        null=True,
+        db_comment="Referencia normalizada.",
+    )
+    unidad_denominacion_informada = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        db_comment="Tal como la informo la jurisdiccion. Sostiene la trazabilidad.",
+    )
+    unidad_dependencia = models.CharField(max_length=255, blank=True, null=True)
+    unidad_localidad = models.CharField(max_length=120, blank=True, null=True)
+    unidad_domicilio = models.CharField(max_length=255, blank=True, null=True)
+    unidad_equipo = models.CharField(max_length=255, blank=True, null=True)
+    unidad_responsable = models.CharField(max_length=255, blank=True, null=True)
+    unidad_telefono = models.CharField(max_length=60, blank=True, null=True)
+    unidad_mail = models.CharField(max_length=120, blank=True, null=True)
+    presentacion_alta = models.ForeignKey(
+        RunacC2Presentacion, models.DO_NOTHING, blank=True, null=True
+    )
+    presentacion_actualizacion = models.ForeignKey(
+        RunacC2Presentacion,
+        models.DO_NOTHING,
+        related_name="runacc3medidampi_presentacion_actualizacion_set",
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_medida_mpi"
+        unique_together = (("nino_adolescente", "jurisdiccion", "fecha_inicio"),)
+        db_table_comment = (
+            "Medida de Proteccion Integral. Se actualiza cuando presenta novedades."
+        )
+
+
+class RunacC3MedidaMpj(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    nino_adolescente = models.ForeignKey("RunacC3NinoAdolescente", models.DO_NOTHING)
+    jurisdiccion = models.ForeignKey(RunacC2Jurisdiccion, models.DO_NOTHING)
+    fecha_inicio = models.DateField(blank=True, null=True)
+    fecha_cese = models.DateField(blank=True, null=True)
+    estado = models.CharField(max_length=12, blank=True, null=True)
+    descripcion_causa_penal = models.CharField(max_length=500, blank=True, null=True)
+    dependencia_judicial = models.CharField(max_length=255, blank=True, null=True)
+    situacion_procesal = models.CharField(max_length=120, blank=True, null=True)
+    monto_de_la_pena = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True
     )
     dispositivo = models.ForeignKey(
         RunacC3Dispositivo,
         models.DO_NOTHING,
         blank=True,
         null=True,
-        db_comment="Dispositivo interviniente, cuando corresponde.",
+        db_comment="Dispositivo penal donde se encuentra el adolescente.",
     )
-    familia = models.ForeignKey(
-        RunacC3Familia,
+    fecha_ingreso_dispositivo = models.DateField(blank=True, null=True)
+    edad_al_ingreso = models.IntegerField(blank=True, null=True)
+    procedencia = models.CharField(max_length=120, blank=True, null=True)
+    procedencia_dispositivo = models.ForeignKey(
+        RunacC3Dispositivo,
         models.DO_NOTHING,
+        related_name="runacc3medidampj_procedencia_dispositivo_set",
         blank=True,
         null=True,
-        db_comment="Familia interviniente, en modalidades de cuidado familiar del MPE.",
+        db_comment="Cuando la procedencia es otro dispositivo del padron.",
     )
-    referente = models.ForeignKey(
-        "RunacC3Persona",
+    fecha_egreso_dispositivo = models.DateField(blank=True, null=True)
+    destino_al_egreso = models.CharField(max_length=120, blank=True, null=True)
+    destino_dispositivo = models.ForeignKey(
+        RunacC3Dispositivo,
         models.DO_NOTHING,
-        related_name="runacc3medida_referente_set",
+        related_name="runacc3medidampj_destino_dispositivo_set",
         blank=True,
         null=True,
-        db_comment="Persona que actúa como referente adulto, en el MPI.",
+        db_comment="Cuando el egreso es hacia otro dispositivo penal.",
     )
-    fecha_inicio = models.DateField(
+    presentacion_alta = models.ForeignKey(
+        RunacC2Presentacion, models.DO_NOTHING, blank=True, null=True
+    )
+    presentacion_actualizacion = models.ForeignKey(
+        RunacC2Presentacion,
+        models.DO_NOTHING,
+        related_name="runacc3medidampj_presentacion_actualizacion_set",
         blank=True,
         null=True,
-        db_comment="Fecha en que se dictó o formalizó la medida, o fecha de ingreso en los eventos.",
     )
-    fecha_fin = models.DateField(
-        blank=True,
-        null=True,
-        db_comment="Fecha de cese o egreso. Queda vacía mientras la medida esté vigente.",
-    )
-    vigente = models.IntegerField(
-        db_comment="Indica si la medida sigue en curso. Se deriva de fecha_fin."
-    )
-    motivo = models.CharField(
-        max_length=255, blank=True, null=True, db_comment="Causa o motivo principal."
-    )
-    origen_demanda = models.CharField(
-        max_length=120, blank=True, null=True, db_comment="Origen de la demanda."
-    )
-    motivo_cese = models.CharField(
-        max_length=255, blank=True, null=True, db_comment="Causa de finalización."
-    )
-    equipo_interviniente = models.CharField(
-        max_length=255, blank=True, null=True, db_comment="Equipo o área responsable."
-    )
-    datos = models.JSONField(
-        blank=True,
-        null=True,
-        db_comment="Campos propios de cada universo que no son comunes a todos. Evita una tabla distinta por universo mientras el modelo se estabiliza.",
-    )
-    creada_el = models.DateTimeField(db_comment="Alta en el consolidado.")
-    actualizada_el = models.DateTimeField(db_comment="Última modificación.")
 
     class Meta:
         managed = False
-        db_table = "runac_c3_medida"
-        unique_together = (("persona", "universo", "fecha_inicio", "jurisdiccion"),)
-        db_table_comment = "Medidas MPI, MPE, MPJ y eventos DAE. Se insertan; si el mismo episodio vuelve en otra presentación se actualiza por su clave natural, no se duplica."
+        db_table = "runac_c3_medida_mpj"
+        unique_together = (("nino_adolescente", "jurisdiccion", "fecha_inicio"),)
+        db_table_comment = "Medida Penal Juvenil. Referencia hasta tres dispositivos: el actual, la procedencia y el destino al egreso. DEFINICION PENDIENTE: como informan las jurisdicciones el traslado de un adolescente entre dispositivos por la misma causa penal."
+
+
+class RunacC3NinoAdolescente(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    persona = models.OneToOneField("RunacC3Persona", models.DO_NOTHING)
+    apellidos = models.CharField(max_length=120, blank=True, null=True)
+    nombres = models.CharField(max_length=120, blank=True, null=True)
+    situacion_documentacion = models.CharField(max_length=60, blank=True, null=True)
+    fecha_nacimiento = models.DateField(blank=True, null=True)
+    edad = models.IntegerField(blank=True, null=True)
+    genero = models.CharField(max_length=30, blank=True, null=True)
+    pais_nacimiento = models.CharField(max_length=120, blank=True, null=True)
+    asiste_institucion_educativa = models.CharField(
+        max_length=30, blank=True, null=True
+    )
+    maximo_nivel_educativo = models.CharField(max_length=60, blank=True, null=True)
+    cobertura_salud = models.CharField(max_length=60, blank=True, null=True)
+    enfermedad_cronica = models.CharField(max_length=30, blank=True, null=True)
+    problematica_salud = models.CharField(max_length=255, blank=True, null=True)
+    consumo_problematico = models.CharField(max_length=30, blank=True, null=True)
+    presenta_discapacidad = models.CharField(max_length=30, blank=True, null=True)
+    tipo_discapacidad = models.CharField(max_length=60, blank=True, null=True)
+    posee_cud = models.CharField(max_length=30, blank=True, null=True)
+    seguridad_social = models.CharField(max_length=60, blank=True, null=True)
+    asignacion_universal_por_hijo = models.CharField(
+        max_length=30, blank=True, null=True
+    )
+    pueblo_originario = models.CharField(max_length=30, blank=True, null=True)
+    pueblo_originario_especificar = models.CharField(
+        max_length=120, blank=True, null=True
+    )
+    tiene_hijos = models.CharField(max_length=30, blank=True, null=True)
+    domicilio_actual = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        db_comment="Solo lo releva el MPI: en proteccion integral el chico vive ahi.",
+    )
+    provincia = models.CharField(max_length=120, blank=True, null=True)
+    localidad = models.CharField(max_length=120, blank=True, null=True)
+    partido = models.CharField(max_length=120, blank=True, null=True)
+    codigo_postal = models.CharField(max_length=20, blank=True, null=True)
+    creado_el = models.DateTimeField(blank=True, null=True)
+    actualizado_el = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_nino_adolescente"
+        db_table_comment = "Todo lo relevado sobre el chico, con independencia del archivo que lo informo y de la medida que tenga: la medida es circunstancial y el chico no. UNA fila por chico, con el dato vigente; si una presentacion informa un valor distinto se actualiza y el cambio va a runac_c3_cambio, que es la fuente de las series historicas."
+
+
+class RunacC3NyaIdProvincial(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    nino_adolescente = models.ForeignKey(RunacC3NinoAdolescente, models.DO_NOTHING)
+    jurisdiccion = models.ForeignKey(RunacC2Jurisdiccion, models.DO_NOTHING)
+    identificador = models.CharField(max_length=60)
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_nya_id_provincial"
+        unique_together = (("jurisdiccion", "identificador"),)
+        db_table_comment = "Identificador provincial del chico. Uno por jurisdiccion: un chico informado por dos provincias tiene un identificador en cada una y ambos lo designan. Debe ser obligatorio y estable en el tiempo. FALTA EN EL MPI: omision senalada a la DNPYPI."
 
 
 class RunacC3Origen(models.Model):
-    id = models.BigAutoField(primary_key=True, db_comment="Identificador interno.")
+    id = models.BigAutoField(primary_key=True)
     entidad = models.CharField(
-        max_length=40,
-        db_comment="Tabla de Capa 3 a la que pertenece el registro, por ejemplo persona o medida.",
+        max_length=40, db_comment="Tabla de Capa 3 a la que pertenece el registro."
     )
-    entidad_id = models.BigIntegerField(db_comment="Registro de esa tabla.")
-    presentacion = models.ForeignKey(
-        RunacC2Presentacion,
-        models.DO_NOTHING,
-        db_comment="Presentación provincial de la que provino el dato.",
-    )
-    importacion = models.ForeignKey(
-        RunacC2Importacion, models.DO_NOTHING, db_comment="Importación concreta."
-    )
-    numero_fila = models.IntegerField(
-        blank=True,
-        null=True,
-        db_comment="Fila del Excel de la que salió, para poder volver al origen.",
-    )
-    accion = models.CharField(
-        max_length=13, db_comment="Qué hizo esta presentación con el registro."
-    )
-    fecha = models.DateTimeField(db_comment="Momento de la consolidación.")
+    entidad_id = models.BigIntegerField()
+    presentacion = models.ForeignKey(RunacC2Presentacion, models.DO_NOTHING)
+    importacion = models.ForeignKey(RunacC2Importacion, models.DO_NOTHING)
+    numero_fila = models.IntegerField(blank=True, null=True)
+    accion = models.CharField(max_length=13, blank=True, null=True)
+    fecha = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = "runac_c3_origen"
-        db_table_comment = 'Responde "de dónde salió este dato": provincia, período, archivo, fila y versión. Es la trazabilidad que pide el requerimiento.'
+        db_table_comment = "Responde de donde salio cada dato: provincia, periodo, archivo, hoja, fila y version."
 
 
 class RunacC3Persona(models.Model):
     id = models.BigAutoField(
-        primary_key=True,
-        db_comment="ID SISOC de la persona. Se asigna una sola vez y no cambia nunca.",
+        primary_key=True, db_comment="ID SISOC. Se asigna una vez y no cambia."
     )
     ciudadano_id = models.BigIntegerField(
         blank=True,
         null=True,
-        db_comment="Vínculo con ciudadanos.Ciudadano de SISOC, cuando se resuelva esa integración. Hoy queda vacío: es una decisión funcional pendiente.",
+        db_comment="Vinculo con ciudadanos.Ciudadano de SISOC. Definicion pendiente.",
     )
-    tipo_documento = models.CharField(
-        max_length=30, blank=True, null=True, db_comment="Tipo de documento informado."
-    )
-    numero_documento = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        db_comment="Número de documento, sin puntos ni espacios.",
-    )
-    cuil = models.CharField(
-        max_length=13, blank=True, null=True, db_comment="CUIL normalizado."
-    )
-    apellidos = models.CharField(
-        max_length=120, blank=True, null=True, db_comment="Apellido o apellidos."
-    )
-    nombres = models.CharField(
-        max_length=120, blank=True, null=True, db_comment="Nombre o nombres."
-    )
-    fecha_nacimiento = models.DateField(
-        blank=True, null=True, db_comment="Fecha de nacimiento."
-    )
-    genero = models.CharField(
-        max_length=30, blank=True, null=True, db_comment="Género informado."
-    )
-    pais_nacimiento = models.CharField(
-        max_length=120, blank=True, null=True, db_comment="País de nacimiento."
-    )
-    rol = models.CharField(
-        max_length=11,
-        db_comment="Rol principal con el que la persona entró al registro. Una misma persona puede cumplir más de uno a lo largo del tiempo.",
-    )
-    estado_identidad = models.CharField(
-        max_length=15,
-        db_comment="Resultado del cotejo de identidad. REVISION_MANUAL marca las coincidencias ambiguas que alguien debe resolver.",
-    )
-    creada_el = models.DateTimeField(db_comment="Alta en el padrón.")
-    actualizada_el = models.DateTimeField(db_comment="Última modificación.")
+    tipo_documento = models.CharField(max_length=30, blank=True, null=True)
+    numero_documento = models.CharField(max_length=20, blank=True, null=True)
+    cuil = models.CharField(max_length=13, blank=True, null=True)
+    creada_el = models.DateTimeField(blank=True, null=True)
+    actualizada_el = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = "runac_c3_persona"
         unique_together = (("tipo_documento", "numero_documento"),)
-        db_table_comment = "Padrón de personas. Una persona se registra UNA sola vez, aunque aparezca en muchas presentaciones y en varios archivos."
+        db_table_comment = "El mismo ser humano, y unicamente su identidad resuelta. Todo lo relevado sobre una persona vive en su caracterizacion: nino o adolescente, o referente adulto. Una misma persona puede tener las dos."
 
 
-class RunacC3PersonaDatoOrigen(models.Model):
-    id = models.BigAutoField(primary_key=True, db_comment="Identificador interno.")
-    persona = models.ForeignKey(
-        RunacC3Persona,
-        models.DO_NOTHING,
-        db_comment="Persona del padrón a la que se atribuyó este dato.",
+class RunacC3Precedencia(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    entidad = models.CharField(max_length=40)
+    entidad_id = models.BigIntegerField(blank=True, null=True)
+    campo = models.CharField(max_length=100)
+    valor_elegido = models.TextField(blank=True, null=True)
+    regla = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        db_comment="Jerarquia por archivo, ultimo informado, fuente externa, o decision manual.",
     )
-    presentacion = models.ForeignKey(
-        RunacC2Presentacion,
+    usuario = models.CharField(max_length=150, blank=True, null=True)
+    fecha = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_precedencia"
+        db_table_comment = "La decision sobre que valor prevalece, conservada para las presentaciones siguientes: la misma discrepancia no se resuelve dos veces."
+
+
+class RunacC3ReferenteAdulto(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    persona = models.OneToOneField(RunacC3Persona, models.DO_NOTHING)
+    apellidos = models.CharField(max_length=120, blank=True, null=True)
+    nombres = models.CharField(max_length=120, blank=True, null=True)
+    fecha_nacimiento = models.DateField(blank=True, null=True)
+    genero = models.CharField(max_length=30, blank=True, null=True)
+    nacionalidad = models.CharField(max_length=120, blank=True, null=True)
+    domicilio_actual = models.CharField(max_length=255, blank=True, null=True)
+    provincia = models.CharField(max_length=120, blank=True, null=True)
+    localidad = models.CharField(max_length=120, blank=True, null=True)
+    partido = models.CharField(max_length=120, blank=True, null=True)
+    codigo_postal = models.CharField(max_length=20, blank=True, null=True)
+    telefono = models.CharField(max_length=60, blank=True, null=True)
+    mail = models.CharField(max_length=120, blank=True, null=True)
+    nivel_escolar = models.CharField(max_length=60, blank=True, null=True)
+    situacion_laboral = models.CharField(max_length=60, blank=True, null=True)
+    creado_el = models.DateTimeField(blank=True, null=True)
+    actualizado_el = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_referente_adulto"
+        db_table_comment = "18 campos, informados unicamente en el MPI. Limitacion: la planilla no preve identificador propio del referente; sin documento, cada presentacion lo registra como un adulto distinto."
+
+
+class RunacC3UnidadAlias(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    jurisdiccion = models.ForeignKey(RunacC2Jurisdiccion, models.DO_NOTHING)
+    denominacion_informada = models.CharField(max_length=255)
+    unidad_interviniente = models.ForeignKey(
+        "RunacC3UnidadInterviniente",
         models.DO_NOTHING,
-        db_comment="Presentación en la que llegó.",
+        blank=True,
+        null=True,
+        db_comment="Vacio mientras esta pendiente de normalizar.",
     )
-    id_provincial = models.CharField(
+    estado = models.CharField(max_length=9)
+    resuelta_por = models.CharField(max_length=150, blank=True, null=True)
+    resuelta_el = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "runac_c3_unidad_alias"
+        unique_together = (("jurisdiccion", "denominacion_informada"),)
+        db_table_comment = "El diccionario. Opera en la importacion (Capa 2) y se perfecciona en cada iteracion: lo ya conocido se resuelve solo, lo nuevo queda pendiente y su resolucion incorpora una entrada para la proxima vez. Su mejora se puede aplicar a lo ya consolidado; ese reproceso queda en runac_c3_cambio."
+
+
+class RunacC3UnidadInterviniente(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    jurisdiccion = models.ForeignKey(RunacC2Jurisdiccion, models.DO_NOTHING)
+    denominacion_normalizada = models.CharField(max_length=255)
+    dependencia = models.CharField(max_length=255, blank=True, null=True)
+    tipo_espacio = models.CharField(
         max_length=60,
         blank=True,
         null=True,
-        db_comment="Identificador que la provincia usa para esa persona, si lo informa.",
-    )
-    tipo_documento = models.CharField(
-        max_length=30,
-        blank=True,
-        null=True,
-        db_comment="Tipo de documento tal como llegó.",
-    )
-    numero_documento = models.CharField(
-        max_length=30,
-        blank=True,
-        null=True,
-        db_comment="Número tal como llegó, sin normalizar.",
-    )
-    apellidos = models.CharField(
-        max_length=255, blank=True, null=True, db_comment="Apellidos tal como llegaron."
-    )
-    nombres = models.CharField(
-        max_length=255, blank=True, null=True, db_comment="Nombres tal como llegaron."
-    )
-    fecha_nacimiento = models.CharField(
-        max_length=30,
-        blank=True,
-        null=True,
-        db_comment="Fecha tal como llegó, en texto: puede venir mal escrita y hay que conservarla.",
-    )
-    coincide = models.IntegerField(
-        db_comment="Indica si los datos coinciden con los del padrón o hay diferencias."
-    )
-    diferencias = models.TextField(
-        blank=True,
-        null=True,
-        db_comment="Detalle de en qué difiere respecto del padrón.",
+        db_comment="Recomendado a la DNPYPI: servicio local, programa municipal, programa provincial, hogar o residencia, centro de dia, otro.",
     )
 
     class Meta:
         managed = False
-        db_table = "runac_c3_persona_dato_origen"
-        db_table_comment = "Los datos personales tal como los mandó cada provincia, coincidan o no con el padrón. Es lo que permite detectar un DNI con error de tipeo comparando nombre y fecha de nacimiento."
+        db_table = "runac_c3_unidad_interviniente"
+        unique_together = (("jurisdiccion", "denominacion_normalizada"),)
+        db_table_comment = "Tabla referencial de servicios, equipos y programas de proteccion integral. No es un padron que las jurisdicciones completen: se construye con lo que efectivamente se informa. El universo es abierto y por eso no admite un padron cerrado."

@@ -240,6 +240,29 @@ def _descarga(contenido: bytes, nombre: str) -> HttpResponse:
     return respuesta
 
 
+class EstadoDelPeriodoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
+    """Abre o cierra el período. Es la ventana de presentación.
+
+    Mientras el período no está abierto no se recibe ningún archivo, y una vez
+    cerrado tampoco. Lo decide el nivel nacional para todas las jurisdicciones,
+    no cada provincia para la suya.
+    """
+
+    seccion = "inicio"
+
+    def post(self, request):
+        codigo = request.POST.get("periodo") or "2026_T1"
+        try:
+            estado = circuito.cambiar_estado_del_periodo(
+                codigo, request.POST.get("estado") or "", request.user
+            )
+        except circuito.TransicionInvalida as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, f"El período {codigo} quedó en «{estado}».")
+        return redirect(f'{reverse("runac:inicio")}?periodo={codigo}')
+
+
 class BorrarImportacionesView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     """Deja el prototipo sin ninguna importación.
 

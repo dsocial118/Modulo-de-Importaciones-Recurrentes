@@ -76,6 +76,11 @@ urlpatterns = [
         name="archivo_marcado",
     ),
     path("reglas/", views.ReglasView.as_view(), name="estructura"),
+    path(
+        "periodo/estado/",
+        views.EstadoDelPeriodoView.as_view(),
+        name="estado_del_periodo",
+    ),
     # Herramienta de prueba: no forma parte del sistema.
     path(
         "pruebas/borrar-importaciones/",

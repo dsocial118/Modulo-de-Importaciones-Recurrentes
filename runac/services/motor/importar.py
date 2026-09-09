@@ -1009,10 +1009,15 @@ def _ejecutar(args, conexion):
         )
         jurisdiccion_id = cur2.lastrowid
 
+    # Si la presentación ya existe se la deja como está. Antes decía
+    # `ON DUPLICATE KEY UPDATE estado='EN_CARGA'`, de modo que importar un
+    # archivo reabría una presentación cerrada, revisada o ya presentada sin
+    # que nadie lo decidiera. Quién puede reabrirla y cuándo es una decisión
+    # del circuito, no un efecto de subir un archivo.
     cur2.execute(
         """INSERT INTO runac_c2_presentacion (periodo_id, jurisdiccion_id, version, estado)
                     VALUES (%s, %s, 1, 'EN_CARGA')
-                    ON DUPLICATE KEY UPDATE estado = 'EN_CARGA'""",
+                    ON DUPLICATE KEY UPDATE id = id""",
         (periodo_id, jurisdiccion_id),
     )
     cur2.execute(

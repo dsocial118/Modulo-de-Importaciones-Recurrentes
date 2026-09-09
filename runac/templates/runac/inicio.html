@@ -34,14 +34,38 @@
     {% endif %}
 
     {% if periodo.estado != "ABIERTO" %}
-        <div class="alert alert-warning py-2">
-            <i class="bi bi-info-circle"></i>
-            El período <strong>{{ periodo_elegido }}</strong> está en <strong>{{ periodo.estado|lower }}</strong>.
-            {% if periodo.estado == "PREPARACION" %}
-                Todavía no está habilitado para que las provincias carguen. La estructura se puede modificar.
-            {% else %}
-                No se admiten más cargas.
+        <div class="alert alert-warning py-2 d-flex flex-wrap gap-2 align-items-center">
+            <div>
+                <i class="bi bi-info-circle"></i>
+                El período <strong>{{ periodo_elegido }}</strong> está en <strong>{{ periodo.estado|lower }}</strong>.
+                {% if periodo.estado == "PREPARACION" %}
+                    Todavía no está habilitado para que las provincias carguen. La estructura se puede modificar.
+                {% else %}
+                    No se admiten más cargas.
+                {% endif %}
+            </div>
+            {% if puede_administrar %}
+                <form method="post"
+                      action="{% url 'runac:estado_del_periodo' %}"
+                      class="ms-auto">
+                    {% csrf_token %}
+                    <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
+                    <input type="hidden" name="estado" value="ABIERTO" />
+                    <button class="btn btn-sm btn-outline-primary">Abrir el período</button>
+                </form>
             {% endif %}
+        </div>
+    {% elif puede_administrar %}
+        <div class="d-flex mb-3">
+            <form method="post"
+                  action="{% url 'runac:estado_del_periodo' %}"
+                  class="ms-auto"
+                  onsubmit="return confirm('Con el período cerrado ninguna jurisdicción puede importar. ¿Continuar?')">
+                {% csrf_token %}
+                <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
+                <input type="hidden" name="estado" value="CERRADO" />
+                <button class="btn btn-sm btn-outline-secondary">Cerrar el período</button>
+            </form>
         </div>
     {% endif %}
 

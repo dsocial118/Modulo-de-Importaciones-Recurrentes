@@ -229,7 +229,14 @@ def reglas_de_hoja(codigo_archivo: str, nombre_hoja: str):
 # ---------------------------------------------------------------------------
 
 
-def presentacion_de(jurisdiccion: str, codigo_periodo: str, crear: bool = True):
+def presentacion_de(jurisdiccion: str, codigo_periodo: str, crear: bool = False):
+    """La presentación de esa jurisdicción en ese período.
+
+    `crear` es explícito y por omisión no crea: consultar el estado de una
+    presentación creaba la presentación. Bastaba con que alguien mirara la
+    pantalla de carga eligiendo otra provincia para que quedara dada de alta
+    una presentación vacía que nadie inició.
+    """
     with connection.cursor() as cur:
         cur.execute(
             """
@@ -555,6 +562,45 @@ def _archivo_admisible(fichero) -> str | None:
     return None
 
 
+# Estados de la presentación en los que todavía se puede importar. Son los
+# mismos en los que se puede corregir un dato: mientras la carga esté abierta o
+# la provincia esté subsanando lo que Nación observó.
+ESTADOS_QUE_ADMITEN_CARGA = ("EN_CARGA", "OBSERVADA", "SUBSANADA")
+
+
+def _se_puede_importar(jurisdiccion: str, codigo_periodo: str) -> str | None:
+    """Por qué no se puede importar en este período, o None si se puede.
+
+    Son dos puertas distintas. El **período** lo abre y lo cierra Nación para
+    todas las provincias: fuera de la ventana de presentación no se recibe
+    nada. El **estado de la presentación** es de esa provincia: con la carga
+    cerrada primero hay que reabrirla, y eso lo decide el circuito.
+
+    Faltaban las dos. El período tenía un estado que no controlaba nada, y una
+    presentación cerrada volvía a EN_CARGA sola al subir un archivo.
+    """
+    datos = periodo(codigo_periodo)
+    if not datos:
+        return f"El período {codigo_periodo} no está definido."
+    if datos["estado"] != "ABIERTO":
+        legibles = {
+            "PREPARACION": "todavía no se abrió",
+            "CERRADO": "ya se cerró",
+        }
+        return (
+            f"El período {codigo_periodo} {legibles.get(datos['estado'], 'no está abierto')}: "
+            "no se pueden importar archivos."
+        )
+
+    pres = presentacion_de(jurisdiccion, codigo_periodo, crear=False)
+    if pres and pres["estado"] not in ESTADOS_QUE_ADMITEN_CARGA:
+        return (
+            f'La presentación de {jurisdiccion} está en «{pres["estado"]}»: '
+            "para importar, primero hay que reabrir la carga."
+        )
+    return None
+
+
 def _comparable(texto: str) -> str:
     """Forma comparable de un texto: sin tildes, sin separadores, en minúsculas.
 
@@ -596,6 +642,10 @@ def importar_uno(
     # Lo primero es si el archivo se puede recibir: antes de leerlo, de
     # guardarlo y de consultar nada.
     motivo = _archivo_admisible(fichero)
+    if motivo:
+        return {"rechazado": True, "codigo": codigo_archivo, "mensaje": motivo}
+
+    motivo = _se_puede_importar(jurisdiccion, codigo_periodo)
     if motivo:
         return {"rechazado": True, "codigo": codigo_archivo, "mensaje": motivo}
 
