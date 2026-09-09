@@ -3,6 +3,76 @@
 
 {% block contenido %}
 
+    {% comment %} El resultado de la importación es lo que la persona vino a ver: como aviso al pie se pierde entre el resto de los mensajes. {% endcomment %}
+    {% if recien_importado %}
+        <div class="modal fade"
+             id="avisoImportacion"
+             tabindex="-1"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header {% if recien_bloqueantes %}bg-danger{% else %}bg-success{% endif %} text-white">
+                        <h5 class="modal-title">
+                            {% if recien_bloqueantes %}
+                                <i class="bi bi-x-octagon-fill"></i> No se pudo importar
+                            {% else %}
+                                <i class="bi bi-check-circle-fill"></i> Importación correcta
+                            {% endif %}
+                        </h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-2">
+                            Archivo <strong>{{ recien_importado }}</strong>.
+                        </p>
+                        {% if recien_bloqueantes %}
+                            <p class="mb-1">
+                                <span class="sev-BLOQUEANTE">{{ recien_bloqueantes }} errores bloqueantes</span>
+                            </p>
+                            {% if recien_advertencias %}
+                                <p class="mb-1">
+                                    <span class="sev-ADVERTENCIA">{{ recien_advertencias }} advertencias</span>
+                                </p>
+                            {% endif %}
+                            <p class="mb-3">No se incorporó ningún registro de este archivo.</p>
+                        {% elif recien_advertencias %}
+                            <p class="mb-3">
+                                Los registros se incorporaron. Hay
+                                <strong class="sev-ADVERTENCIA">{{ recien_advertencias }} advertencias</strong>
+                                que se resuelven dentro del sistema.
+                            </p>
+                        {% else %}
+                            <p class="mb-3">Los registros se incorporaron sin observaciones.</p>
+                        {% endif %}
+
+                        {% if recien_importacion_id %}
+                            {% if recien_bloqueantes or recien_advertencias %}
+                                <div class="d-grid gap-2">
+                                    <a class="btn btn-danger"
+                                       href="{% url 'runac:planilla_errores' recien_importacion_id %}">
+                                        <i class="bi bi-file-earmark-excel"></i> Descargar la lista de errores
+                                    </a>
+                                    <a class="btn btn-warning"
+                                       href="{% url 'runac:archivo_marcado' recien_importacion_id %}">
+                                        <i class="bi bi-highlighter"></i> Descargar el archivo con las celdas marcadas
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     <div class="d-flex justify-content-between align-items-start mb-3">
         <div>
             <h5 class="mb-1">{{ jurisdiccion }} · {{ periodo_elegido }}</h5>
@@ -13,6 +83,7 @@
             {% endif %}
             <div class="ayuda mt-1">{{ estado_ayuda }}</div>
         </div>
+        {% include "runac/_selector_jurisdiccion.html" %}
     </div>
 
     {# --- Dónde está la presentación dentro del circuito ------------------- #}
@@ -52,12 +123,12 @@
             <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
                 <thead class="table-light">
                     <tr>
-                        <th>Archivo</th>
-                        <th>Importación</th>
-                        <th class="text-end">Filas leídas</th>
-                        <th class="text-end">Incorporadas</th>
-                        <th class="text-end">◆ Bloqueantes</th>
-                        <th class="text-end">▲ Advertencias</th>
+                        <th style="width:24%">Archivo</th>
+                        <th style="width:9rem">Importación</th>
+                        <th style="width:6rem" class="text-end">Filas leídas</th>
+                        <th style="width:6rem" class="text-end">Incorporadas</th>
+                        <th style="width:7rem" class="text-end">◆ Bloqueantes</th>
+                        <th style="width:7rem" class="text-end">▲ Advertencias</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -66,7 +137,7 @@
                         <tr>
                             <td>
                                 <strong>{{ a.codigo }}</strong>
-                                <div class="ayuda">{{ a.titulo|truncatechars:52 }}</div>
+                                <div class="ayuda">{{ a.titulo }}</div>
                             </td>
                             <td data-etiqueta="Importación">
                                 <span class="estado e-{{ a.estado }}">{{ a.estado }}</span>
@@ -83,7 +154,7 @@
                                        href="{% url 'runac:detalle' a.importacion.id %}">Ver detalle</a>
                                     {% if a.importada and puede_responder %}
                                         <a class="btn btn-outline-success btn-sm"
-                                           href="{% url 'runac:edicion' a.importacion.id %}">Corregir</a>
+                                           href="{% url 'runac:edicion' a.importacion.id %}">Editar datos</a>
                                     {% endif %}
                                 {% endif %}
                             </td>
@@ -229,4 +300,10 @@
         </div>
     {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+    {% if recien_importado %}
+        <script>new bootstrap.Modal(document.getElementById("avisoImportacion")).show();</script>
+    {% endif %}
 {% endblock %}

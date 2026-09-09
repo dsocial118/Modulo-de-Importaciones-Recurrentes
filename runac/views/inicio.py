@@ -7,7 +7,13 @@ from django.shortcuts import redirect
 from django.views.generic import TemplateView
 
 from runac.services import importacion_service as svc
-from runac.permissions import SeccionPermitidaMixin, jurisdiccion_de, menu_de, rol_de
+from runac.permissions import (
+    SeccionPermitidaMixin,
+    menu_de,
+    puede_administrar,
+    rol_de,
+)
+from runac.views.carga import JURISDICCIONES, jurisdiccion_en_curso
 
 
 class EntrarView(LoginView):
@@ -38,7 +44,9 @@ class InicioView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
         ctx["periodo_elegido"] = elegido
         ctx["periodo"] = svc.periodo(elegido) if elegido else None
         ctx["rol"] = rol_de(self.request.user)
-        ctx["jurisdiccion"] = jurisdiccion_de(self.request.user)
+        ctx["jurisdiccion"] = jurisdiccion_en_curso(self.request)
+        ctx["jurisdicciones"] = JURISDICCIONES
+        ctx["puede_administrar"] = puede_administrar(self.request.user)
 
         if elegido and ctx["jurisdiccion"]:
             estado = svc.estado_de_la_presentacion(ctx["jurisdiccion"], elegido)
@@ -65,7 +73,7 @@ DETALLE_DE_SECCION = {
     "cargar": "De a uno, indicando cuál es. El sistema controla el orden.",
     "resultado": "Qué entró, qué falta corregir, y el cierre de carga.",
     "revision": "Observaciones, habilitación y presentación del período.",
-    "estructura": "Qué campos y qué reglas espera cada archivo.",
+    "estructura": "Qué se espera en cada columna de cada archivo.",
 }
 
 

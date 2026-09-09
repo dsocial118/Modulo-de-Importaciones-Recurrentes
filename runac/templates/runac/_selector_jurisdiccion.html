@@ -1,0 +1,60 @@
+{% comment %}
+Elegir jurisdicción y período. La jurisdicción NO es algo que un operador
+elija: la tiene asignada. Está acá porque durante las pruebas hace falta poder
+cambiarla, y por eso va marcada como función de prueba: quien mire el prototipo
+tiene que poder distinguir una herramienta de testeo de un error de diseño.
+
+Al integrar a SISOC, el selector de jurisdicción desaparece.
+
+Necesita en el contexto: jurisdicciones, jurisdiccion, periodos, periodo_elegido.
+{% endcomment %}
+
+<form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+    <div class="modo-prueba d-flex flex-wrap gap-2 align-items-center">
+        <span class="etiqueta-prueba" title="No forma parte del sistema definitivo">Prueba</span>
+        <label class="ayuda mb-0" for="sel-jurisdiccion">Jurisdicción</label>
+        <select class="form-select form-select-sm"
+                style="width: auto"
+                id="sel-jurisdiccion"
+                name="jurisdiccion"
+                data-actual="{{ jurisdiccion }}"
+                onchange="confirmarCambioDeJurisdiccion(this)">
+            {% for j in jurisdicciones %}
+                <option value="{{ j }}" {% if j == jurisdiccion %}selected{% endif %}>{{ j }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="d-flex gap-2 align-items-center">
+        <label class="ayuda mb-0" for="sel-periodo">Período</label>
+        <select class="form-select form-select-sm"
+                style="width: auto"
+                id="sel-periodo"
+                name="periodo"
+                onchange="this.form.submit()">
+            {% for p in periodos %}
+                <option value="{{ p.codigo }}"
+                        {% if p.codigo == periodo_elegido %}selected{% endif %}>{{ p.codigo }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+<script>
+  function confirmarCambioDeJurisdiccion(select) {
+    var anterior = select.dataset.actual;
+    var elegida = select.value;
+    if (elegida === anterior) return;
+    var sigue = confirm(
+      "Vas a trabajar sobre " + elegida + " en lugar de " + anterior + ".\n\n" +
+      "Cambiar de jurisdicción es una función de prueba: en el sistema " +
+      "definitivo cada usuario trabaja únicamente sobre la suya.\n\n" +
+      "¿Continuar?"
+    );
+    if (sigue) {
+      select.form.submit();
+    } else {
+      select.value = anterior;
+    }
+  }
+</script>

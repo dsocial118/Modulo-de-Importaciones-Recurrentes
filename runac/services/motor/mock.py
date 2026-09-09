@@ -311,7 +311,7 @@ def main():
     p.add_argument("--filas", type=int, default=30)
     p.add_argument("--con-errores", action="store_true")
     p.add_argument("--plantillas", default="/trabajo/capa1/plantillas")
-    p.add_argument("--salida", default="/trabajo/capa1/mock")
+    p.add_argument("--salida", default="/trabajo/entregables/06_Archivos_de_prueba")
     p.add_argument("--periodo", default="2026_T1")
     p.add_argument(
         "--jurisdiccion",

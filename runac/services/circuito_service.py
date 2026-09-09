@@ -27,6 +27,8 @@ Reglas del documento funcional:
 
 from __future__ import annotations
 
+import re
+
 from django.db import connection
 
 from runac.permissions import puede_presentar, puede_revisar
@@ -328,6 +330,60 @@ def registrar_expediente(presentacion_id: int, numero: str, usuario):
             "UPDATE runac_c2_presentacion SET expediente = %s WHERE id = %s",
             [(numero or "").strip()[:100], presentacion_id],
         )
+
+
+def borrar_todas_las_importaciones() -> dict:
+    """Deja el prototipo sin ninguna importación, en todas las jurisdicciones.
+
+    **Es una herramienta de prueba y no forma parte del sistema.** Está porque
+    durante las pruebas hace falta repetir el mismo circuito muchas veces:
+    importar un archivo que anduvo, cambiarle algo, ver si pincha. Sin esto hay
+    que ir a la base a mano.
+
+    Al integrar el módulo a SISOC, esto se va con todo el resto del prototipo.
+    """
+    borrados = {"filas": 0, "importaciones": 0, "presentaciones": 0}
+    with connection.cursor() as cur:
+        # Las tablas receptoras no están declaradas en ningún lado: su nombre se
+        # deduce por convención al crearlas. Se las reconoce porque son las
+        # únicas de la Capa 2 que cuelgan de una importación.
+        cur.execute(
+            """
+            SELECT c.TABLE_NAME
+              FROM information_schema.COLUMNS c
+             WHERE c.TABLE_SCHEMA = DATABASE()
+               AND c.COLUMN_NAME = 'importacion_id'
+               AND c.TABLE_NAME LIKE 'runac_c2_%'
+               AND c.TABLE_NAME NOT IN ('runac_c2_reglas_incumplidas',
+                                        'runac_c2_errores_de_importacion',
+                                        'runac_c2_historial_cambios',
+                                        'runac_c2_observacion')
+        """
+        )
+        tablas = [f[0] for f in cur.fetchall()]
+
+        for tabla in tablas:
+            # El nombre sale del catálogo de la base, no de la petición. Aun
+            # así se comprueba antes de interpolarlo.
+            if not re.fullmatch(r"runac_c2_[a-z0-9_]{1,50}", tabla or ""):
+                continue
+            cur.execute(f"DELETE FROM `{tabla}`")
+            borrados["filas"] += cur.rowcount
+
+        for tabla in (
+            "runac_c2_reglas_incumplidas",
+            "runac_c2_errores_de_importacion",
+            "runac_c2_historial_cambios",
+            "runac_c2_observacion",
+        ):
+            cur.execute(f"DELETE FROM `{tabla}`")
+
+        cur.execute("DELETE FROM runac_c2_importacion")
+        borrados["importaciones"] = cur.rowcount
+        cur.execute("DELETE FROM runac_c2_presentacion")
+        borrados["presentaciones"] = cur.rowcount
+
+    return borrados
 
 
 def comprobante(presentacion_id: int) -> dict:

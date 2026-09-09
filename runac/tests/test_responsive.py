@@ -110,7 +110,7 @@ def test_las_fichas_vuelven_a_ser_tabla_en_pantalla_grande():
         "resultado.html",
         "detalle.html",
         "revision.html",
-        "estructura.html",
+        "reglas.html",
     ],
 )
 def test_toda_tabla_de_datos_es_ficha_en_el_telefono(plantilla):

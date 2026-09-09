@@ -24,15 +24,44 @@ from runac.services import circuito_service as circuito
 from runac.services import importacion_service as svc
 
 
-def _jurisdiccion(request) -> str:
-    """En el prototipo la jurisdicción puede venir del usuario o elegirse."""
+def jurisdiccion_en_curso(request) -> str:
+    """La jurisdicción sobre la que se está trabajando.
+
+    En el prototipo se puede elegir, y **la elección se recuerda**: si no, cada
+    pantalla mostraba una jurisdicción distinta —Inicio la del usuario y Cargar
+    la elegida— y eso confunde más de lo que ayuda.
+
+    Al integrar a SISOC esto desaparece: el alcance territorial lo resuelve el
+    sistema y el operador no elige nada.
+    """
+    elegida = request.GET.get("jurisdiccion") or request.POST.get("jurisdiccion")
+    if elegida:
+        request.session["jurisdiccion"] = elegida
+        return elegida
     return (
-        request.GET.get("jurisdiccion")
-        or request.POST.get("jurisdiccion")
-        or jurisdiccion_de(request.user)
-        or request.session.get("jurisdiccion")
-        or "Chaco"
+        request.session.get("jurisdiccion") or jurisdiccion_de(request.user) or "Chaco"
     )
+
+
+# Nombre corto, para las vistas de este módulo.
+_jurisdiccion = jurisdiccion_en_curso
+
+
+def _entero(valor) -> int:
+    try:
+        return int(valor)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _importacion_de(filas, codigo):
+    """El id de la importación recién hecha, para enlazar sus dos informes."""
+    if not codigo:
+        return None
+    for fila in filas:
+        if fila.get("codigo") == codigo and fila.get("importacion"):
+            return fila["importacion"]["id"]
+    return None
 
 
 class CargarView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
@@ -110,26 +139,32 @@ class CargarArchivoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
         if resultado.get("nombre_inesperado"):
             messages.warning(
                 request,
-                f"El nombre «{fichero.name}» no se corresponde con el período o la jurisdicción "
-                f'en curso. Se esperaba algo como «{resultado["nombre_sugerido"]}». '
+                f"El nombre «{fichero.name}» no se corresponde con el período o la "
+                f'jurisdicción en curso. Se esperaba «{resultado["nombre_sugerido"]}». '
                 f"Es una advertencia: el archivo se procesó igual.",
             )
 
         resumen = resultado.get("resumen") or []
         bloqueantes = sum((r or {}).get("bloqueantes", 0) or 0 for r in resumen)
+        advertencias = sum((r or {}).get("advertencias", 0) or 0 for r in resumen)
+
         if bloqueantes:
             messages.error(
                 request,
                 f"{codigo}: se detectaron {bloqueantes} errores bloqueantes. "
-                f"La importación es restrictiva, de modo que no se incorporó ninguna fila. "
+                f"No se incorporó ningún registro de este archivo. "
                 f"Hay que corregir el Excel y volver a importarlo.",
             )
         else:
-            messages.success(request, f"{codigo}: importado correctamente.")
+            messages.success(request, f"{codigo}: se importó correctamente.")
 
+        # El resultado se muestra además como aviso al llegar a la pantalla: si
+        # sólo va en la franja de mensajes, se pierde entre el resto.
         return redirect(
             f'{reverse("runac:resultado")}?periodo={periodo}'
             f"&jurisdiccion={jurisdiccion}"
+            f"&importado={codigo}&bloqueantes={bloqueantes}"
+            f"&advertencias={advertencias}"
         )
 
 
@@ -158,14 +193,22 @@ class ResultadoView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
         nombre, ayuda, _ = circuito.ESTADOS.get(
             estado_codigo, (estado_codigo, "", "secondary")
         )
+        recien = self.request.GET.get("importado")
 
         ctx.update(
             {
                 "periodo_elegido": periodo,
                 "jurisdiccion": jurisdiccion,
+                "jurisdicciones": JURISDICCIONES,
+                "periodos": svc.periodos(),
                 "archivos": filas,
                 "presentacion": pres,
                 "listo": estado["listo"],
+                # Lo que se acaba de importar, para el aviso de resultado.
+                "recien_importado": recien,
+                "recien_bloqueantes": _entero(self.request.GET.get("bloqueantes")),
+                "recien_advertencias": _entero(self.request.GET.get("advertencias")),
+                "recien_importacion_id": _importacion_de(filas, recien),
                 "estado_legible": nombre,
                 "estado_ayuda": ayuda,
                 "pasos": _pasos_del_circuito(estado_codigo),

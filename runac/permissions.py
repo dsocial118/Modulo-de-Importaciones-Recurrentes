@@ -73,9 +73,9 @@ SECCIONES = {
         "acceso": ES_NACIONAL,
     },
     "estructura": {
-        "etiqueta": "Estructura",
+        "etiqueta": "Reglas",
         "url": "runac:estructura",
-        "icono": "bi-diagram-3",
+        "icono": "bi-list-check",
         "menu": TODOS,
         "acceso": TODOS,
     },

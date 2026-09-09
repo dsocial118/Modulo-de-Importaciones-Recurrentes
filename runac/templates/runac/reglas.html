@@ -1,0 +1,103 @@
+{% extends "runac/base.html" %}
+{% block titulo %}Reglas{% endblock %}
+
+{% block contenido %}
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <h5 class="mb-1">Qué se espera de cada archivo</h5>
+            <div class="ayuda">
+                Antes de completar una planilla, acá se consulta qué va en cada columna:
+                si es obligatoria, qué tipo de dato admite y qué condiciones tiene que cumplir.
+            </div>
+        </div>
+        <form method="get" class="d-flex gap-2 align-items-center">
+            <label class="ayuda mb-0" for="sel-hoja">Archivo y hoja</label>
+            <select class="form-select form-select-sm"
+                    style="width: auto"
+                    id="sel-hoja"
+                    name="hoja"
+                    onchange="this.form.submit()">
+                {% for h in hojas %}
+                    <option value="{{ h.clave }}"
+                            {% if h.clave == hoja_elegida %}selected{% endif %}>{{ h.etiqueta }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    {% if campos %}
+        <div class="ayuda mb-2">
+            <strong>{{ campos|length }}</strong> columnas
+            {% if obligatorios %}· <strong>{{ obligatorios }}</strong> obligatorias{% endif %}
+            {% if con_regla %}· <strong>{{ con_regla }}</strong> con condiciones propias{% endif %}
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0 tabla-scroll">
+                <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:3rem" class="text-center">Col.</th>
+                            <th>Campo</th>
+                            {% if ver_tecnico %}<th style="width:15rem">Nombre técnico</th>{% endif %}
+                            <th style="width:6rem" class="text-center">Oblig.</th>
+                            <th style="width:12rem">Qué se espera</th>
+                            <th style="width:26%">Valores admitidos</th>
+                            <th>Condiciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in campos %}
+                            <tr>
+                                <td class="text-center ayuda mono">{{ c.letra }}</td>
+                                <td data-etiqueta="Campo">
+                                    {{ c.titulo }}
+                                    {% if c.ayuda %}<div class="ayuda">{{ c.ayuda }}</div>{% endif %}
+                                </td>
+                                {% if ver_tecnico %}<td class="ayuda mono" data-etiqueta="Nombre técnico">{{ c.nombre }}</td>{% endif %}
+                                <td class="text-center" data-etiqueta="Oblig.">
+                                    {% if c.obligatorio %}
+                                        <i class="bi bi-check-lg text-success"></i>
+                                    {% else %}
+                                        <span class="ayuda">—</span>
+                                    {% endif %}
+                                </td>
+                                <td data-etiqueta="Qué se espera">{{ c.espera }}</td>
+                                <td data-etiqueta="Valores admitidos">
+                                    {% if c.valores.detalle %}
+                                        <details>
+                                            <summary class="text-primary" style="cursor: pointer">{{ c.valores.texto }}</summary>
+                                            <div class="ayuda mt-1">{{ c.valores.detalle }}</div>
+                                        </details>
+                                    {% elif c.valores.texto %}
+                                        <span class="ayuda">{{ c.valores.texto }}</span>
+                                    {% else %}
+                                        <span class="ayuda">—</span>
+                                    {% endif %}
+                                </td>
+                                <td data-etiqueta="Condiciones">
+                                    {% for r in c.reglas %}
+                                        <div class="sev-{{ r.severidad }}">{{ r.texto }}</div>
+                                    {% empty %}
+                                        <span class="ayuda">—</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="ayuda mt-3">
+            <i class="bi bi-info-circle"></i>
+            La columna <strong>Condiciones</strong> se completa con lo que la DNPYPI defina para cada
+            campo: obligatoriedad condicionada, relaciones entre columnas o verificaciones del dato.
+            Cada condición que se declare, el sistema la controla al importar y la avisa.
+        </div>
+    {% else %}
+        <p class="ayuda">No hay columnas definidas para esta hoja.</p>
+    {% endif %}
+
+{% endblock %}

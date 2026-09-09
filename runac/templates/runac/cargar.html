@@ -12,23 +12,7 @@
                 los dispositivos antes que las nóminas, porque las nóminas los referencian.
             </div>
         </div>
-        <form method="get" class="d-flex gap-2">
-            <select class="form-select form-select-sm"
-                    name="jurisdiccion"
-                    onchange="this.form.submit()">
-                {% for j in jurisdicciones %}
-                    <option value="{{ j }}" {% if j == jurisdiccion %}selected{% endif %}>{{ j }}</option>
-                {% endfor %}
-            </select>
-            <select class="form-select form-select-sm"
-                    name="periodo"
-                    onchange="this.form.submit()">
-                {% for p in periodos %}
-                    <option value="{{ p.codigo }}"
-                            {% if p.codigo == periodo_elegido %}selected{% endif %}>{{ p.codigo }}</option>
-                {% endfor %}
-            </select>
-        </form>
+        {% include "runac/_selector_jurisdiccion.html" %}
     </div>
 
     {% if not carga_abierta %}
@@ -47,13 +31,14 @@
     <div class="card mb-4">
         <div class="card-body p-0 tabla-scroll">
             <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
+                {% comment %} Los anchos se declaran para que ninguna columna se coma el resto: sin esto, «Archivo» se estiraba y el botón de importar quedaba apretado contra el borde. {% endcomment %}
                 <thead class="table-light">
                     <tr>
-                        <th style="width:3rem" class="text-center">#</th>
-                        <th>Archivo</th>
-                        <th>Estado</th>
-                        <th class="text-end">Filas</th>
-                        <th style="width:30rem">Importar</th>
+                        <th style="width:2.5rem" class="text-center">#</th>
+                        <th style="width:26%">Archivo</th>
+                        <th style="width:11rem">Estado</th>
+                        <th style="width:5rem" class="text-end">Filas</th>
+                        <th>Importar</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -63,7 +48,7 @@
                             <td data-etiqueta="Archivo">
                                 <strong>{{ a.codigo }}</strong>
                                 {% if a.obligatorio %}<span class="ayuda">· obligatorio</span>{% endif %}
-                                <div class="ayuda">{{ a.titulo|truncatechars:60 }}</div>
+                                <div class="ayuda">{{ a.titulo }}</div>
                                 <div class="ayuda mono">{{ a.nombre_sugerido }}</div>
                             </td>
                             <td data-etiqueta="Estado">
@@ -82,14 +67,17 @@
                                     <form method="post"
                                           action="{% url 'runac:cargar_archivo' a.codigo %}"
                                           enctype="multipart/form-data"
-                                          class="d-flex gap-2">
+                                          class="d-flex flex-wrap gap-2 align-items-center">
                                         {% csrf_token %}
                                         <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
                                         <input type="hidden" name="jurisdiccion" value="{{ jurisdiccion }}" />
+                                        {% comment %} El selector de archivo necesita ancho propio: con flex a secas se encogía hasta no poder leer el nombre del archivo elegido. {% endcomment %}
                                         <input type="file"
                                                name="archivo"
                                                accept=".xlsx,.xlsm"
                                                class="form-control form-control-sm"
+                                               style="flex: 1 1 15rem;
+                                                      min-width: 12rem"
                                                required />
                                         <button class="btn btn-sm btn-primary text-nowrap">
                                             {% if a.importada %}

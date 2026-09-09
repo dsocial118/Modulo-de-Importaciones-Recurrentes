@@ -8,7 +8,8 @@ esto se mude al repositorio sin reescribir la lógica.
 from .inicio import InicioView, EntrarView, salir
 from .plantillas import PlantillasView, descargar_plantilla
 from .carga import CargarView, CargarArchivoView, ResultadoView, DetalleView
-from .estructura import EstructuraView, CamposView
+from .circuito import BorrarImportacionesView
+from .estructura import ReglasView
 from .edicion import EdicionView, EditarCampoView
 from .circuito import (
     AccionView,
@@ -22,6 +23,8 @@ from .circuito import (
 )
 
 __all__ = [
+    "BorrarImportacionesView",
+    "ReglasView",
     "InicioView",
     "EntrarView",
     "salir",
@@ -31,8 +34,6 @@ __all__ = [
     "CargarArchivoView",
     "ResultadoView",
     "DetalleView",
-    "EstructuraView",
-    "CamposView",
     "EdicionView",
     "EditarCampoView",
     "AccionView",

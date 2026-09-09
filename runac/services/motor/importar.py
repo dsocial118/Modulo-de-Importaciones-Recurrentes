@@ -150,6 +150,11 @@ def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str
     par = regla["parametros"] or {}
     vacio = valor is None or norm(valor) == ""
 
+    def titulo(nombre_tecnico):
+        """Cómo se llama esa columna en la planilla."""
+        titulos = contexto.get("titulos") or {}
+        return titulos.get(nombre_tecnico, nombre_tecnico)
+
     if tipo == "RANGO":
         if vacio or not isinstance(valor, (int, float)):
             return None
@@ -179,8 +184,9 @@ def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str
             return None
         if not comparar(valor, par.get("operador", "IGUAL"), otro):
             return (
-                f'El valor no cumple la condición respecto de "{par.get("campo_comparacion")}": '
-                f'debe ser {par.get("operador", "").lower().replace("_", " ")} que ese campo.'
+                f"El valor no cumple la condición respecto de "
+                f'«{titulo(par.get("campo_comparacion"))}»: debe ser '
+                f'{par.get("operador", "").lower().replace("_", " ")} que ese campo.'
             )
         return None
 
@@ -198,8 +204,8 @@ def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str
         )
         if dispara and vacio:
             return (
-                f'El campo es obligatorio cuando "{par.get("campo_condicion")}" '
-                f'{op.lower().replace("_", " ")} "{par.get("valor_condicion")}".'
+                f'El campo es obligatorio cuando «{titulo(par.get("campo_condicion"))}» '
+                f'{op.lower().replace("_", " ")} «{par.get("valor_condicion")}».'
             )
         return None
 
@@ -442,7 +448,13 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
     hallazgos: list[dict] = []
     filas_crudas: list[tuple] = []
     filas_tipadas: list[tuple] = []
-    contexto = {"unicos": {}, "fila_actual": 0}
+    # Los mensajes se leen: nombran las columnas por su título, no por el
+    # nombre técnico con el que las guarda la base.
+    contexto = {
+        "unicos": {},
+        "fila_actual": 0,
+        "titulos": {c["nombre"]: c["titulo_esperado"] for c in hoja["campos"]},
+    }
     total = 0
     con_error = 0
     vacias_intercaladas = []

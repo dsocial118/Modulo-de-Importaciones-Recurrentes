@@ -107,6 +107,87 @@ def campos_de(codigo_archivo: str):
         return _fila_a_dict(cur)
 
 
+def hojas_disponibles():
+    """Las hojas de datos, para el selector de la pantalla de reglas.
+
+    Se lista Archivo — Hoja y no sólo archivo: un archivo con seis hojas
+    volcadas una debajo de la otra no se consulta, se sufre.
+    """
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT a.codigo AS archivo, h.nombre_esperado AS hoja,
+                   av.titulo, COUNT(c.id) AS campos
+            FROM runac_c1_hoja h
+            JOIN runac_c1_archivo_version av ON av.id = h.archivo_version_id
+                                            AND av.estado = 'VIGENTE'
+            JOIN runac_c1_archivo a ON a.id = av.archivo_id
+            LEFT JOIN runac_c1_campo c ON c.hoja_id = h.id
+            GROUP BY a.codigo, h.id
+            HAVING campos > 0
+            ORDER BY av.orden_importacion, h.orden_procesamiento
+        """
+        )
+        return _fila_a_dict(cur)
+
+
+def reglas_de_hoja(codigo_archivo: str, nombre_hoja: str):
+    """Qué se espera en cada columna de una hoja, en lenguaje llano.
+
+    Es la pantalla que evita que el operador tenga que adivinar. No muestra
+    contadores ni nombres técnicos: título, si es obligatorio, qué tipo de dato
+    se espera, qué valores admite y qué condición tiene que cumplir.
+    """
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT c.id, c.orden, c.titulo_esperado, c.tipo_dato,
+                   c.longitud_maxima, c.obligatorio,
+                   c.ayuda, d.nombre_esperado AS grupo,
+                   cat.codigo AS catalogo, cat.nombre AS lista,
+                   (SELECT COUNT(*) FROM runac_c1_catalogo_opcion o
+                     WHERE o.catalogo_id = cat.id AND o.activo = 1) AS opciones,
+                   (SELECT GROUP_CONCAT(o.valor_esperado ORDER BY o.orden SEPARATOR ' · ')
+                      FROM runac_c1_catalogo_opcion o
+                     WHERE o.catalogo_id = cat.id AND o.activo = 1) AS valores
+            FROM runac_c1_campo c
+            JOIN runac_c1_hoja h ON h.id = c.hoja_id
+            JOIN runac_c1_archivo_version av ON av.id = h.archivo_version_id
+                                            AND av.estado = 'VIGENTE'
+            JOIN runac_c1_archivo a ON a.id = av.archivo_id
+            LEFT JOIN runac_c1_dimension d ON d.id = c.dimension_id
+            LEFT JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
+            WHERE a.codigo = %s AND h.nombre_esperado = %s
+            ORDER BY c.orden
+        """,
+            [codigo_archivo, nombre_hoja],
+        )
+        campos = _fila_a_dict(cur)
+
+        cur.execute(
+            """
+            SELECT cr.campo_id, cr.severidad,
+                   COALESCE(NULLIF(cr.mensaje, ''), r.descripcion, r.nombre) AS texto
+            FROM runac_c1_campo_regla cr
+            JOIN runac_c1_regla r ON r.id = cr.regla_id
+            JOIN runac_c1_campo c ON c.id = cr.campo_id
+            JOIN runac_c1_hoja h ON h.id = c.hoja_id
+            JOIN runac_c1_archivo_version av ON av.id = h.archivo_version_id
+                                            AND av.estado = 'VIGENTE'
+            JOIN runac_c1_archivo a ON a.id = av.archivo_id
+            WHERE a.codigo = %s AND h.nombre_esperado = %s
+        """,
+            [codigo_archivo, nombre_hoja],
+        )
+        reglas: dict[int, list] = {}
+        for fila in _fila_a_dict(cur):
+            reglas.setdefault(fila["campo_id"], []).append(fila)
+
+    for campo in campos:
+        campo["reglas"] = reglas.get(campo["id"], [])
+    return campos
+
+
 # ---------------------------------------------------------------------------
 # Presentación
 # ---------------------------------------------------------------------------

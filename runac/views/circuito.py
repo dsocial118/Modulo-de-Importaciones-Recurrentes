@@ -13,7 +13,12 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import TemplateView
 
-from runac.permissions import SeccionPermitidaMixin, es_nacional, puede_revisar
+from runac.permissions import (
+    SeccionPermitidaMixin,
+    es_nacional,
+    puede_administrar,
+    puede_revisar,
+)
 from runac.services import circuito_service as circuito
 from runac.services import informe_errores_service as informes
 from runac.services import importacion_service as svc
@@ -206,3 +211,36 @@ def _descarga(contenido: bytes, nombre: str) -> HttpResponse:
     )
     respuesta["Content-Disposition"] = f'attachment; filename="{nombre}"'
     return respuesta
+
+
+class BorrarImportacionesView(SeccionPermitidaMixin, LoginRequiredMixin, View):
+    """Deja el prototipo sin ninguna importación.
+
+    **Herramienta de prueba, no parte del sistema.** Existe porque durante las
+    pruebas hay que repetir el mismo circuito muchas veces: importar un archivo
+    que anduvo, cambiarle algo y ver si falla.
+
+    Sólo la ve el administrador: si estuviera al alcance del operador, alguien
+    la toca durante una demostración. Va arriba de todo en el inicio, junto al
+    selector de jurisdicción, porque son las dos herramientas de prueba y
+    conviene buscarlas en el mismo lugar.
+    """
+
+    seccion = "inicio"
+
+    def post(self, request):
+        if not puede_administrar(request.user):
+            messages.error(
+                request, "Sólo el administrador puede borrar las importaciones."
+            )
+            return redirect("runac:inicio")
+
+        borrados = circuito.borrar_todas_las_importaciones()
+        messages.warning(
+            request,
+            "Se borraron todas las importaciones de todas las jurisdicciones: "
+            f'{borrados["presentaciones"]} presentaciones, '
+            f'{borrados["importaciones"]} importaciones y '
+            f'{borrados["filas"]} registros. Es una función de prueba.',
+        )
+        return redirect("runac:inicio")

@@ -37,11 +37,36 @@
     /* Nada empuja la pantalla a lo ancho. */
     body, .container-xxl { overflow-x: hidden; }
 
+    /* El encabezado entero queda arriba al desplazarse: la franja del
+       prototipo, la barra con el menú y la línea del usuario. Van envueltos en
+       un solo contenedor porque `sticky` fija UN elemento: si se le pone a la
+       franja sola, la barra se va igual. */
+    .encabezado-fijo {
+      position: sticky; top: 0; z-index: 1040;
+      /* Con el menú desplegado en el teléfono el encabezado crece: que no se
+         coma la pantalla entera. */
+      max-height: 100vh; overflow-y: auto;
+    }
+
     .aviso-prototipo {
       background: repeating-linear-gradient(45deg, #ffc107, #ffc107 12px, #ffb300 12px, #ffb300 24px);
       color: #3d2c00; font-weight: 600; letter-spacing: .04em; font-size: .72rem;
       text-align: center; padding: .3rem .5rem; text-transform: uppercase;
-      position: sticky; top: 0; z-index: 1040;
+    }
+
+    /* --- Funciones que existen sólo para probar ----------------------
+       Se marcan siempre igual, para que se lea que son deliberadas y no un
+       descuido: alguien que ve el prototipo tiene que poder distinguir una
+       herramienta de prueba de un error de diseño. */
+    .modo-prueba {
+      border: 1px dashed #b8860b; border-radius: .4rem;
+      background: #fffbeb; padding: .35rem .5rem;
+    }
+    .etiqueta-prueba {
+      display: inline-block; background: #b8860b; color: #fff;
+      font-size: .62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; padding: .05rem .4rem; border-radius: .25rem;
+      white-space: nowrap;
     }
 
     .navbar { background: var(--azul) !important; }
@@ -176,51 +201,53 @@
 
     /* Impresión: el comprobante se imprime, y no con la barra de navegación. */
     @media print {
-      .navbar, .aviso-prototipo, .d-print-none { display: none !important; }
+      .encabezado-fijo, .navbar, .aviso-prototipo, .d-print-none { display: none !important; }
       body { background: #fff; }
       .card { border: 1px solid #999; box-shadow: none; }
     }
         </style>
     </head>
     <body>
-        {% if es_prototipo %}<div class="aviso-prototipo">{{ aviso_prototipo }}</div>{% endif %}
-        <nav class="navbar navbar-expand-lg mb-3 mb-md-4">
-            <div class="container-xxl">
-                <a class="navbar-brand fw-bold" href="{% url 'runac:inicio' %}">RUNAC</a>
-                {% if user.is_authenticated %}
-                    <button class="navbar-toggler"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#menuPrincipal"
-                            aria-controls="menuPrincipal"
-                            aria-expanded="false"
-                            aria-label="Abrir el menú">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="menuPrincipal">
-                        <div class="navbar-nav me-auto">
-                            {% for s in menu %}
-                                <a class="nav-link {% if seccion_actual == s.clave %}activo{% endif %}"
-                                   href="{% url s.url %}">
-                                    <i class="bi {{ s.icono }} d-lg-none me-1"></i>{{ s.etiqueta }}
+        <div class="encabezado-fijo">
+            {% if es_prototipo %}<div class="aviso-prototipo">{{ aviso_prototipo }}</div>{% endif %}
+            <nav class="navbar navbar-expand-lg">
+                <div class="container-xxl">
+                    <a class="navbar-brand fw-bold" href="{% url 'runac:inicio' %}">RUNAC</a>
+                    {% if user.is_authenticated %}
+                        <button class="navbar-toggler"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#menuPrincipal"
+                                aria-controls="menuPrincipal"
+                                aria-expanded="false"
+                                aria-label="Abrir el menú">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        <div class="collapse navbar-collapse" id="menuPrincipal">
+                            <div class="navbar-nav me-auto">
+                                {% for s in menu %}
+                                    <a class="nav-link {% if seccion_actual == s.clave %}activo{% endif %}"
+                                       href="{% url s.url %}">
+                                        <i class="bi {{ s.icono }} d-lg-none me-1"></i>{{ s.etiqueta }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                            <div class="navbar-nav">
+                                <span class="nav-link small">
+                                    {{ user.get_username }}
+                                    {% if rol %}· {{ rol }}{% endif %}
+                                    {% if jurisdiccion %}· {{ jurisdiccion }}{% endif %}
+                                </span>
+                                <a class="nav-link" href="{% url 'runac:salir' %}" title="Salir">
+                                    <i class="bi bi-box-arrow-right"></i> <span class="d-lg-none">Salir</span>
                                 </a>
-                            {% endfor %}
+                            </div>
                         </div>
-                        <div class="navbar-nav">
-                            <span class="nav-link small">
-                                {{ user.get_username }}
-                                {% if rol %}· {{ rol }}{% endif %}
-                                {% if jurisdiccion %}· {{ jurisdiccion }}{% endif %}
-                            </span>
-                            <a class="nav-link" href="{% url 'runac:salir' %}" title="Salir">
-                                <i class="bi bi-box-arrow-right"></i> <span class="d-lg-none">Salir</span>
-                            </a>
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-        </nav>
-        <div class="container-xxl pb-5">
+                    {% endif %}
+                </div>
+            </nav>
+        </div>
+        <div class="container-xxl pt-3 pt-md-4 pb-5">
             {% if messages %}
                 {% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }} py-2">{{ m }}</div>{% endfor %}
             {% endif %}
