@@ -133,9 +133,16 @@ protección. No es secreto, pero tampoco es para que ande suelto.
 El circuito de nueve pasos del análisis funcional está implementado de punta a
 punta, incluida la corrección de datos dentro del sistema.
 
-**Cada rol ve y accede sólo a lo suyo.** El menú se arma según el rol, y el
-acceso se verifica también al entrar por dirección directa: ocultar un enlace no
-es un permiso.
+**Cada rol ve y accede sólo a las secciones que le corresponden.** El menú se
+arma según el rol, y el acceso se verifica también al entrar por dirección
+directa: ocultar un enlace no es un permiso.
+
+Lo que **todavía no** se verifica es la pertenencia territorial: el prototipo
+comprueba qué puede hacer un rol, no sobre qué jurisdicción puede hacerlo. La
+jurisdicción llega como parámetro y se puede cambiar a mano. Es deliberado
+—permite mostrar el circuito de cualquier provincia sin crear un usuario por
+cada una— y es lo primero que se reemplaza al integrar, con el alcance
+territorial de SISOC.
 
 **Mobile first.** El diseño arranca en teléfono y suma tablet (768px) y
 escritorio (992px). En pantalla chica las tablas se convierten en fichas, con el
@@ -153,8 +160,11 @@ repositorio: lo mantiene el responsable funcional en documentos aparte.
 
 ## Cómo está armado
 
-Con **la misma estructura que las apps de SISOC**, a propósito: cuando esto se
-integre, se copia la carpeta en vez de reescribirla.
+Con **la misma estructura que las apps de SISOC**, a propósito: es lo que hace
+que el código se pueda mudar en vez de reescribirlo. No es copiar la carpeta:
+la tabla de más abajo dice qué se reusa y qué se tira, y el anexo técnico
+enumera lo que hay que resolver antes —permisos con alcance territorial,
+migraciones, trazabilidad y clasificación modular—.
 
 **La lógica vive en `services/`; las vistas no deciden nada.**
 
@@ -206,9 +216,13 @@ Bootstrap 5** — las mismas que `requirements/base.txt` del repositorio.
 
 ### Los modelos son de sólo lectura
 
-Todos llevan `managed = False`. **El prototipo no crea ni modifica el modelo: lo
-lee.** La estructura la produce la skill `runac-capa1`, que es la que sabe leer
-los Excel y generar las tres capas.
+Todos llevan `managed = False`, que en Django significa que **las migraciones
+no crean ni modifican esas tablas**: la estructura la produce la skill
+`runac-capa1`, que es la que sabe leer los Excel y generar las tres capas.
+
+No significa que los datos sean de sólo lectura: el prototipo escribe en la
+Capa 2 —importaciones, filas, correcciones— con SQL directo. Lo que no toca es
+la definición de las tablas.
 
 Para regenerarlos si cambia la base:
 
@@ -257,6 +271,11 @@ docker exec runac_proto_web pytest runac/tests/ -q
 ```
 
 Los tests cubren las reglas del circuito —quién puede hacer qué, desde qué
-estado— y la convención de nombres de las tablas receptoras. No tocan la base:
-los modelos son `managed = False`, porque la estructura la define la Capa 1 y no
-Django.
+estado—, la convención de nombres de las tablas receptoras y, en
+`test_garantias.py`, las promesas que el módulo hace: que el cero es un dato,
+que los números se leen igual en las dos pantallas, que ninguna vista queda sin
+control de sección, que la completitud no la decide el navegador y que una
+regla que el motor no sabe evaluar no pasa en silencio.
+
+No tocan la base: no hace falta, porque lo que prueban es la decisión, no el
+guardado.
