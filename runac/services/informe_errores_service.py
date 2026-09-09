@@ -94,6 +94,31 @@ def datos_de_la_importacion(importacion_id: int) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _inofensivo(valor):
+    """Un texto que Excel no va a interpretar como fórmula.
+
+    Todo lo que sale a estos informes viene de un archivo que subió una
+    provincia. Excel trata como fórmula cualquier celda que empiece con `=`,
+    `+`, `-` o `@`, así que un valor como `=HYPERLINK(...)` escrito en la
+    planilla se ejecutaría en la máquina de quien abre el informe. Se marcan
+    esas celdas como texto explícito y el valor se muestra tal cual vino: es un
+    informe de lo que el archivo decía, y eso incluye lo que decía mal.
+    """
+    if isinstance(valor, str) and valor[:1] in ("=", "+", "-", "@"):
+        return ("texto", valor)
+    return (None, valor)
+
+
+def _celda(hoja, fila: int, columna: int, valor):
+    """Escribe una celda sin dejar que su contenido se convierta en fórmula."""
+    formato, contenido = _inofensivo(valor)
+    celda = hoja.cell(row=fila, column=columna, value=contenido)
+    if formato == "texto":
+        celda.data_type = "s"
+        celda.quotePrefix = True
+    return celda
+
+
 def _escribir_encabezado(hoja, titulos: list[str]) -> None:
     for i, titulo in enumerate(titulos, start=1):
         celda = hoja.cell(row=1, column=i, value=titulo)
@@ -131,7 +156,7 @@ def planilla_de_errores(importacion_id: int) -> bytes:
     ]
     for i, (etiqueta, valor) in enumerate(resumen, start=1):
         portada.cell(row=i, column=1, value=etiqueta).font = Font(bold=True)
-        portada.cell(row=i, column=2, value=valor)
+        _celda(portada, i, 2, valor)
 
     fila = len(resumen) + 2
     portada.cell(row=fila, column=1, value="Cómo leer este informe").font = Font(
@@ -179,7 +204,7 @@ def planilla_de_errores(importacion_id: int) -> bytes:
                 e["codigo"],
             ]
             for j, valor in enumerate(valores, start=1):
-                celda = hoja.cell(row=i, column=j, value=valor)
+                celda = _celda(hoja, i, j, valor)
                 celda.fill = PatternFill(
                     "solid", fgColor=COLOR_POR_SEVERIDAD.get(e["severidad"], GRIS)
                 )
@@ -204,7 +229,7 @@ def planilla_de_errores(importacion_id: int) -> bytes:
                 ],
                 start=1,
             ):
-                hoja.cell(row=i, column=j, value=valor).fill = PatternFill(
+                _celda(hoja, i, j, valor).fill = PatternFill(
                     "solid", fgColor=ROJO_SUAVE
                 )
         for letra, ancho in zip("ABCDEF", (26, 22, 8, 26, 26, 62)):
@@ -287,7 +312,7 @@ def archivo_marcado(importacion_id: int) -> tuple[bytes, str]:
     ]
     for i, (etiqueta, valor) in enumerate(lineas, start=1):
         guia.cell(row=i, column=1, value=etiqueta).font = Font(bold=True)
-        guia.cell(row=i, column=2, value=valor)
+        _celda(guia, i, 2, valor)
 
     fila = len(lineas) + 2
     ayuda = (

@@ -308,3 +308,73 @@ def test_una_regla_que_el_motor_no_sabe_evaluar_no_pasa_en_silencio():
             {},
             {},
         )
+
+
+def test_el_informe_no_lleva_formulas_de_vuelta(tmp_path):
+    """Lo que sale al Excel viene de un archivo que subió una provincia.
+
+    Excel ejecuta como fórmula cualquier celda que empiece con «=», así que un
+    valor así escrito en la planilla se ejecutaba en la máquina de quien abre
+    el informe de errores. El valor tiene que verse —es el dato que estaba
+    mal— pero como texto.
+    """
+    from openpyxl import Workbook, load_workbook
+
+    from runac.services import informe_errores_service as informes
+
+    libro = Workbook()
+    hoja = libro.active
+    informes._celda(hoja, 1, 1, '=HYPERLINK("http://ejemplo","ver")')
+    informes._celda(hoja, 2, 1, "Hogar San José")
+    ruta = tmp_path / "informe.xlsx"
+    libro.save(ruta)
+
+    leido = load_workbook(ruta).active
+    assert leido["A1"].data_type == "s", "no puede quedar guardada como fórmula"
+    assert leido["A1"].value.startswith("=HYPERLINK"), "el valor se sigue viendo"
+    assert leido["A2"].value == "Hogar San José"
+
+
+def test_el_nombre_del_archivo_no_puede_salir_de_la_carpeta():
+    """El nombre lo elige quien sube el archivo y se usa para armar una ruta."""
+    from runac.services.importacion_service import _nombre_de_archivo_seguro
+
+    assert _nombre_de_archivo_seguro("../../etc/passwd.xlsx") == "passwd.xlsx"
+    assert _nombre_de_archivo_seguro(r"C:\otro\MPI_2026_T1_Chaco.xlsx") == (
+        "MPI_2026_T1_Chaco.xlsx"
+    )
+    assert _nombre_de_archivo_seguro("MPI_2026_T1_Entre Ríos.xlsx") == (
+        "MPI_2026_T1_Entre Ríos.xlsx"
+    ), "un nombre legítimo no se toca"
+    assert _nombre_de_archivo_seguro("") == "archivo.xlsx"
+
+
+def test_solo_se_reciben_planillas_y_de_tamano_razonable():
+    """Un archivo enorme llenaría el disco antes de que nadie lo mire."""
+    from runac.services import importacion_service as svc
+
+    class _Subido:
+        def __init__(self, name, size):
+            self.name, self.size = name, size
+
+    assert svc._archivo_admisible(_Subido("MPI_2026_T1_Chaco.xlsx", 500_000)) is None
+    assert svc._archivo_admisible(_Subido("MPI.exe", 500)) is not None
+    assert svc._archivo_admisible(_Subido("MPI.xlsx", 0)) is not None
+    assert (
+        svc._archivo_admisible(_Subido("MPI.xlsx", svc.TAMANO_MAXIMO + 1)) is not None
+    )
+
+
+def test_el_destino_de_vuelta_es_de_esta_aplicacion():
+    """El destino viaja en el formulario, así que puede escribirlo cualquiera.
+
+    Un enlace con «?volver=https://…» mandaba a la persona a otro sitio después
+    de operar, con la sesión abierta y la apariencia de seguir adentro.
+    """
+    import inspect
+
+    from runac.views import circuito
+
+    fuente = inspect.getsource(circuito._volver)
+    assert "url_has_allowed_host_and_scheme" in fuente
+    assert "request.get_host()" in fuente

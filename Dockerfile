@@ -6,6 +6,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         default-libmysqlclient-dev build-essential pkg-config default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
+# defusedxml no se usa desde el código: alcanza con que esté instalada para que
+# openpyxl la use al leer los .xlsx. Un Excel es un ZIP con XML adentro, y un
+# XML preparado puede hacer que el lector consuma toda la memoria de la máquina
+# o intente leer archivos del servidor. Los archivos vienen de afuera.
 RUN pip install --no-cache-dir \
       Django==5.2.16 \
       mysqlclient==2.1.1 \
@@ -14,7 +18,8 @@ RUN pip install --no-cache-dir \
       djangorestframework==3.16.1 \
       openpyxl==3.1.5 \
       pandas==2.3.1 \
-      mysql-connector-python==9.1.0
+      mysql-connector-python==9.1.0 \
+      defusedxml==0.7.1
 
 # Tooling de calidad: las MISMAS versiones que SISOC (requirements/dev.txt,
 # lint.txt y test.txt). Es lo que exige AGENTS.md > Validacion.

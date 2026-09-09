@@ -10,6 +10,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 from django.views.generic import TemplateView
 
@@ -25,8 +26,18 @@ from runac.services import importacion_service as svc
 
 
 def _volver(request, presentacion_id=None):
+    """A dónde vuelve el operador después de una acción del circuito.
+
+    El destino viaja en el formulario, así que lo escribe el navegador y puede
+    escribirlo cualquiera: un enlace preparado con `?volver=https://…` mandaba
+    a la persona a otro sitio después de operar, con la sesión abierta y la
+    apariencia de seguir dentro del sistema. Sólo se aceptan destinos de esta
+    misma aplicación.
+    """
     destino = request.POST.get("volver") or request.GET.get("volver")
-    if destino:
+    if destino and url_has_allowed_host_and_scheme(
+        destino, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
         return redirect(destino)
     periodo = request.POST.get("periodo") or "2026_T1"
     jurisdiccion = request.POST.get("jurisdiccion") or ""

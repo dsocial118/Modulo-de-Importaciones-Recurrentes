@@ -9,6 +9,7 @@ no sabe nada de Django ni de web.
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 import unicodedata
@@ -516,6 +517,44 @@ def dependencias_faltantes(codigo_archivo: str, jurisdiccion: str, codigo_period
     ]
 
 
+# Lo que se acepta recibir. El tope no sale de un cálculo: es holgado para las
+# planillas reales —la más grande de las de prueba no llega a 1 MB— y corta el
+# archivo enorme que llenaría el disco antes de que nadie lo mire.
+EXTENSIONES_ADMITIDAS = (".xlsx", ".xlsm")
+TAMANO_MAXIMO = 40 * 1024 * 1024
+
+
+def _nombre_de_archivo_seguro(nombre: str) -> str:
+    """El nombre tal como llegó, sin nada que sirva para salir de la carpeta.
+
+    El nombre lo elige quien sube el archivo y se usa para armar una ruta en el
+    disco: `../../algo.xlsx` escribiría fuera del directorio de cargas. Se
+    conserva sólo el último tramo y se descartan los separadores.
+    """
+    limpio = os.path.basename(str(nombre or "").replace("\\", "/"))
+    limpio = re.sub(r"[^A-Za-z0-9 ._\-áéíóúüñÁÉÍÓÚÜÑ]", "_", limpio).strip(". ")
+    return limpio[:150] or "archivo.xlsx"
+
+
+def _archivo_admisible(fichero) -> str | None:
+    """Devuelve el motivo por el que no se puede recibir, o None si se puede."""
+    nombre = _nombre_de_archivo_seguro(fichero.name)
+    if not nombre.lower().endswith(EXTENSIONES_ADMITIDAS):
+        return (
+            "Sólo se reciben planillas de Excel "
+            f'({", ".join(EXTENSIONES_ADMITIDAS)}).'
+        )
+    tamano = getattr(fichero, "size", None) or 0
+    if tamano > TAMANO_MAXIMO:
+        return (
+            f"El archivo pesa {tamano // (1024 * 1024)} MB y el máximo admitido "
+            f"es {TAMANO_MAXIMO // (1024 * 1024)} MB."
+        )
+    if tamano == 0:
+        return "El archivo está vacío."
+    return None
+
+
 def _comparable(texto: str) -> str:
     """Forma comparable de un texto: sin tildes, sin separadores, en minúsculas.
 
@@ -554,6 +593,12 @@ def importar_uno(
     Devuelve el resumen del motor. Si faltan dependencias, no se procesa: se
     informa qué falta, como pide el documento.
     """
+    # Lo primero es si el archivo se puede recibir: antes de leerlo, de
+    # guardarlo y de consultar nada.
+    motivo = _archivo_admisible(fichero)
+    if motivo:
+        return {"rechazado": True, "codigo": codigo_archivo, "mensaje": motivo}
+
     faltan = dependencias_faltantes(codigo_archivo, jurisdiccion, codigo_periodo)
     if faltan:
         return {
@@ -570,16 +615,15 @@ def importar_uno(
     # archivo que no corresponde a este período o a esta jurisdicción no entra.
     # Era una advertencia y se procesaba igual, de modo que un archivo de otra
     # provincia podía incorporarse a la presentación en curso.
+    nombre = _nombre_de_archivo_seguro(fichero.name)
     esperado = f"{codigo_archivo}_{codigo_periodo}_{jurisdiccion}.xlsx"
-    if not _nombre_corresponde(
-        fichero.name, codigo_archivo, codigo_periodo, jurisdiccion
-    ):
+    if not _nombre_corresponde(nombre, codigo_archivo, codigo_periodo, jurisdiccion):
         return {
             "rechazado": True,
             "codigo": codigo_archivo,
             "nombre_sugerido": esperado,
             "mensaje": (
-                f"El nombre «{fichero.name}» no corresponde a este archivo, "
+                f"El nombre «{nombre}» no corresponde a este archivo, "
                 f"este período y esta jurisdicción. Se espera «{esperado}». "
                 "El archivo no se importó."
             ),
@@ -591,7 +635,7 @@ def importar_uno(
         / f"{jurisdiccion}_{codigo_periodo}_{codigo_archivo}_{marca}"
     )
     destino.mkdir(parents=True, exist_ok=True)
-    ruta = destino / fichero.name
+    ruta = destino / nombre
     with open(ruta, "wb") as salida:
         for bloque in fichero.chunks():
             salida.write(bloque)
@@ -603,7 +647,7 @@ def importar_uno(
         jurisdiccion=jurisdiccion,
         codigo_periodo=codigo_periodo,
         usuario=usuario,
-        asignacion={fichero.name: codigo_archivo},
+        asignacion={nombre: codigo_archivo},
     )
     resultado["rechazado"] = False
     resultado["codigo"] = codigo_archivo
