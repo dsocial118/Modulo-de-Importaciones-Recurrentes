@@ -402,3 +402,35 @@ def test_las_filas_vacias_del_final_no_son_un_problema():
     )
     # Y lo que se anota es lo que quedó entre dos filas con datos.
     assert "range(ultima_con_datos + 1, nro)" in fuente
+
+
+def test_una_jurisdiccion_que_no_empezo_devuelve_la_misma_forma(monkeypatch):
+    """La pantalla no se cae porque una provincia todavía no cargó nada.
+
+    `estado_de_la_presentacion` devolvía, cuando no había presentación, los
+    archivos tal como salen de la Capa 1: sin `estado`, sin `importada` y sin
+    `importacion`. Quien los recorría se rompía con KeyError.
+
+    No se notaba porque consultar el estado CREABA la presentación, así que esa
+    rama no se ejecutaba nunca. Al separar la consulta del alta quedó expuesta,
+    y apareció recién al vaciar la base.
+    """
+    from runac.services import importacion_service as svc
+
+    monkeypatch.setattr(svc, "presentacion_de", lambda *a, **k: None)
+    monkeypatch.setattr(
+        svc,
+        "archivos_esperados",
+        lambda periodo: [{"codigo": "MPI", "obligatorio": 1, "orden_importacion": 4}],
+    )
+
+    estado = svc.estado_de_la_presentacion("Tucumán", "2026_T1")
+
+    assert estado["presentacion"] is None
+    assert estado["listo"] is False
+    for archivo in estado["archivos"]:
+        # Las mismas claves que cuando sí hay presentación: quien las recorre no
+        # tiene por qué preguntar en qué caso está.
+        assert archivo["estado"] == "SIN_CARGAR"
+        assert archivo["importada"] is False
+        assert archivo["importacion"] is None

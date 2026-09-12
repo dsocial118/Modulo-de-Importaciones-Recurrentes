@@ -306,11 +306,33 @@ def importaciones_de(presentacion_id: int):
 
 
 def estado_de_la_presentacion(jurisdiccion: str, codigo_periodo: str):
-    """Resume, por archivo, si está cargado y cómo quedó."""
+    """Resume, por archivo, si está cargado y cómo quedó.
+
+    Una jurisdicción que todavía no empezó devuelve **la misma forma** que una
+    que ya cargó: los archivos que se esperan, todos en SIN_CARGAR. Antes
+    devolvía los archivos tal como salen de la Capa 1, sin la clave `estado`, y
+    quien los recorría se rompía.
+
+    Eso no se notaba mientras consultar creaba la presentación: la rama del «no
+    hay nada todavía» no llegaba a ejecutarse nunca. Al separar la consulta del
+    alta quedó a la vista.
+    """
     pres = presentacion_de(jurisdiccion, codigo_periodo)
     esperados = archivos_esperados(codigo_periodo)
     if not pres:
-        return {"presentacion": None, "archivos": esperados, "listo": False}
+        return {
+            "presentacion": None,
+            "archivos": [
+                {
+                    **a,
+                    "importacion": None,
+                    "importada": False,
+                    "estado": "SIN_CARGAR",
+                }
+                for a in esperados
+            ],
+            "listo": False,
+        }
 
     # La importación vigente de cada archivo es la última que quedó VALIDA.
     # Las ANULADAS fueron reemplazadas; las FALLIDAS no incorporaron nada.
