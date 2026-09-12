@@ -22,21 +22,56 @@ from reglas import sugerir_reglas, sugerir_reglas_de_hoja
 
 # --- detección de la estructura de una hoja --------------------------------
 
+# Qué tan variados tienen que ser los valores de una fila para que pueda ser la
+# de títulos. Medido sobre las seis planillas recibidas: las filas de títulos dan
+# entre 0,97 y 1,00 y las de anotaciones entre 0,02 y 0,35. No hay zona gris.
+VARIEDAD_DE_TITULOS = 0.8
+
+
+def variedad(hoja: LX.Hoja, fila: int) -> float:
+    """Proporción de valores distintos en una fila.
+
+    Es lo que distingue una fila de títulos de una de anotaciones. Los títulos
+    nombran columnas, así que casi no se repiten; las anotaciones dicen lo mismo
+    muchas veces —«Seleccionar» cinco veces, «AGREGADO» cuatro—, igual que las
+    filas de datos.
+    """
+    valores = [
+        str(LX.texto(hoja, fila, c) or "").strip().lower()
+        for c in range(1, hoja.max_columna + 1)
+    ]
+    valores = [v for v in valores if v]
+    return len(set(valores)) / len(valores) if valores else 0.0
+
 
 def detectar_estructura(hoja: LX.Hoja) -> dict:
     """Ubica el título general, la fila de dimensiones y la de encabezados.
 
     Se apoya en cómo Excel guarda las celdas combinadas: una que cubre casi todo
     el ancho es el título; las que agrupan varias columnas son las dimensiones.
+
+    La fila de títulos era simplemente la que más celdas llenas tenía, y eso
+    alcanzaba mientras las planillas no traían anotaciones de trabajo. El MPE de
+    septiembre trae una fila de aclaraciones debajo del encabezado —«Campo
+    abierto», «AGREGADO», «Seleccionar»— con UNA celda llena más que la de
+    títulos, y con eso se llevaba la elección: la Capa 1 salía con veinte
+    columnas llamadas «Seleccionar». Por eso ahora primero se descarta lo que no
+    puede ser una fila de títulos, y recién después se cuenta.
     """
     llenas_por_fila = {}
     for fila in range(1, min(hoja.max_fila, 12) + 1):
         llenas_por_fila[fila] = sum(
             1 for col in range(1, hoja.max_columna + 1) if (fila, col) in hoja.celdas
         )
-    fila_encabezados = (
-        max(llenas_por_fila, key=lambda f: llenas_por_fila[f]) if llenas_por_fila else 1
-    )
+    candidatas = {
+        f: n
+        for f, n in llenas_por_fila.items()
+        if n and variedad(hoja, f) >= VARIEDAD_DE_TITULOS
+    }
+    # Si ninguna fila califica, se decide como antes: es preferible elegir mal a
+    # no elegir, porque el mapa de la hoja se revisa igual antes de generar.
+    entre = candidatas or llenas_por_fila
+    fila_encabezados = max(entre, key=lambda f: entre[f]) if entre else 1
 
     horizontales = defaultdict(list)
     for f1, c1, f2, c2 in hoja.combinadas:
