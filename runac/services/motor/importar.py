@@ -934,9 +934,29 @@ def main():
 
 
 def _ejecutar(args, conexion):
+    """Abre la conexion, ejecuta la importacion y la cierra SIEMPRE.
+
+    El cierre estaba al final del cuerpo, asi que solo se alcanzaba cuando todo
+    salia bien. Una excepcion --o el return temprano cuando hay archivos
+    ambiguos-- dejaba la conexion viva con su transaccion en curso, reteniendo
+    los bloqueos sobre la presentacion. La importacion siguiente se quedaba
+    esperando esos bloqueos y fallaba tambien: un error se convertia en todos
+    los errores siguientes, y la unica salida era reiniciar el contenedor.
+    """
+    cn = mysql.connector.connect(**conexion)
+    try:
+        return _ejecutar_con(args, cn)
+    finally:
+        try:
+            # Lo que no se confirmo no queda a medias esperando a nadie.
+            cn.rollback()
+        finally:
+            cn.close()
+
+
+def _ejecutar_con(args, cn):
     imprimir = (lambda *a, **k: None) if getattr(args, "silencioso", False) else print
 
-    cn = mysql.connector.connect(**conexion)
     cur = cn.cursor(dictionary=True)
     archivos = leer_configuracion(cur, args.periodo)
 
@@ -1025,7 +1045,14 @@ def _ejecutar(args, conexion):
                     WHERE periodo_id=%s AND jurisdiccion_id=%s AND version=1""",
         (periodo_id, jurisdiccion_id),
     )
-    presentacion_id = cur2.fetchone()[0]
+    fila = cur2.fetchone()
+    if not fila:
+        raise RuntimeError(
+            f"No se pudo obtener la presentacion de {args.jurisdiccion} para "
+            f"{args.periodo}. Suele ser un bloqueo dejado por una importacion "
+            "anterior que fallo; volver a intentar."
+        )
+    presentacion_id = fila[0]
 
     resumen_general = []
     imprimir("== Procesamiento ==")
@@ -1289,7 +1316,6 @@ def _ejecutar(args, conexion):
 
     cur.close()
     cur2.close()
-    cn.close()
 
     return {
         "resumen": resumen_general,

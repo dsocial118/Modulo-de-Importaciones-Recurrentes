@@ -179,9 +179,10 @@ def test_la_hoja_prepara_su_insercion_pero_no_la_ejecuta():
     )
     assert '"insercion": insercion' in cuerpo_hoja
 
-    # El recorrido de hojas vive en _ejecutar; procesar_carpeta es la envoltura
-    # que arma los argumentos.
-    cuerpo_archivo = inspect.getsource(importar._ejecutar)
+    # El recorrido de hojas vive en _ejecutar_con, que es el cuerpo; _ejecutar
+    # solo abre la conexion y se asegura de cerrarla, y procesar_carpeta es la
+    # envoltura que arma los argumentos.
+    cuerpo_archivo = inspect.getsource(importar._ejecutar_con)
     assert "if not bloqueantes:" in cuerpo_archivo, (
         "el archivo debe insertar sólo cuando ninguna de sus hojas tiene " "bloqueantes"
     )
@@ -453,3 +454,29 @@ def test_volver_a_empezar_incluye_poder_empezar():
         "dejar el prototipo sin importaciones y con el período cerrado lo deja "
         "inutilizable, que es lo contrario de lo que esta herramienta hace"
     )
+
+
+def test_la_conexion_del_motor_se_cierra_aunque_falle():
+    """Un error de importación no puede dejar la base trabada para el siguiente.
+
+    El cierre estaba al final del cuerpo, así que sólo se alcanzaba cuando todo
+    salía bien. Una excepción —o el `return` temprano cuando hay archivos
+    ambiguos— dejaba la conexión viva con su transacción en curso, reteniendo
+    los bloqueos sobre la presentación.
+
+    La importación siguiente se quedaba esperando esos bloqueos y fallaba
+    también: **un error se convertía en todos los errores siguientes**, y la
+    única salida era reiniciar el contenedor. Pasó en una demostración.
+    """
+    import inspect
+
+    import importar
+
+    fuente = inspect.getsource(importar._ejecutar)
+    assert "finally:" in fuente, "el cierre tiene que estar en un finally"
+    assert "cn.rollback()" in fuente, "lo no confirmado no queda esperando a nadie"
+    assert "cn.close()" in fuente
+
+    # Y el cuerpo largo ya no cierra nada: de eso se ocupa quien la abrió.
+    cuerpo = inspect.getsource(importar._ejecutar_con)
+    assert "cn.close()" not in cuerpo
