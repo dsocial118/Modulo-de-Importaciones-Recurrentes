@@ -679,4 +679,50 @@ def historial_de(importacion_id: int, numero_fila: int | None = None) -> list[di
     sql += " ORDER BY h.fecha DESC LIMIT 200"
     with connection.cursor() as cur:
         cur.execute(sql, parametros)
-        return _filas(cur)
+        cambios = _filas(cur)
+
+    documentos = _documentos_de(importacion_id)
+    for cambio in cambios:
+        cambio["documento"] = documentos.get(cambio["numero_fila"], "")
+    return cambios
+
+
+def _documentos_de(importacion_id: int) -> dict[int, str]:
+    """El documento de cada fila, para poder leer el historial.
+
+    «Fila 6» no le dice nada a nadie: identifica la posición en el Excel, no a
+    la persona. Con el documento al lado, el historial se puede contrastar con
+    el expediente sin volver a abrir el archivo.
+
+    En los archivos de dispositivos no hay documento —no son personas— y la
+    columna queda vacía, sin que eso sea un problema.
+    """
+    contexto = contexto_de(importacion_id)
+    if not contexto:
+        return {}
+
+    varias = len(contexto["hojas"]) > 1
+    documentos: dict[int, str] = {}
+    for hoja in contexto["hojas"]:
+        tabla = nombre_tabla_receptora(
+            contexto["archivo_codigo"],
+            hoja["nombre_esperado"],
+            varias,
+            contexto["version"],
+        )
+        with connection.cursor() as cur:
+            cur.execute(
+                """SELECT 1 FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s
+                      AND COLUMN_NAME = 'n_dni'""",
+                [tabla],
+            )
+            if not cur.fetchone():
+                continue
+            cur.execute(
+                f"SELECT numero_fila, `n_dni` FROM `{_identificador_seguro(tabla)}` "
+                "WHERE importacion_id = %s",
+                [importacion_id],
+            )
+            documentos.update({f[0]: f[1] or "" for f in cur.fetchall()})
+    return documentos

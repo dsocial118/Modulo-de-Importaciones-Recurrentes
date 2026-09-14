@@ -159,10 +159,23 @@ def _comentario_del_campo(campo: dict) -> Comment:
 
     texto = "\n".join(partes)
     comentario = Comment(texto, "RUNAC")
+
     # El globo se dimensiona según el largo del texto, para que se lea entero.
-    lineas = sum(max(1, len(linea) // 48 + 1) for linea in texto.split("\n"))
-    comentario.width = 340
-    comentario.height = min(400, max(90, lineas * 16 + 20))
+    #
+    # Estaba angosto y calculado corto, así que los títulos largos —que en estas
+    # planillas son la mayoría, porque muchos son preguntas— quedaban cortados.
+    # Se ensancha, se cuentan menos caracteres por renglón (los que entran de
+    # verdad a este ancho) y se deja más aire arriba y abajo.
+    ANCHO = 420
+    CARACTERES_POR_RENGLON = 52
+    ALTO_DE_RENGLON = 18
+
+    lineas = sum(
+        max(1, (len(linea) - 1) // CARACTERES_POR_RENGLON + 1)
+        for linea in texto.split("\n")
+    )
+    comentario.width = ANCHO
+    comentario.height = min(600, max(110, lineas * ALTO_DE_RENGLON + 34))
     return comentario
 
 

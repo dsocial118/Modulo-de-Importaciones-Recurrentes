@@ -181,7 +181,7 @@
 
     {# --- Historial de correcciones ------------------------------------- #}
     {% if historial %}
-        <div class="card mt-4">
+        <div class="card mt-4" id="historial-de-cambios">
             {% comment %} Abierto y no detrás de un botón: un historial que hay que ir a buscar parece no existir, y acá la constancia de quién cambió qué es media razón de ser de la pantalla. {% endcomment %}
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>
@@ -198,7 +198,9 @@
                     <table class="table table-sm tabla-compacta tabla-ficha mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Fila</th>
+                                <th style="width:5rem">Fila</th>
+                                {% comment %} El documento al lado de la fila: «fila 6» ubica en el Excel, no identifica a nadie. {% endcomment %}
+                                <th style="width:9rem">Documento</th>
                                 <th>Campo</th>
                                 <th>Antes</th>
                                 <th>Después</th>
@@ -210,6 +212,7 @@
                             {% for h in historial %}
                                 <tr>
                                     <td>Fila {{ h.numero_fila }}</td>
+                                    <td class="mono" data-etiqueta="Documento">{{ h.documento|default:"—" }}</td>
                                     <td data-etiqueta="Campo">{{ h.campo }}</td>
                                     <td data-etiqueta="Antes" class="ayuda">{{ h.valor_anterior|default:"—" }}</td>
                                     <td data-etiqueta="Después">{{ h.valor_nuevo|default:"—" }}</td>

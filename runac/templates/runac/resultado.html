@@ -166,11 +166,19 @@
                                         <a class="btn btn-outline-success btn-sm"
                                            href="{% url 'runac:edicion' a.importacion.id %}">Editar datos</a>
                                     {% endif %}
+                                    {% comment %} El historial estaba al final de la pantalla de correccion, asi que habia que entrar a corregir para ver que se habia corregido. Se llega directo. {% endcomment %}
+                                    {% if a.importada %}
+                                        <a class="btn btn-outline-secondary btn-sm"
+                                           href="{% url 'runac:edicion' a.importacion.id %}#historial-de-cambios"
+                                           title="Quien cambio que, cuando y por que">
+                                            <i class="bi bi-clock-history"></i> Historial de cambios
+                                        </a>
+                                    {% endif %}
                                     {% comment %} Los informes se descargan desde acá cuantas veces haga falta: si sólo estuvieran en el aviso emergente, cerrarlo sin bajarlos los perdía. {% endcomment %}
                                     {% if a.importacion.bloqueantes or a.importacion.advertencias %}
                                         <a class="btn btn-outline-danger btn-sm"
                                            href="{% url 'runac:planilla_errores' a.importacion.id %}"
-                                           title="Descargar la lista de errores en Excel">
+                                           title="Descargar la lista de errores y advertencias en Excel">
                                             <i class="bi bi-file-earmark-excel"></i>
                                         </a>
                                         <a class="btn btn-outline-warning btn-sm"
