@@ -33,26 +33,31 @@ PLAN = [
     ("MPJ_DAE", "MPJ_DAE_2026_T1_Chubut.xlsx"),
 ]
 
-CAMPO_CON_AVISO = "Pueblo originario (especificar)"
-
-# Dos formas distintas de resolver la misma advertencia: completar el dato que
-# faltaba, y corregir el campo que lo exigía. El historial muestra las dos.
+# Cómo se corrige cada tipo de advertencia sembrada. Se toma la primera fila que
+# la tenga sin resolver y se la arregla.
+#
+# Antes esto apuntaba a UN campo fijo. El día que el generador dejó de sembrar
+# esa advertencia en particular —la condición que la dispara se sortea— la demo
+# quedó con el historial vacío y no se notó hasta mirarlo. Ahora depende de lo
+# que el archivo efectivamente trajo, y con una lista más larga que las que se
+# van a usar.
 CORRECCIONES = [
-    (CAMPO_CON_AVISO, "Qom", "Lo informó la provincia por nota"),
-    (CAMPO_CON_AVISO, "Mapuche", "Se verificó contra el expediente"),
-    (
-        "¿Se identifica con algún pueblo originario?",
-        "No",
-        "Estaba mal cargado: no se identifica con ningún pueblo",
-    ),
+    ("edad", "15", "Se verificó contra la fecha de nacimiento"),
+    ("fecha_del_relevamiento", "02/03/2026", "Estaba cargada con una fecha futura"),
+    ("pueblo_originario_especificar", "Qom", "Lo informó la provincia por nota"),
+    ("tipo_de_discapacidad", "Motora", "Se completó con lo que informó el dispositivo"),
 ]
+
+# Suficientes para que el historial tenga contenido, y no tantas como para que
+# no quede nada que mostrar corrigiendo en vivo.
+A_CORREGIR = 3
 
 
 def armar(borrar_antes: bool = True) -> dict:
     """Deja la presentación de Chubut completa y lista para mostrar.
 
-    Devuelve un resumen de lo que hizo, para que quien la llame lo informe:
-    la consola lo imprime y la pantalla lo muestra como aviso.
+    Devuelve un resumen de lo que hizo, para que quien la llame lo informe: la
+    consola lo imprime y la pantalla lo muestra como aviso.
     """
     resumen = {"borrado": None, "importados": [], "rechazados": [], "correcciones": 0}
 
@@ -92,27 +97,40 @@ def _corregir() -> int:
     importacion = fila[0]
     contexto = edicion.contexto_de(importacion)
     hoja = contexto["hojas"][0]
-    campos = {c["titulo_esperado"]: c for c in edicion.campos_de_la_hoja(hoja["id"])}
-
-    # Las filas se eligen de las que efectivamente tienen la advertencia, y
-    # distintas entre sí: dos correcciones sobre la misma fila se leen como una
-    # corrección de una corrección, que no es lo que se quiere mostrar.
-    with connection.cursor() as cur:
-        cur.execute(
-            """SELECT DISTINCT numero_fila FROM runac_c2_reglas_incumplidas
-                WHERE importacion_id = %s AND resuelta = 0 AND nombre_campo = %s
-                ORDER BY numero_fila""",
-            [importacion, CAMPO_CON_AVISO],
-        )
-        filas = [f[0] for f in cur.fetchall()]
+    campos = {c["nombre"]: c for c in edicion.campos_de_la_hoja(hoja["id"])}
 
     hechas = 0
-    for numero, (titulo, valor, motivo) in zip(filas, CORRECCIONES):
-        campo = campos.get(titulo)
+    for nombre, valor, motivo in CORRECCIONES:
+        if hechas >= A_CORREGIR:
+            break
+        campo = campos.get(nombre)
         if not campo:
             continue
-        edicion.editar(
-            importacion, hoja["id"], numero, campo["nombre"], valor, "operador", motivo
-        )
+        numero = _fila_con_aviso(importacion, hoja, campo)
+        if numero is None:
+            continue
+        try:
+            edicion.editar(
+                importacion, hoja["id"], numero, nombre, valor, "operador", motivo
+            )
+        except edicion.EdicionNoPermitida:
+            # Una corrección que el sistema no acepta —un valor que quedó fuera
+            # del catálogo, por ejemplo— se saltea. Dejar la demo a medio armar
+            # por un dato de ejemplo mal elegido es peor que tener una
+            # corrección menos en el historial.
+            continue
         hechas += 1
     return hechas
+
+
+def _fila_con_aviso(importacion: int, hoja: dict, campo: dict):
+    """La primera fila con una advertencia sin resolver en ese campo."""
+    with connection.cursor() as cur:
+        cur.execute(
+            """SELECT MIN(numero_fila) FROM runac_c2_reglas_incumplidas
+                WHERE importacion_id = %s AND nombre_hoja = %s
+                  AND nombre_campo = %s AND resuelta = 0""",
+            [importacion, hoja["nombre_esperado"], campo["titulo_esperado"]],
+        )
+        fila = cur.fetchone()
+    return fila[0] if fila else None

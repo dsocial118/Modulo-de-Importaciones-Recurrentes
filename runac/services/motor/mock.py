@@ -187,6 +187,21 @@ def es_de_dispositivo(titulo: str) -> bool:
     return any(p in titulo for p in ("disposit", "programa", "residencia", "hogar"))
 
 
+def fuera_de_rango(par: dict, candidato):
+    """Un valor que la regla de rango tiene que rechazar.
+
+    Se pasa por arriba del máximo, que es lo que se ve mal a simple vista —500
+    horas semanales, 8888 agentes—. Si la regla sólo declara un mínimo, se va
+    por abajo, que para una cantidad significa un negativo.
+    """
+    maximo, minimo = par.get("maximo"), par.get("minimo")
+    if maximo is not None:
+        return int(maximo) + 1
+    if minimo is not None:
+        return int(minimo) - 1
+    return candidato
+
+
 def valor_condicionado(
     campo: dict, fila: dict, candidato, rnd: random.Random, sembrar_aviso: bool = False
 ):
@@ -207,8 +222,21 @@ def valor_condicionado(
         tipo, severidad = regla["tipo_regla"], regla["severidad"]
         es_aviso = severidad == "ADVERTENCIA"
 
-        if tipo == "EXISTE_EN_ARCHIVO" and sembrar_aviso and es_aviso:
-            return "Dispositivo no declarado", regla["nombre"]
+        # Las reglas que se aplican SIEMPRE, sin condición previa. Sin ellas,
+        # los dos archivos de dispositivos salían sin una sola advertencia: no
+        # tienen campos dependientes, así que lo único que se sembraba —las
+        # condicionales— no los tocaba.
+        if sembrar_aviso and es_aviso:
+            if tipo == "EXISTE_EN_ARCHIVO":
+                return "Dispositivo no declarado", regla["nombre"]
+            if tipo == "RANGO":
+                return fuera_de_rango(par, candidato), regla["nombre"]
+            if tipo == "COMPARAR_VALOR" and par.get("valor") == "HOY":
+                # La regla pide que la fecha no sea futura: se la pone futura.
+                return (
+                    date.today() + timedelta(days=rnd.randint(30, 400)),
+                    regla["nombre"],
+                )
 
         if tipo not in ("PROHIBIDO_SI", "OBLIGATORIO_SI"):
             continue
