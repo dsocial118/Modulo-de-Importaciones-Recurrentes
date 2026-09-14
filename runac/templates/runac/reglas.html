@@ -7,16 +7,13 @@
         <div>
             <h5 class="mb-1">Qué se espera de cada archivo</h5>
             <div class="ayuda">
-                Antes de completar una planilla, acá se consulta qué va en cada columna:
-                si es obligatoria, qué tipo de dato admite y qué condiciones tiene que cumplir.
+                Qué va en cada columna: si es obligatoria, qué tipo de dato admite y qué
+                condiciones debe cumplir.
             </div>
-            {% comment %} Esta línea es el planteo entero del módulo dicho en una oración. Sin ella, la pantalla parece una ayuda; con ella, se entiende que es la definición ejecutable. {% endcomment %}
+            {% comment %} El planteo entero del módulo en una oración. Sin esto la pantalla parece una ayuda; con esto se entiende que es la definición ejecutable. {% endcomment %}
             <div class="ayuda mt-2 fundamento">
-                <i class="bi bi-info-circle"></i>
-                Nada de esto está escrito en el programa: sale de la definición del archivo.
-                El sistema <strong>lee esta misma configuración</strong> para generar la plantilla,
-                para validar lo que se importa y para armar esta pantalla. Si cambia la planilla,
-                cambia la definición — y el código no se toca.
+                Esta pantalla, la plantilla y la validación salen de la misma definición.
+                Si cambia la planilla, cambia la definición: el código no se toca.
             </div>
         </div>
         <form method="get" class="d-flex gap-2 align-items-center">

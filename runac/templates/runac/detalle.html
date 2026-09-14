@@ -96,21 +96,16 @@
     {% if resumen %}
         <div class="card mb-3">
             <div class="card-header">Reglas incumplidas, por tipo</div>
-            <div class="card-body p-0 tabla-scroll">
-                <table class="table table-sm tabla-compacta tabla-fija mb-0 tabla-ficha">
-                    <tbody>
-                        {% for r in resumen %}
-                            <tr>
-                                <td style="width:5rem" class="text-end fw-semibold sev-{{ r.severidad }}">{{ r.casos }}</td>
-                                <td style="width:11rem">
-                                    <span class="mono ayuda">{{ r.codigo }}</span>
-                                </td>
-                                <td>{{ r.ejemplo }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            {% comment %} Un resumen que ocupa mas que el detalle no resume. Una linea por tipo, con el ejemplo cortado: el texto completo esta abajo, fila por fila. {% endcomment %}
+            <ul class="list-group list-group-flush">
+                {% for r in resumen %}
+                    <li class="list-group-item py-1 d-flex gap-2 align-items-baseline">
+                        <span class="fw-semibold sev-{{ r.severidad }}" style="min-width:2.5rem">{{ r.casos }}</span>
+                        <span class="ayuda text-nowrap" style="min-width:11rem">{{ r.codigo }}</span>
+                        <span class="ayuda text-truncate">{{ r.ejemplo }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
         </div>
     {% endif %}
 
@@ -157,38 +152,37 @@
     lo pide. Con doscientos errores, abrir directo el detalle no orienta. {% endcomment %}
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span>{{ hallazgos|length }} resultado(s)</span>
-            <button class="btn btn-sm btn-outline-secondary"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#detalleErrores"
-                    aria-expanded="false">Ver el detalle fila por fila</button>
+            <span>
+                {{ hallazgos|length }} resultado(s)
+                {% if severidad_unica %}
+                    · todos de severidad
+                    <strong class="sev-{{ severidad_unica }}">{{ severidad_unica|lower }}</strong>
+                {% endif %}
+            </span>
         </div>
-        <div class="card-body p-0 collapse" id="detalleErrores">
+        {% comment %} Sin boton para desplegar: si se entro al detalle es para verlo. {% endcomment %}
+        <div class="card-body p-0 tabla-scroll">
             <table class="table table-sm tabla-compacta tabla-fija mb-0 tabla-ficha">
                 <thead class="table-light">
+                    {% comment %} Los anchos siguen al contenido: «Fila» es un numero y «Que pasa» es la oracion que explica el problema. {% endcomment %}
                     <tr>
-                        <th>Fila</th>
-                        <th>Hoja</th>
-                        <th>Campo</th>
-                        <th>Sev.</th>
-                        <th>Valor</th>
+                        <th style="width:4rem" class="text-end">Fila</th>
+                        <th style="width:9rem">Hoja</th>
+                        <th style="width:16rem">Campo</th>
+                        {% if not severidad_unica %}<th style="width:8rem">Severidad</th>{% endif %}
+                        <th style="width:12rem">Valor</th>
                         <th>Qué pasa</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for h in hallazgos %}
                         <tr>
-                            <td class="fw-semibold">{{ h.numero_fila|default:"—" }}</td>
+                            <td class="fw-semibold text-end">{{ h.numero_fila|default:"—" }}</td>
                             <td class="ayuda" data-etiqueta="Hoja">{{ h.nombre_hoja|default:"—" }}</td>
                             <td data-etiqueta="Campo">{{ h.nombre_campo|default:"—" }}</td>
-                            <td class="sev-{{ h.severidad }}" data-etiqueta="Sev.">
-                                {% if h.severidad == "BLOQUEANTE" %}
-                                    ◆
-                                {% else %}
-                                    ▲
-                                {% endif %}
-                            </td>
+                            {% if not severidad_unica %}
+                                <td class="sev-{{ h.severidad }}" data-etiqueta="Severidad">{{ h.severidad|lower }}</td>
+                            {% endif %}
                             <td class="mono" data-etiqueta="Valor">{{ h.valor_encontrado|default:"—"|truncatechars:34 }}</td>
                             <td data-etiqueta="Qué pasa">{{ h.descripcion }}</td>
                         </tr>

@@ -283,13 +283,20 @@ class DetalleView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
             columnas = [c[0] for c in cur.description]
             errores_archivo = [dict(zip(columnas, f)) for f in cur.fetchall()]
 
+        hallazgos = svc.hallazgos_de(importacion_id, severidad, hoja, buscar)
+        # Una importación que entró tiene sólo advertencias, y una que falló casi
+        # siempre sólo bloqueantes: repetir la palabra en cada fila es una columna
+        # entera con el mismo valor. Cuando están mezcladas —pasa en un archivo
+        # que falla y además trae observaciones— la columna sí hace falta.
+        severidades = {h["severidad"] for h in hallazgos}
         ctx.update(
             {
                 "importacion": importacion,
                 "hojas": hojas,
                 "errores_archivo": errores_archivo,
                 "resumen": svc.resumen_de_hallazgos(importacion_id),
-                "hallazgos": svc.hallazgos_de(importacion_id, severidad, hoja, buscar),
+                "hallazgos": hallazgos,
+                "severidad_unica": severidades.pop() if len(severidades) == 1 else None,
                 "filtro": {
                     "severidad": severidad or "",
                     "hoja": hoja or "",

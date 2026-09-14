@@ -168,3 +168,28 @@ def nombre_tabla_receptora(
     else:
         sufijo = f"{abrev(codigo, 20)}_v{version}"
     return f"runac_c2_{sufijo}"[:MAX_IDENT]
+
+
+# Instrucciones que las planillas traen pegadas al título de la hoja. No son
+# parte del título: le dicen a la provincia qué hacer con el archivo. Van al
+# final y separadas por un punto, así que se cortan ahí.
+INSTRUCCIONES_EN_EL_TITULO = (
+    "modelo para completar y adjuntar",
+    "completar y adjuntar",
+    "modelo para completar",
+)
+
+
+def titulo_sin_instrucciones(texto: str) -> str:
+    """El título de la hoja, sin la instrucción que la planilla le pegó al final.
+
+    «Listado de dispositivos penales. MODELO PARA COMPLETAR Y ADJUNTAR» es un
+    título más una consigna. Guardar las dos cosas juntas hace que la consigna
+    aparezca en cada pantalla que muestre el título, repetida una vez por
+    archivo.
+    """
+    limpio = norm(texto)
+    for parte in reversed(limpio.split(".")):
+        if clave(parte).strip() in INSTRUCCIONES_EN_EL_TITULO:
+            limpio = limpio[: limpio.rfind(parte)].rstrip(" .")
+    return limpio

@@ -62,6 +62,7 @@ def _sin_base(monkeypatch):
         monkeypatch.setattr(
             svc, "estado_de_la_presentacion", lambda *a, **k: _estado(importados)
         )
+        monkeypatch.setattr(svc, "archivos_esperados", lambda periodo: list(ARCHIVOS))
         monkeypatch.setattr(
             svc,
             "archivos_referenciados",
@@ -74,41 +75,64 @@ def _sin_base(monkeypatch):
 # ---------------------------------------------------------------------------
 # Dependencias entre archivos
 #
-# La dependencia es la REFERENCIA, no el orden. Antes se pedían todos los
-# archivos obligatorios de orden anterior: para importar la nómina penal había
-# que haber importado las de protección, que no tienen nada que ver con ella.
+# Traban dos cosas distintas y las dos hacen falta:
+#
+#   La POLÍTICA: las nóminas van después de los dispositivos. Una nómina dice
+#   dónde está alojado un chico; si el dispositivo no se declaró, habla de algo
+#   que para el sistema no existe.
+#
+#   La REFERENCIA declarada en la Capa 1: además, un archivo espera a los que
+#   nombra campo a campo, y eso verifica que cada valor exista.
+#
+# Un tiempo estuvo sólo la segunda y quedó floja: como la referencia del MPE no
+# estaba declarada, se podía importar antes que los dispositivos.
 # ---------------------------------------------------------------------------
 
+DISPOSITIVOS = ["DISP_PENAL", "DISP_SCP"]
 REFERENCIAS = {"MPJ_DAE": ["DISP_PENAL"], "MPE": ["DISP_SCP"]}
 
 
-def test_un_archivo_que_no_referencia_a_ninguno_no_tiene_dependencias(sin_base):
+def test_un_archivo_de_dispositivos_no_espera_a_nadie(sin_base):
     sin_base(referencias=REFERENCIAS)
     assert svc.dependencias_faltantes("DISP_PENAL", "Salta", "2026_T1") == []
+    assert svc.dependencias_faltantes("DISP_SCP", "Salta", "2026_T1") == []
 
 
-def test_una_nomina_sin_sus_dispositivos_no_se_puede_importar(sin_base):
+def test_ninguna_nomina_entra_antes_que_los_dispositivos(sin_base):
+    """Vale incluso para la que no tiene ninguna referencia declarada."""
     sin_base(referencias=REFERENCIAS)
-    faltan = svc.dependencias_faltantes("MPJ_DAE", "Salta", "2026_T1")
-    assert [f["codigo"] for f in faltan] == ["DISP_PENAL"]
+    faltan = [
+        f["codigo"] for f in svc.dependencias_faltantes("MPI", "Salta", "2026_T1")
+    ]
+    assert sorted(faltan) == sorted(DISPOSITIVOS)
 
 
-def test_con_las_dependencias_cargadas_se_habilita(sin_base):
-    sin_base(importados=("DISP_PENAL",), referencias=REFERENCIAS)
-    assert svc.dependencias_faltantes("MPJ_DAE", "Salta", "2026_T1") == []
+def test_con_los_dispositivos_cargados_la_nomina_se_habilita(sin_base):
+    sin_base(importados=tuple(DISPOSITIVOS), referencias=REFERENCIAS)
+    assert svc.dependencias_faltantes("MPI", "Salta", "2026_T1") == []
 
 
-def test_el_orden_por_si_solo_no_traba_la_carga(sin_base):
-    """MPI y MPE van antes que la nómina penal, y no tienen nada que ver."""
-    sin_base(referencias=REFERENCIAS)
+def test_la_referencia_declarada_se_suma_a_la_politica(sin_base):
+    """MPJ_DAE nombra a DISP_PENAL, y además espera a los dos por política."""
+    sin_base(importados=("DISP_SCP",), referencias=REFERENCIAS)
+    faltan = [
+        f["codigo"] for f in svc.dependencias_faltantes("MPJ_DAE", "Salta", "2026_T1")
+    ]
+    assert faltan == ["DISP_PENAL"]
+
+
+def test_una_nomina_no_espera_a_otra_nomina(sin_base):
+    """MPI y MPE van antes que la penal en el orden, y no tienen nada que ver."""
+    sin_base(importados=tuple(DISPOSITIVOS), referencias=REFERENCIAS)
     faltan = [
         f["codigo"] for f in svc.dependencias_faltantes("MPJ_DAE", "Salta", "2026_T1")
     ]
     assert "MPI" not in faltan and "MPE" not in faltan
 
 
-def test_un_archivo_que_no_existe_no_bloquea_nada(sin_base):
-    sin_base(referencias=REFERENCIAS)
+def test_un_archivo_que_no_existe_espera_igual_a_los_dispositivos(sin_base):
+    """No se conoce, así que no se lo exime: la política se aplica por descarte."""
+    sin_base(importados=tuple(DISPOSITIVOS), referencias=REFERENCIAS)
     assert svc.dependencias_faltantes("INVENTADO", "Salta", "2026_T1") == []
 
 

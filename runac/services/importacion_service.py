@@ -28,6 +28,9 @@ if str(_MOTOR) not in sys.path:
 # El import va aca y no arriba porque depende del sys.path que se arma
 # unas lineas antes: el motor corre tambien fuera de Django.
 import importar as motor_importar  # noqa: E402  # pylint: disable=wrong-import-position
+from comun import (  # noqa: E402  # pylint: disable=wrong-import-position
+    titulo_sin_instrucciones,
+)
 
 
 def _fila_a_dict(cursor):
@@ -83,7 +86,14 @@ def archivos_esperados(codigo_periodo: str):
         """,
             [codigo_periodo],
         )
-        return _fila_a_dict(cur)
+        archivos = _fila_a_dict(cur)
+
+    # El titulo se limpia tambien al leerlo, y no solo al extraerlo: las
+    # definiciones ya cargadas arrastran la consigna de la planilla pegada al
+    # titulo, y regenerarlas por eso solo no vale la pena.
+    for archivo in archivos:
+        archivo["titulo"] = titulo_sin_instrucciones(archivo.get("titulo"))
+    return archivos
 
 
 def campos_de(codigo_archivo: str):
@@ -526,23 +536,40 @@ def archivos_referenciados(codigo_archivo: str, codigo_periodo: str) -> list[str
         return [f[0] for f in cur.fetchall() if f[0]]
 
 
+# Los archivos que describen la oferta —dónde puede estar un chico— van antes
+# que los que describen a las personas. No es una referencia campo a campo: es
+# el orden en que la presentación tiene sentido, y vale aunque todavía no esté
+# declarada la regla de integridad que lo verifica dato por dato.
+ARCHIVOS_DE_DISPOSITIVOS = ("DISP_PENAL", "DISP_SCP")
+
+
 def dependencias_faltantes(codigo_archivo: str, jurisdiccion: str, codigo_periodo: str):
     """Archivos que deben estar importados antes que este.
 
-    Antes se pedían **todos** los obligatorios de orden anterior: para importar
-    la nómina penal había que haber importado las de protección, que no tienen
-    nada que ver. Ahora se piden los que este archivo efectivamente referencia.
-    El orden de importación sigue existiendo, pero para ordenar la pantalla, no
-    para trabar la carga.
+    Son dos cosas distintas y las dos traban:
+
+    1. **La política:** las nóminas van después de los dispositivos. Una nómina
+       dice dónde está alojado un chico; si el dispositivo todavía no se declaró,
+       la nómina habla de algo que para el sistema no existe.
+    2. **La referencia declarada en la Capa 1:** además, un archivo espera a los
+       que nombra campo a campo —la nómina penal al archivo de dispositivos
+       penales— y eso verifica que cada valor exista.
+
+    Un tiempo sólo estuvo la segunda, y quedó floja: como la referencia del MPE
+    no estaba declarada, se podía importar antes que los dispositivos. La
+    política no depende de que esa declaración exista.
     """
-    referenciados = archivos_referenciados(codigo_archivo, codigo_periodo)
-    if not referenciados:
+    esperados = {a["codigo"] for a in archivos_esperados(codigo_periodo)}
+    requeridos = set(archivos_referenciados(codigo_archivo, codigo_periodo))
+    if codigo_archivo not in ARCHIVOS_DE_DISPOSITIVOS:
+        requeridos |= {c for c in ARCHIVOS_DE_DISPOSITIVOS if c in esperados}
+    if not requeridos:
         return []
     estado = estado_de_la_presentacion(jurisdiccion, codigo_periodo)
     return [
         a
         for a in estado["archivos"]
-        if a["codigo"] in referenciados and not a.get("importada")
+        if a["codigo"] in requeridos and not a.get("importada")
     ]
 
 

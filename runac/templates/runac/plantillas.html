@@ -14,13 +14,14 @@
         </div>
     </form>
 
+    {% comment %} Registro impersonal y en dos oraciones: es un texto oficial, no una explicación. {% endcomment %}
     <div class="alert alert-info py-2">
         <i class="bi bi-info-circle"></i>
-        Estas plantillas son las del período <strong>{{ periodo_elegido }}</strong>. Las genera el sistema
-        a partir de la misma definición contra la que después valida, así que la planilla que completás
-        y la que el sistema espera son exactamente la misma.
-        <strong>No uses las de un período anterior.</strong>
+        Las plantillas se generan desde la misma definición que el sistema verifica al importar.
+        <strong>No deben utilizarse las de períodos anteriores.</strong>
     </div>
+
+    <h6 class="mb-2">Modelos para completar y adjuntar — período {{ periodo_elegido }}</h6>
 
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -32,31 +33,28 @@
         </div>
         <div class="card-body p-0 tabla-scroll">
             <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
+                {% comment %} Los anchos siguen al contenido: el orden es un número, obligatorio es una marca, y «Archivo» se queda con lo que sobra porque es lo único que tiene texto. Catálogos y reglas se fueron a la pantalla de Reglas: acá se viene a bajar el modelo, y un contador de catálogos no ayuda a decidir nada. {% endcomment %}
                 <thead class="table-light">
                     <tr>
-                        <th>Orden</th>
+                        <th style="width:4rem" class="text-center">Orden</th>
                         <th>Archivo</th>
-                        <th>Hojas</th>
-                        <th>Campos</th>
-                        <th>Listas</th>
-                        <th>Reglas</th>
-                        <th>Obligatorio</th>
-                        <th class="text-end">Plantilla</th>
+                        <th style="width:5rem" class="text-end">Hojas</th>
+                        <th style="width:6rem" class="text-end">Campos</th>
+                        <th style="width:6rem" class="text-center">Obligatorio</th>
+                        <th style="width:9rem" class="text-end">Plantilla</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for a in archivos %}
                         <tr>
-                            <td class="ayuda">{{ a.orden_importacion }}</td>
+                            <td class="ayuda text-center">{{ a.orden_importacion }}</td>
                             <td data-etiqueta="Archivo">
                                 <strong>{{ a.codigo }}</strong>
                                 <div class="ayuda">{{ a.titulo }}</div>
                             </td>
-                            <td data-etiqueta="Hojas">{{ a.hojas }}</td>
-                            <td data-etiqueta="Campos">{{ a.campos }}</td>
-                            <td data-etiqueta="Listas">{{ a.catalogos }}</td>
-                            <td data-etiqueta="Reglas">{{ a.reglas }}</td>
-                            <td data-etiqueta="Obligatorio">
+                            <td class="text-end" data-etiqueta="Hojas">{{ a.hojas }}</td>
+                            <td class="text-end" data-etiqueta="Campos">{{ a.campos }}</td>
+                            <td class="text-center" data-etiqueta="Obligatorio">
                                 {% if a.obligatorio %}
                                     <i class="bi bi-check-lg text-success"></i>
                                 {% else %}

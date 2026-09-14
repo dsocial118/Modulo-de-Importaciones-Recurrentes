@@ -45,10 +45,11 @@
                             {% endif %}
                             <p class="mb-3">No se incorporó ningún registro de este archivo.</p>
                         {% elif recien_advertencias %}
+                            {% comment %} No se dice «se resuelven dentro del sistema» como si fuera la unica salida: el archivo ya entro, y corregir en el Excel y volver a importar es igual de valido. {% endcomment %}
                             <p class="mb-3">
-                                Los registros se incorporaron. Hay
-                                <strong class="sev-ADVERTENCIA">{{ recien_advertencias }} advertencias</strong>
-                                que se resuelven dentro del sistema.
+                                Los registros se incorporaron. Quedan
+                                <strong class="sev-ADVERTENCIA">{{ recien_advertencias }} advertencias</strong>:
+                                pueden corregirse dentro del sistema, o volver a importarse el archivo corregido.
                             </p>
                         {% else %}
                             <p class="mb-3">Los registros se incorporaron sin observaciones.</p>
@@ -156,8 +157,11 @@
                                 data-etiqueta="▲ Advertencias">{{ a.importacion.advertencias|default:"—" }}</td>
                             <td class="text-end">
                                 {% if a.importacion %}
-                                    <a class="btn btn-outline-secondary btn-sm"
-                                       href="{% url 'runac:detalle' a.importacion.id %}">Ver detalle</a>
+                                    {% comment %} El detalle solo se ofrece si hay algo que detallar: sobre un archivo que entro limpio, la pantalla estaria vacia. {% endcomment %}
+                                    {% if a.importacion.bloqueantes or a.importacion.advertencias %}
+                                        <a class="btn btn-outline-secondary btn-sm"
+                                           href="{% url 'runac:detalle' a.importacion.id %}">Ver detalle</a>
+                                    {% endif %}
                                     {% if a.importada and puede_responder %}
                                         <a class="btn btn-outline-success btn-sm"
                                            href="{% url 'runac:edicion' a.importacion.id %}">Editar datos</a>

@@ -15,7 +15,15 @@ from collections import defaultdict
 
 import lector_excel as LX
 import validaciones_x14
-from comun import clave, es_placeholder, huella, nombre_tecnico, norm, sha1_archivo
+from comun import (
+    clave,
+    es_placeholder,
+    huella,
+    nombre_tecnico,
+    norm,
+    sha1_archivo,
+    titulo_sin_instrucciones,
+)
 from inferir import inferir_campo
 from reglas import sugerir_reglas, sugerir_reglas_de_hoja
 
@@ -94,7 +102,9 @@ def detectar_estructura(hoja: LX.Hoja) -> dict:
         bloques = horizontales[f]
         desde_a = [r for r in bloques if r[1] == 1]
         if len(bloques) == 1 and desde_a:
-            texto_enc = LX.texto(hoja, desde_a[0][0], desde_a[0][1])
+            texto_enc = titulo_sin_instrucciones(
+                LX.texto(hoja, desde_a[0][0], desde_a[0][1])
+            )
             if texto_enc:
                 encabezados.append((f, texto_enc))
         else:
