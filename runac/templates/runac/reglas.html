@@ -10,6 +10,14 @@
                 Antes de completar una planilla, acá se consulta qué va en cada columna:
                 si es obligatoria, qué tipo de dato admite y qué condiciones tiene que cumplir.
             </div>
+            {% comment %} Esta línea es el planteo entero del módulo dicho en una oración. Sin ella, la pantalla parece una ayuda; con ella, se entiende que es la definición ejecutable. {% endcomment %}
+            <div class="ayuda mt-2 fundamento">
+                <i class="bi bi-info-circle"></i>
+                Nada de esto está escrito en el programa: sale de la definición del archivo.
+                El sistema <strong>lee esta misma configuración</strong> para generar la plantilla,
+                para validar lo que se importa y para armar esta pantalla. Si cambia la planilla,
+                cambia la definición — y el código no se toca.
+            </div>
         </div>
         <form method="get" class="d-flex gap-2 align-items-center">
             <label class="ayuda mb-0" for="sel-hoja">Archivo y hoja</label>

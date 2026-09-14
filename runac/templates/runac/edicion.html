@@ -179,14 +179,18 @@
     {# --- Historial de correcciones ------------------------------------- #}
     {% if historial %}
         <div class="card mt-4">
+            {% comment %} Abierto y no detrás de un botón: un historial que hay que ir a buscar parece no existir, y acá la constancia de quién cambió qué es media razón de ser de la pantalla. {% endcomment %}
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Últimas correcciones</span>
+                <span>
+                    Últimas correcciones
+                    <span class="ayuda ms-1">{{ historial|length }}</span>
+                </span>
                 <button class="btn btn-sm btn-outline-secondary"
                         type="button"
                         data-bs-toggle="collapse"
-                        data-bs-target="#historial">Ver</button>
+                        data-bs-target="#historial">Ocultar</button>
             </div>
-            <div class="collapse" id="historial">
+            <div class="collapse show" id="historial">
                 <div class="card-body p-0 tabla-scroll">
                     <table class="table table-sm tabla-compacta tabla-ficha mb-0">
                         <thead class="table-light">
