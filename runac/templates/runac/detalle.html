@@ -25,10 +25,13 @@
                href="{% url 'runac:archivo_marcado' importacion.id %}">
                 <i class="bi bi-file-earmark-excel"></i> Descargar mi archivo con los errores marcados
             </a>
-            <a class="btn btn-outline-success btn-sm"
-               href="{% url 'runac:edicion' importacion.id %}">
-                <i class="bi bi-pencil-square"></i> Corregir datos en el sistema
-            </a>
+            {% comment %} Corregir dentro del sistema sólo tiene sentido si el archivo entró: si no entró, no hay ninguna fila que editar, y el botón llevaba a una pantalla que decía que no había nada. Lo que sí sirve con un archivo rechazado es bajarlo marcado y corregirlo en el Excel. {% endcomment %}
+            {% if importacion.estado == "VALIDA" %}
+                <a class="btn btn-outline-success btn-sm"
+                   href="{% url 'runac:edicion' importacion.id %}">
+                    <i class="bi bi-pencil-square"></i> Corregir datos en el sistema
+                </a>
+            {% endif %}
             <a class="btn btn-outline-primary btn-sm"
                href="{% url 'runac:planilla_errores' importacion.id %}">
                 <i class="bi bi-list-check"></i> Descargar la lista de errores
@@ -110,7 +113,8 @@
     {% endif %}
 
     <form method="get" class="row g-2 align-items-end mb-3">
-        <div class="col-auto">
+        {% comment %} El filtro por severidad sólo aparece si hay algo que filtrar: en un archivo que entró son todas advertencias, y en uno que no entró son casi todas bloqueantes. {% endcomment %}
+        <div class="col-auto" {% if severidad_unica %}hidden{% endif %}>
             <label class="form-label mb-1 ayuda">Severidad</label>
             <select name="severidad"
                     class="form-select form-select-sm"
