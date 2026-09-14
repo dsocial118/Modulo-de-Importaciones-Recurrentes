@@ -503,3 +503,24 @@ def test_un_abrazo_mortal_se_reintenta_y_no_se_muestra():
     assert importar.DEADLOCK == 1213
     # Y se sigue cerrando siempre, que es lo que evitaba el problema anterior.
     assert "finally:" in fuente and "cn.close()" in fuente
+
+
+def test_la_jurisdiccion_es_una_sola_en_todas_las_pantallas():
+    """El encabezado no puede decir una cosa en una pantalla y otra en otra.
+
+    Salía del usuario en el procesador de contexto —que alimenta el encabezado
+    de todas— y de la sesión en las vistas que tienen selector. Resultado: con
+    el operador de Chaco trabajando sobre Chubut, Inicio y Cargar decían Chubut
+    y Reglas y Plantillas decían Chaco. La misma pantalla, dos respuestas.
+    """
+    import inspect
+
+    from runac import context
+
+    fuente = inspect.getsource(context._jurisdiccion_en_curso)
+    assert "session" in fuente and '"jurisdiccion"' in fuente, (
+        "la elegida vive en la sesión: el encabezado tiene que leerla de ahí, "
+        "no del usuario"
+    )
+    # Y si nunca se eligió, la del usuario: no puede quedar vacío.
+    assert "jurisdiccion_de(usuario)" in fuente
