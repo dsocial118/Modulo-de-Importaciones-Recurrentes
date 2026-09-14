@@ -38,7 +38,7 @@ from openpyxl import load_workbook
 
 # El generador aplica las MISMAS condiciones que el importador: si usara una
 # copia propia, un archivo "limpio" podría no serlo.
-from importar import condicion_se_cumple
+from importar import aplicar_regla, condicion_se_cumple
 
 CONEXION = dict(
     host=os.environ.get("RUNAC_DB_HOST", "mysql"),
@@ -202,8 +202,61 @@ def fuera_de_rango(par: dict, candidato):
     return candidato
 
 
+def rompe_algun_bloqueante(campo: dict, valor, fila: dict) -> bool:
+    """¿Ese valor haría que la fila no entre?
+
+    Sembrar una advertencia no puede producir un bloqueante: el archivo tiene
+    que **entrar** y quedar observado, que es justamente lo que distingue una
+    advertencia de un error. Pasó con «ID familia», que tiene mínimo 1 en la
+    regla blanda y también en la dura: el valor sembrado —cero— rompía las dos,
+    y el archivo «con advertencias» terminaba rechazado.
+
+    Se evalúa con la misma función que usa el importador, no con una copia.
+    """
+    contexto = {
+        "unicos": {},
+        "fila_actual": 0,
+        "titulos": {},
+        "reglas_rotas": set(),
+        "referencias": {},
+    }
+    for regla in campo.get("reglas") or []:
+        if regla["severidad"] != "BLOQUEANTE":
+            continue
+        try:
+            if aplicar_regla(regla, valor, fila, contexto):
+                return True
+        except Exception:  # pylint: disable=broad-except
+            # Una regla que no se puede evaluar acá se trata como si rompiera:
+            # es material de prueba, y ante la duda no se siembra.
+            return True
+    return False
+
+
+def campos_de_los_que_otro_depende(campos: list[dict]) -> set:
+    """Los campos que otro campo mira para validarse.
+
+    Ensuciar uno de estos no deja una advertencia: rompe al OTRO, y con
+    severidad bloqueante. Pasó con las fechas: poner la de ingreso en el futuro
+    hacía que el egreso quedara antes del ingreso, y el archivo «con
+    advertencias» terminaba rechazado por una regla que ni siquiera es de ese
+    campo.
+    """
+    return {
+        (regla.get("parametros") or {}).get("campo_comparacion")
+        for campo in campos
+        for regla in (campo.get("reglas") or [])
+        if regla["tipo_regla"] == "COMPARAR_CAMPO"
+    }
+
+
 def valor_condicionado(
-    campo: dict, fila: dict, candidato, rnd: random.Random, sembrar_aviso: bool = False
+    campo: dict,
+    fila: dict,
+    candidato,
+    rnd: random.Random,
+    sembrar_aviso: bool = False,
+    intocables: set | None = None,
 ):
     """Ajusta el valor para que respete las reglas condicionales de la Capa 1.
 
@@ -226,17 +279,21 @@ def valor_condicionado(
         # los dos archivos de dispositivos salían sin una sola advertencia: no
         # tienen campos dependientes, así que lo único que se sembraba —las
         # condicionales— no los tocaba.
-        if sembrar_aviso and es_aviso:
+        if sembrar_aviso and es_aviso and campo["nombre"] not in (intocables or set()):
+            propuesto = None
             if tipo == "EXISTE_EN_ARCHIVO":
-                return "Dispositivo no declarado", regla["nombre"]
-            if tipo == "RANGO":
-                return fuera_de_rango(par, candidato), regla["nombre"]
-            if tipo == "COMPARAR_VALOR" and par.get("valor") == "HOY":
+                propuesto = "Dispositivo no declarado"
+            elif tipo == "RANGO":
+                propuesto = fuera_de_rango(par, candidato)
+            elif tipo == "COMPARAR_VALOR" and par.get("valor") == "HOY":
                 # La regla pide que la fecha no sea futura: se la pone futura.
-                return (
-                    date.today() + timedelta(days=rnd.randint(30, 400)),
-                    regla["nombre"],
-                )
+                propuesto = date.today() + timedelta(days=rnd.randint(30, 400))
+            if propuesto is not None:
+                # Si el valor sembrado rompiera además una regla que bloquea, no
+                # se siembra: se sigue con la regla siguiente del campo.
+                if rompe_algun_bloqueante(campo, propuesto, fila):
+                    continue
+                return propuesto, regla["nombre"]
 
         if tipo not in ("PROHIBIDO_SI", "OBLIGATORIO_SI"):
             continue
@@ -521,6 +578,9 @@ def main():
             fila = fila_enc + 1
 
             avisos_puestos = []
+            # Se calcula una vez por hoja: los campos que otro mira para
+            # validarse no se ensucian, porque romperlos rompe al otro.
+            intocables = campos_de_los_que_otro_depende(campos)
             for i in range(1, args.filas + 1):
                 # Una de cada tres filas lleva advertencias: así el archivo
                 # tiene también filas correctas y se ve la diferencia.
@@ -530,7 +590,9 @@ def main():
                     v = valor_inventado(
                         campo, campo["opciones"], i, rnd, generados, args.jurisdiccion
                     )
-                    v, aviso = valor_condicionado(campo, generados, v, rnd, sembrar)
+                    v, aviso = valor_condicionado(
+                        campo, generados, v, rnd, sembrar, intocables
+                    )
                     if aviso:
                         avisos_puestos.append(
                             (nombre, fila, campo["titulo_esperado"], aviso)
