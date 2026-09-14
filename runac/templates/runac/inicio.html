@@ -18,12 +18,22 @@
         <div class="modo-prueba d-flex flex-wrap align-items-center gap-2 mb-4">
             <span class="etiqueta-prueba">Prueba</span>
             <span class="ayuda">
-                Borra las importaciones de todas las jurisdicciones, para repetir el
-                circuito desde cero. No forma parte del sistema definitivo.
+                Borra las importaciones de todas las jurisdicciones para repetir el
+                circuito desde cero, o deja una presentación completa para mostrar.
+                No forman parte del sistema definitivo.
             </span>
+            {% comment %} Los dos botones van juntos porque son un par: uno limpia para volver a probar y el otro deja algo que mostrar. Sin el segundo, limpiar antes de una demostración era un viaje de ida. {% endcomment %}
+            <form method="post"
+                  action="{% url 'runac:armar_demo' %}"
+                  class="ms-auto"
+                  onsubmit="return confirm('Se borrará lo que haya y se armará la presentación de Chubut completa, con advertencias para corregir.\n\n¿Continuar?')">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-magic"></i> Armar demostración
+                </button>
+            </form>
             <form method="post"
                   action="{% url 'runac:borrar_importaciones' %}"
-                  class="ms-auto"
                   onsubmit="return confirm('Se borrarán TODAS las importaciones de TODAS las jurisdicciones.\n\nEste botón existe únicamente para hacer pruebas y no estará disponible en la versión definitiva.\n\n¿Confirma que quiere borrarlas?')">
                 {% csrf_token %}
                 <button class="btn btn-sm btn-outline-danger">

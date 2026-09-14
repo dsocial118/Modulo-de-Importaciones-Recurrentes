@@ -81,7 +81,12 @@ urlpatterns = [
         views.EstadoDelPeriodoView.as_view(),
         name="estado_del_periodo",
     ),
-    # Herramienta de prueba: no forma parte del sistema.
+    # Herramientas de prueba: no forman parte del sistema.
+    path(
+        "pruebas/armar-demo/",
+        views.ArmarDemoView.as_view(),
+        name="armar_demo",
+    ),
     path(
         "pruebas/borrar-importaciones/",
         views.BorrarImportacionesView.as_view(),

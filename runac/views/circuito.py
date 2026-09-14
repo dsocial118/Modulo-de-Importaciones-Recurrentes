@@ -21,6 +21,7 @@ from runac.permissions import (
     puede_revisar,
 )
 from runac.services import circuito_service as circuito
+from runac.services import demo_service
 from runac.services import informe_errores_service as informes
 from runac.services import importacion_service as svc
 
@@ -261,6 +262,39 @@ class EstadoDelPeriodoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
         else:
             messages.success(request, f"El período {codigo} quedó en «{estado}».")
         return redirect(f'{reverse("runac:inicio")}?periodo={codigo}')
+
+
+class ArmarDemoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
+    """Deja una presentación completa para mostrar. La contraparte de borrar.
+
+    **Herramienta de prueba, no parte del sistema.** Va junto al botón de
+    borrar porque son un par: una limpia para volver a probar y la otra deja
+    algo que mostrar. Sin las dos, limpiar antes de una demostración es un
+    viaje de ida.
+    """
+
+    seccion = "inicio"
+
+    def post(self, request):
+        if not puede_administrar(request.user):
+            messages.error(
+                request, "Sólo el administrador puede armar la demostración."
+            )
+            return redirect("runac:inicio")
+
+        resumen = demo_service.armar()
+        if resumen["rechazados"]:
+            for codigo, motivo in resumen["rechazados"]:
+                messages.error(request, f"{codigo}: {motivo}")
+        messages.success(
+            request,
+            f'Demostración armada: {len(resumen["importados"])} archivos importados '
+            f'y {resumen["correcciones"]} correcciones registradas, sobre '
+            f"{demo_service.JURISDICCION}. Es una función de prueba.",
+        )
+        return redirect(
+            f'{reverse("runac:inicio")}?jurisdiccion={demo_service.JURISDICCION}'
+        )
 
 
 class BorrarImportacionesView(SeccionPermitidaMixin, LoginRequiredMixin, View):
