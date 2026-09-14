@@ -933,7 +933,12 @@ def main():
     _ejecutar(args, CONEXION)
 
 
-def _ejecutar(args, conexion):
+# MySQL avisa un abrazo mortal con este número, y lo que pide es exactamente
+# esto: volver a intentar. No es un error del archivo ni de las reglas.
+DEADLOCK = 1213
+
+
+def _ejecutar(args, conexion, intentos: int = 2):
     """Abre la conexion, ejecuta la importacion y la cierra SIEMPRE.
 
     El cierre estaba al final del cuerpo, asi que solo se alcanzaba cuando todo
@@ -942,16 +947,29 @@ def _ejecutar(args, conexion):
     los bloqueos sobre la presentacion. La importacion siguiente se quedaba
     esperando esos bloqueos y fallaba tambien: un error se convertia en todos
     los errores siguientes, y la unica salida era reiniciar el contenedor.
+
+    Y se reintenta una vez ante un abrazo mortal. Dos importaciones seguidas
+    pueden pedirse los mismos bloqueos en distinto orden --al anular la anterior
+    y al registrar la nueva-- y MySQL corta una de las dos. No es un error del
+    archivo: es lo que la base pide que se haga, y aparecer como una pantalla de
+    error por algo que se resuelve reintentando es peor que reintentar.
     """
-    cn = mysql.connector.connect(**conexion)
-    try:
-        return _ejecutar_con(args, cn)
-    finally:
+    ultimo = None
+    for intento in range(intentos):
+        cn = mysql.connector.connect(**conexion)
         try:
-            # Lo que no se confirmo no queda a medias esperando a nadie.
-            cn.rollback()
+            return _ejecutar_con(args, cn)
+        except mysql.connector.errors.InternalError as falla:
+            if falla.errno != DEADLOCK or intento == intentos - 1:
+                raise
+            ultimo = falla
         finally:
-            cn.close()
+            try:
+                # Lo que no se confirmo no queda a medias esperando a nadie.
+                cn.rollback()
+            finally:
+                cn.close()
+    raise ultimo  # pragma: no cover — no se llega salvo con intentos=0
 
 
 def _ejecutar_con(args, cn):

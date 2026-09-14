@@ -480,3 +480,26 @@ def test_la_conexion_del_motor_se_cierra_aunque_falle():
     # Y el cuerpo largo ya no cierra nada: de eso se ocupa quien la abrió.
     cuerpo = inspect.getsource(importar._ejecutar_con)
     assert "cn.close()" not in cuerpo
+
+
+def test_un_abrazo_mortal_se_reintenta_y_no_se_muestra():
+    """MySQL corta una de dos transacciones que se piden los mismos bloqueos.
+
+    Pasa entre dos importaciones seguidas: una anula la anterior mientras la
+    otra registra la nueva, y se los piden en distinto orden. No es un error
+    del archivo ni de las reglas: la base misma dice que hay que reintentar.
+
+    Salió a la luz importando quince archivos uno atrás del otro para verificar
+    los juegos de prueba. En una demostración habría aparecido como una pantalla
+    de error.
+    """
+    import inspect
+
+    import importar
+
+    fuente = inspect.getsource(importar._ejecutar)
+    assert "DEADLOCK" in fuente, "el reintento tiene que distinguir QUÉ falla"
+    assert "errno != DEADLOCK" in fuente, "sólo se reintenta el abrazo mortal"
+    assert importar.DEADLOCK == 1213
+    # Y se sigue cerrando siempre, que es lo que evitaba el problema anterior.
+    assert "finally:" in fuente and "cn.close()" in fuente
