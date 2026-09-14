@@ -144,7 +144,7 @@
                         <tr>
                             <td>
                                 <strong>{{ a.codigo }}</strong>
-                                <div class="ayuda">{{ a.titulo }}</div>
+                                {% if a.nombre %}<div class="ayuda">{{ a.nombre }}</div>{% endif %}
                             </td>
                             <td data-etiqueta="Importación">
                                 <span class="estado e-{{ a.estado }}">{{ a.estado }}</span>

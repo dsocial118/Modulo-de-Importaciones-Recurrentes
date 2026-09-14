@@ -101,7 +101,7 @@
                                 <td class="ayuda">{{ a.orden_importacion }}</td>
                                 <td data-etiqueta="Archivo">
                                     <strong>{{ a.codigo }}</strong>
-                                    <div class="ayuda">{{ a.titulo }}</div>
+                                    {% if a.nombre %}<div class="ayuda">{{ a.nombre }}</div>{% endif %}
                                 </td>
                                 <td data-etiqueta="Oblig.">
                                     {% if a.obligatorio %}
