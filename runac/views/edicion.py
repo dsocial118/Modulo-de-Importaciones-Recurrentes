@@ -101,10 +101,15 @@ class EditarCampoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
             return self._volver(request, importacion_id)
 
         if _pide_json(request):
+            # Se informa si el valor guardado quedó observado. Antes la celda
+            # decía «Guardado» y nada más: se podía escribir un número absurdo,
+            # ver que se guardaba, y no enterarse de que había dejado una
+            # advertencia. Guardar y quedar bien no son lo mismo.
             return JsonResponse(
                 {
                     "ok": True,
                     "sin_cambios": resultado["sin_cambios"],
+                    "advertencias": resultado.get("advertencias") or 0,
                     "valor": (
                         "" if resultado["valor"] is None else str(resultado["valor"])
                     ),

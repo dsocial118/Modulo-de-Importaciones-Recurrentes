@@ -269,7 +269,16 @@
             .then(function (r) {
               if (r.ok) {
                 campo.dataset.original = campo.value;
-                avisar(campo, true, r.sin_cambios ? "Sin cambios" : "Guardado");
+                // Guardado y sin observaciones no son lo mismo: si el valor
+                // entro pero quedo observado, la celda lo dice.
+                let mensaje = r.sin_cambios ? "Sin cambios" : "Guardado";
+                if (!r.sin_cambios && r.advertencias) {
+                  mensaje +=
+                    ", con " +
+                    r.advertencias +
+                    (r.advertencias === 1 ? " advertencia" : " advertencias");
+                }
+                avisar(campo, !r.advertencias, mensaje);
               } else {
                 avisar(campo, false, r.error);
                 campo.value = campo.dataset.original;
