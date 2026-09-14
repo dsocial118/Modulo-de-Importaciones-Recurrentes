@@ -173,12 +173,18 @@ def digito_cuil(diez: str) -> int:
 
 
 def es_de_dispositivo(titulo: str) -> bool:
-    """¿El campo nombra un dispositivo o un programa, y no a una persona?
+    """¿El campo nombra un lugar donde se aloja a alguien, y no a una persona?
 
     «disposit» y no «dispositivo» porque las planillas traen «dispositvo», sin
-    la i, y ese es justamente el campo que la nómina referencia.
+    la i, y ese es justamente el campo que la nómina penal referencia.
+
+    «residencia» y «hogar» están acá y no más abajo por un motivo: el MPE llama
+    a ese campo «Nombre de la residencia/hogar», y la rama que reparte nombres
+    de pila se queda con cualquier título que diga «nombre». Así, la nómina de
+    protección quedaba nombrando residencias que se llamaban Ana o Thiago, y la
+    regla que verifica que la residencia exista fallaba en las treinta filas.
     """
-    return "disposit" in titulo or "programa" in titulo
+    return any(p in titulo for p in ("disposit", "programa", "residencia", "hogar"))
 
 
 def valor_condicionado(
@@ -305,7 +311,7 @@ def valor_inventado(
         return f"{rnd.choice(CALLES)} {rnd.randint(100, 4999)}"
     if "codigo postal" in t or "código postal" in t:
         return f"{rnd.choice('BCDEHKLMNPQRSTUWXYZ')}{rnd.randint(1000, 9999)}{rnd.choice('ABCDEFGHIJ')}"
-    if es_de_dispositivo(t) or "residencia" in t or "hogar" in t:
+    if es_de_dispositivo(t):
         return rnd.choice(DISPOSITIVOS)
     if "localidad" in t or "partido" in t or "municipio" in t:
         return rnd.choice(LOCALIDADES.get(jurisdiccion or "", LOCALIDAD_POR_DEFECTO))

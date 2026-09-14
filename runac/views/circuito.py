@@ -291,6 +291,8 @@ class BorrarImportacionesView(SeccionPermitidaMixin, LoginRequiredMixin, View):
             "Se borraron todas las importaciones de todas las jurisdicciones: "
             f'{borrados["presentaciones"]} presentaciones, '
             f'{borrados["importaciones"]} importaciones y '
-            f'{borrados["filas"]} registros. Es una función de prueba.',
+            f'{borrados["filas"]} registros.'
+            + (" El período se reabrió." if borrados["periodos"] else "")
+            + " Es una función de prueba.",
         )
         return redirect("runac:inicio")

@@ -434,3 +434,22 @@ def test_una_jurisdiccion_que_no_empezo_devuelve_la_misma_forma(monkeypatch):
         assert archivo["estado"] == "SIN_CARGAR"
         assert archivo["importada"] is False
         assert archivo["importacion"] is None
+
+
+def test_volver_a_empezar_incluye_poder_empezar():
+    """La herramienta de prueba tiene que dejar el prototipo utilizable.
+
+    Borraba todas las importaciones pero no tocaba el período. Si el período
+    había quedado cerrado —probando el circuito, que es justamente para lo que
+    existe la herramienta— no se podía importar nada y no quedaba forma obvia
+    de salir: la pantalla de carga aparecía vacía y muda.
+    """
+    import inspect
+
+    from runac.services import circuito_service as circuito
+
+    fuente = inspect.getsource(circuito.borrar_todas_las_importaciones)
+    assert "runac_c2_periodo SET estado = 'ABIERTO'" in fuente, (
+        "dejar el prototipo sin importaciones y con el período cerrado lo deja "
+        "inutilizable, que es lo contrario de lo que esta herramienta hace"
+    )

@@ -368,7 +368,7 @@ def borrar_todas_las_importaciones() -> dict:
 
     Al integrar el módulo a SISOC, esto se va con todo el resto del prototipo.
     """
-    borrados = {"filas": 0, "importaciones": 0, "presentaciones": 0}
+    borrados = {"filas": 0, "importaciones": 0, "presentaciones": 0, "periodos": 0}
     with connection.cursor() as cur:
         # Las tablas receptoras no están declaradas en ningún lado: su nombre se
         # deduce por convención al crearlas. Se las reconoce porque son las
@@ -408,6 +408,16 @@ def borrar_todas_las_importaciones() -> dict:
         borrados["importaciones"] = cur.rowcount
         cur.execute("DELETE FROM runac_c2_presentacion")
         borrados["presentaciones"] = cur.rowcount
+
+        # Y se reabre el período. Sin esto la herramienta dejaba el prototipo a
+        # medio camino: borraba todo pero, si el período había quedado cerrado
+        # —probando el circuito, por ejemplo—, no se podía volver a importar
+        # nada y no quedaba forma obvia de salir. «Volver a empezar» incluye
+        # poder empezar.
+        cur.execute(
+            "UPDATE runac_c2_periodo SET estado = 'ABIERTO' WHERE estado <> 'ABIERTO'"
+        )
+        borrados["periodos"] = cur.rowcount
 
     return borrados
 
