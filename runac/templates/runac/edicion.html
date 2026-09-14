@@ -126,10 +126,13 @@
                                             {% endfor %}
                                         </select>
                                     {% else %}
+                                        {% comment %} El campo se declara del tipo que la Capa 1 dice que es. No reemplaza a la validación --el servidor vuelve a comprobar todo-- pero evita que se escriba una letra donde va un número y que haya que enterarse al guardar. El tipo sale de la definición, igual que todo lo demás. {% endcomment %}
                                         <input class="form-control form-control-sm celda-editable"
                                                id="c{{ fila.numero_fila }}_{{ celda.nombre }}"
                                                data-fila="{{ fila.numero_fila }}"
                                                data-campo="{{ celda.nombre }}"
+                                               {% if celda.campo.tipo_dato == "ENTERO" %}type="number" step="1" inputmode="numeric"{% elif celda.campo.tipo_dato == "DECIMAL" %}type="number" step="any" inputmode="decimal"{% elif celda.campo.tipo_dato == "FECHA" %}type="text" placeholder="dd/mm/aaaa"{% else %}type="text"{% if celda.campo.longitud_maxima %} maxlength="{{ celda.campo.longitud_maxima }}"{% endif %}
+                                               {% endif %}
                                                value="{{ celda.valor }}" />
                                     {% endif %}
                                 {% else %}
