@@ -110,6 +110,7 @@ class EditarCampoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
                     "ok": True,
                     "sin_cambios": resultado["sin_cambios"],
                     "advertencias": resultado.get("advertencias") or 0,
+                    "observaciones": resultado.get("observaciones") or [],
                     "valor": (
                         "" if resultado["valor"] is None else str(resultado["valor"])
                     ),

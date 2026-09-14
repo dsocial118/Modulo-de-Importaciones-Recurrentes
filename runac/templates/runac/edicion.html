@@ -269,16 +269,20 @@
             .then(function (r) {
               if (r.ok) {
                 campo.dataset.original = campo.value;
-                // Guardado y sin observaciones no son lo mismo: si el valor
-                // entro pero quedo observado, la celda lo dice.
+                // Guardado y sin observaciones no son lo mismo. Y lo que se
+                // muestra es QUE observacion quedo sobre este campo, con su
+                // texto: decir "3 advertencias" contaba las de toda la fila, asi
+                // que el numero no bajaba al corregir el dato y no habia forma
+                // de saber cual era.
+                const propias = r.observaciones || [];
                 let mensaje = r.sin_cambios ? "Sin cambios" : "Guardado";
-                if (!r.sin_cambios && r.advertencias) {
-                  mensaje +=
-                    ", con " +
-                    r.advertencias +
-                    (r.advertencias === 1 ? " advertencia" : " advertencias");
+                if (propias.length) {
+                  mensaje = propias[0];
+                  if (propias.length > 1) {
+                    mensaje += " (y " + (propias.length - 1) + " mas)";
+                  }
                 }
-                avisar(campo, !r.advertencias, mensaje);
+                avisar(campo, !propias.length, mensaje);
               } else {
                 avisar(campo, false, r.error);
                 campo.value = campo.dataset.original;

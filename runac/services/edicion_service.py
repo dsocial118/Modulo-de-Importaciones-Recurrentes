@@ -654,6 +654,12 @@ def editar(
         "valor": valor,
         "anterior": valor_anterior,
         "advertencias": len(hallazgos),
+        # Lo que quedó observado EN ESTE CAMPO, con su texto. Devolver sólo el
+        # total de la fila confundía: se corregía el dato y el número no bajaba,
+        # porque contaba también las observaciones de los otros campos.
+        "observaciones": [
+            h["descripcion"] for h in hallazgos if h["campo_id"] == campo["id"]
+        ],
     }
 
 

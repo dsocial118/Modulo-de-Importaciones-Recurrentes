@@ -17,6 +17,8 @@ Se arma para consultarla, no para auditar el modelo. De ahí las decisiones:
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 
+import json
+
 from runac.permissions import SeccionPermitidaMixin, puede_administrar
 from runac.services import importacion_service as svc
 
@@ -67,14 +69,50 @@ def titulo_completo(campo) -> str:
     return f"{grupo.rstrip('. ')}… {resto}"
 
 
+def limite_numerico(campo) -> str:
+    """El rango admitido, dicho con números y no con un mensaje de error.
+
+    La pantalla mostraba «Es una cantidad inusualmente alta» y «Ese número no
+    puede ser», que son lo que el sistema dirá si te equivocás — pero no dicen
+    cuál es el número. Quien viene acá viene a saber qué puede poner.
+
+    Cuando hay dos rangos —uno que avisa y otro que bloquea— manda el que
+    bloquea para el tope, porque es el que decide si el archivo entra.
+    """
+    topes = [
+        (
+            json.loads(r["parametros"] or "{}")
+            if isinstance(r["parametros"], str)
+            else (r["parametros"] or {})
+        )
+        for r in campo.get("reglas") or []
+        if r.get("tipo_regla") == "RANGO"
+    ]
+    if not topes:
+        return ""
+    minimos = [t["minimo"] for t in topes if t.get("minimo") is not None]
+    # El tope que se muestra es el más exigente: es el primero que se va a
+    # quejar, y por lo tanto el que hay que respetar.
+    maximos = [t["maximo"] for t in topes if t.get("maximo") is not None]
+    if minimos and maximos:
+        return f", entre {max(minimos):g} y {min(maximos):g}"
+    if maximos:
+        return f", hasta {min(maximos):g}"
+    if minimos:
+        return f", desde {max(minimos):g}"
+    return ""
+
+
 def que_se_espera(campo) -> str:
-    """El tipo de dato dicho en castellano."""
+    """El tipo de dato dicho en castellano, con su límite si lo tiene."""
     if campo.get("catalogo"):
         return "Una opción de la lista"
     tipo = TIPO_EN_CASTELLANO.get(campo.get("tipo_dato"), campo.get("tipo_dato") or "")
     largo = campo.get("longitud_maxima")
     if tipo == "Texto" and largo:
         return f"Texto, hasta {largo} caracteres"
+    if campo.get("tipo_dato") in ("ENTERO", "DECIMAL"):
+        return f"{tipo}{limite_numerico(campo)}"
     return tipo
 
 

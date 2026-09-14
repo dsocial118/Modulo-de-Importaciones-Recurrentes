@@ -232,10 +232,12 @@ def reglas_de_hoja(codigo_archivo: str, nombre_hoja: str):
 
         cur.execute(
             """
-            SELECT cr.campo_id, cr.severidad,
+            SELECT cr.campo_id, cr.severidad, tr.nombre AS tipo_regla,
+                   r.parametros,
                    COALESCE(NULLIF(cr.mensaje, ''), r.descripcion, r.nombre) AS texto
             FROM runac_c1_campo_regla cr
             JOIN runac_c1_regla r ON r.id = cr.regla_id
+            JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
             JOIN runac_c1_campo c ON c.id = cr.campo_id
             JOIN runac_c1_hoja h ON h.id = c.hoja_id
             JOIN runac_c1_archivo_version av ON av.id = h.archivo_version_id
