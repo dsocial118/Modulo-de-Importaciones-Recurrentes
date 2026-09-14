@@ -69,7 +69,8 @@ def archivos_esperados(codigo_periodo: str):
         cur.execute(
             """
             SELECT a.id, a.codigo, av.id AS version_id, av.numero AS version,
-                   av.nombre_esperado, av.titulo, av.orden_importacion, av.obligatorio,
+                   av.nombre_esperado, a.descripcion AS nombre_archivo,
+                   av.titulo, av.orden_importacion, av.obligatorio,
                    COUNT(DISTINCT h.id) AS hojas,
                    COUNT(DISTINCT c.id) AS campos,
                    COUNT(DISTINCT c.catalogo_id) AS catalogos,
@@ -93,7 +94,26 @@ def archivos_esperados(codigo_periodo: str):
     # titulo, y regenerarlas por eso solo no vale la pena.
     for archivo in archivos:
         archivo["titulo"] = titulo_sin_instrucciones(archivo.get("titulo"))
+        archivo["nombre"] = nombre_de_archivo(archivo)
     return archivos
+
+
+# Como se llama un archivo cuando todavia no se le puso nombre. Se prefiere no
+# decir nada antes que mostrar el titulo de una de sus hojas: el archivo de
+# dispositivos penales tiene cinco, y ponerle el encabezado de la primera lo
+# hacia parecer el listado de una sola.
+def nombre_de_archivo(archivo: dict) -> str:
+    """El nombre del archivo, que es un dato del archivo y no de sus hojas.
+
+    Vive en «runac_c1_archivo.descripcion», la tabla que NO se versiona: el
+    archivo se sigue llamando igual aunque cambie su estructura. Lo va a
+    administrar el Responsable Nacional cuando exista el CRUD de archivos.
+
+    Mientras el texto sea el autogenerado —«Archivo X de RUNAC. hoja…»— se
+    devuelve vacio: es un relleno tecnico, no un nombre.
+    """
+    nombre = (archivo.get("nombre_archivo") or "").strip()
+    return "" if nombre.startswith("Archivo ") else nombre
 
 
 def campos_de(codigo_archivo: str):

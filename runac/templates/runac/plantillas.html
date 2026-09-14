@@ -50,7 +50,7 @@
                             <td class="ayuda text-center">{{ a.orden_importacion }}</td>
                             <td data-etiqueta="Archivo">
                                 <strong>{{ a.codigo }}</strong>
-                                <div class="ayuda">{{ a.titulo }}</div>
+                                {% if a.nombre %}<div class="ayuda">{{ a.nombre }}</div>{% endif %}
                             </td>
                             <td class="text-end" data-etiqueta="Hojas">{{ a.hojas }}</td>
                             <td class="text-end" data-etiqueta="Campos">{{ a.campos }}</td>

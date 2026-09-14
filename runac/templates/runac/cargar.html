@@ -48,7 +48,8 @@
                             <td data-etiqueta="Archivo">
                                 <strong>{{ a.codigo }}</strong>
                                 {% if a.obligatorio %}<span class="ayuda">· obligatorio</span>{% endif %}
-                                <div class="ayuda">{{ a.titulo }}</div>
+                                {% comment %} El nombre del archivo, no el titulo de una de sus hojas: el de dispositivos penales tiene cinco, y el encabezado de la primera lo hacia parecer el listado de una sola. {% endcomment %}
+                                {% if a.nombre %}<div class="ayuda">{{ a.nombre }}</div>{% endif %}
                                 <div class="ayuda">
                                     Nombre requerido: <span class="mono">{{ a.nombre_sugerido }}</span>
                                 </div>
