@@ -115,6 +115,16 @@ RUNAC_CAPA1 = Path(os.getenv("RUNAC_CAPA1", "/trabajo/capa1"))
 RUNAC_PLANTILLAS = RUNAC_CAPA1 / "plantillas"
 RUNAC_CARGAS = BASE_DIR / "media" / "cargas"
 
-# Marca visible en todas las pantallas. No se saca hasta que deje de ser prototipo.
+# Marca visible en todas las pantallas. No es una nota de modestia: es una
+# etiqueta de seguridad. Lo que hace el trabajo es «datos de prueba» — que nadie
+# pueda confundir esta pantalla con un sistema que tiene datos de chicas y
+# chicos adentro, ni en persona ni en una foto que despues circula.
+#
+# La palabra «prototipo» y el descargo «no es el sistema definitivo» salieron a
+# pedido del responsable funcional: bajaban el precio de algo que funciona, sin
+# aportar nada a la advertencia. «Version funcional» dice que anda sin prometer
+# que esta en uso, que es lo que todavia no es cierto.
+#
+# La mitad que protege no se saca mientras el prototipo se muestre por ngrok.
 RUNAC_ES_PROTOTIPO = True
-RUNAC_AVISO_PROTOTIPO = "PROTOTIPO · datos de prueba · no es el sistema definitivo"
+RUNAC_AVISO_PROTOTIPO = "RUNAC · versión funcional · datos de prueba"
