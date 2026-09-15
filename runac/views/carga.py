@@ -41,7 +41,7 @@ def jurisdiccion_en_curso(request) -> str:
         request.session["jurisdiccion"] = elegida
         return elegida
     return (
-        request.session.get("jurisdiccion") or jurisdiccion_de(request.user) or "Chaco"
+        request.session.get("jurisdiccion") or jurisdiccion_de(request.user) or "Chubut"
     )
 
 

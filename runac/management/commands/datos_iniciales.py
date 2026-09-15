@@ -13,9 +13,13 @@ from runac.permissions import ROLES, asegurar_grupos
 
 CLAVE = "runac"
 
+# La jurisdiccion de los usuarios provinciales es CHUBUT porque es la que arma
+# `armar_demo`. Con los usuarios en Chaco, quien entraba por primera vez caia en
+# una pantalla vacia y tenia que descubrir el selector de jurisdiccion -que es
+# una herramienta de prueba- para ver algo.
 USUARIOS = [
-    ("operador", "operador_provincial", "Chaco"),
-    ("responsable", "responsable_provincial", "Chaco"),
+    ("operador", "operador_provincial", "Chubut"),
+    ("responsable", "responsable_provincial", "Chubut"),
     ("revisor", "revisor_nacional", None),
     ("admin", "administrador_nacional", None),
 ]

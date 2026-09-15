@@ -258,7 +258,7 @@
           elemento.parentElement.appendChild(nota);
         }
         nota.textContent = mensaje;
-        nota.style.color = ok ? "#0f5132" : "#b02a37";
+        nota.style.color = ok ? "var(--marca-oscura)" : "var(--error-tinta)";
       }
 
       document.querySelectorAll(".celda-editable").forEach(function (campo) {

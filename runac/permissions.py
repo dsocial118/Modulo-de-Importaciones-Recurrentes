@@ -157,7 +157,7 @@ class SeccionPermitidaMixin:
             and self.seccion
             and not puede_entrar(request.user, self.seccion)
         ):
-            raise PermissionDenied("Tu rol no tiene acceso a esta sección del sistema.")
+            raise PermissionDenied("Este rol no tiene acceso a esta sección del sistema.")
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
