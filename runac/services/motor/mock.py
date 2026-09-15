@@ -187,19 +187,52 @@ def es_de_dispositivo(titulo: str) -> bool:
     return any(p in titulo for p in ("disposit", "programa", "residencia", "hogar"))
 
 
-def fuera_de_rango(par: dict, candidato):
-    """Un valor que la regla de rango tiene que rechazar.
+def fuera_de_rango(par: dict, candidato, rnd: random.Random):
+    """Valores que la regla de rango tiene que rechazar, con la forma que
+    tienen los errores de verdad.
 
-    Se pasa por arriba del máximo, que es lo que se ve mal a simple vista —500
-    horas semanales, 8888 agentes—. Si la regla sólo declara un mínimo, se va
-    por abajo, que para una cantidad significa un negativo.
+    Antes devolvía siempre `maximo + 1`. El archivo de prueba salía entonces
+    con **el mismo 201 en cada fila y en cada campo**: demostraba que la regla
+    anda, pero no se parecía a nada que una provincia pudiera mandar, y quien
+    lo mira aprende a ignorar la columna.
+
+    Los errores de carga reales tienen unas pocas formas conocidas, y cada una
+    se lee distinto en pantalla:
+
+      apenas arriba   205      puede ser cierto; obliga a mirar el caso
+      otra escala     640      se cargó el total de la provincia en un renglón
+      dedo pegado     888      se apoyó dos veces la misma tecla
+      cero de más     2400     se corrió la coma o sobró un cero
+
+    Devuelve varios candidatos, no uno: el que llama prueba en orden y se queda
+    con el primero que no rompa además una regla bloqueante —el tope duro—,
+    porque una advertencia sembrada que termina bloqueando deja el archivo
+    afuera, que es exactamente lo contrario de lo que este archivo demuestra.
+
+    Si la regla sólo declara un mínimo, se va por abajo: para una cantidad, un
+    negativo.
     """
     maximo, minimo = par.get("maximo"), par.get("minimo")
-    if maximo is not None:
-        return int(maximo) + 1
-    if minimo is not None:
-        return int(minimo) - 1
-    return candidato
+    if maximo is None:
+        if minimo is not None:
+            return [int(minimo) - 1, int(minimo) - rnd.randint(2, 9)]
+        return [candidato]
+
+    maximo = int(maximo)
+    apenas = maximo + rnd.randint(1, max(1, maximo // 8))
+    escala = maximo * rnd.randint(2, 4) + rnd.randint(0, 99)
+    dedo = int(str(rnd.choice("6789")) * len(str(maximo)))
+    cero = maximo * 10 + rnd.randint(0, 9)
+
+    candidatos = [apenas, escala, dedo, cero]
+    rnd.shuffle(candidatos)
+    # El «apenas arriba» va primero una vez de cada tres: es el caso que mejor
+    # explica para qué sirve una advertencia y no un bloqueante, y conviene que
+    # aparezca seguido sin ser el único.
+    if rnd.random() < 0.34:
+        candidatos.remove(apenas)
+        candidatos.insert(0, apenas)
+    return [c for c in candidatos if c > maximo]
 
 
 def rompe_algun_bloqueante(campo: dict, valor, fila: dict) -> bool:
@@ -250,6 +283,30 @@ def campos_de_los_que_otro_depende(campos: list[dict]) -> set:
     }
 
 
+# Cuando una regla OBLIGATORIO_SI exige un dato que quedó vacío, hay que poner
+# algo. Estos son casi siempre los campos «(especificar)»: si se declaró
+# pertenencia a un pueblo originario, la columna de al lado pide cuál, y
+# «Dato requerido 42» no es una respuesta. Valores inventados, como los del
+# VOCABULARIO.
+RELLENOS = [
+    (("pueblo originario",), ["Mapuche", "Tehuelche", "Qom", "Mapuche-Tehuelche"]),
+    (("procedencia",), ["Otra provincia", "Comodoro Rivadavia", "País limítrofe"]),
+    (("discapacidad",), ["Motora", "Visual", "Auditiva", "Intelectual"]),
+    (("destino",), ["Familia de origen", "Familia ampliada", "Vivienda propia"]),
+    (("enfermedad", "salud"), ["Asma", "Diabetes tipo 1", "Epilepsia"]),
+    (("sustancia", "consumo"), ["Alcohol", "Marihuana", "Policonsumo"]),
+]
+
+
+def relleno_obligatorio(campo: dict, rnd: random.Random) -> str:
+    """Un valor plausible para un campo que una regla vuelve obligatorio."""
+    titulo = (campo["titulo_esperado"] or "").lower()
+    for claves, valores in RELLENOS:
+        if any(k in titulo for k in claves):
+            return rnd.choice(valores)
+    return "Sin detalle"
+
+
 def valor_condicionado(
     campo: dict,
     fila: dict,
@@ -280,18 +337,36 @@ def valor_condicionado(
         # tienen campos dependientes, así que lo único que se sembraba —las
         # condicionales— no los tocaba.
         if sembrar_aviso and es_aviso and campo["nombre"] not in (intocables or set()):
-            propuesto = None
+            # Varios candidatos, no uno: se prueba en orden y se toma el primero
+            # que no rompa además una regla bloqueante. Antes había un solo
+            # valor posible y, si ese rompía el tope duro, el campo se quedaba
+            # sin sembrar.
+            propuestos = []
             if tipo == "EXISTE_EN_ARCHIVO":
-                propuesto = "Dispositivo no declarado"
+                propuestos = [
+                    "Dispositivo no declarado",
+                    "Hogar convenido (sin declarar)",
+                    "Residencia en trámite de habilitación",
+                ]
+                rnd.shuffle(propuestos)
             elif tipo == "RANGO":
-                propuesto = fuera_de_rango(par, candidato)
+                propuestos = fuera_de_rango(par, candidato, rnd)
             elif tipo == "COMPARAR_VALOR" and par.get("valor") == "HOY":
                 # La regla pide que la fecha no sea futura: se la pone futura.
-                propuesto = date.today() + timedelta(days=rnd.randint(30, 400))
-            if propuesto is not None:
-                # Si el valor sembrado rompiera además una regla que bloquea, no
-                # se siembra: se sigue con la regla siguiente del campo.
-                if rompe_algun_bloqueante(campo, propuesto, fila):
+                # Con distancias distintas, que en pantalla se leen distinto:
+                # unos días puede ser un error de tipeo en el año, varios meses
+                # es otra cosa.
+                propuestos = [
+                    date.today() + timedelta(days=d)
+                    for d in (
+                        rnd.randint(2, 20),
+                        rnd.randint(40, 120),
+                        rnd.randint(200, 400),
+                    )
+                ]
+                rnd.shuffle(propuestos)
+            for propuesto in propuestos:
+                if propuesto is None or rompe_algun_bloqueante(campo, propuesto, fila):
                     continue
                 return propuesto, regla["nombre"]
 
@@ -305,14 +380,91 @@ def valor_condicionado(
             # dato lo deja vacío y la que lo prohíbe se asegura de que haya uno.
             if tipo == "OBLIGATORIO_SI":
                 return None, regla["nombre"]
-            return (candidato if not vacio else f"Dato {rnd.randint(1, 99)}"), regla[
+            return (candidato if not vacio else relleno_obligatorio(campo, rnd)), regla[
                 "nombre"
             ]
         if tipo == "PROHIBIDO_SI":
             return None, None
         if vacio:
-            return f"Dato requerido {rnd.randint(1, 99)}", None
+            return relleno_obligatorio(campo, rnd), None
     return candidato, None
+
+
+# Valores verosímiles para los campos que no tienen lista en ninguna parte.
+# Inventados: no salen de la planilla ni de un catálogo de la Capa 1. Se usan
+# sólo para datos de prueba. La clave es un trozo del título, en minúsculas.
+VOCABULARIO = [
+    (
+        ("dependencia institucional",),
+        [
+            "Secretaría de Niñez, Adolescencia y Familia",
+            "Ministerio de Desarrollo Social",
+            "Subsecretaría de Niñez y Adolescencia",
+            "Municipalidad de Rawson",
+            "Convenio con organización civil",
+            "Servicio de Protección de Derechos",
+        ],
+    ),
+    (
+        ("dependencia judicial",),
+        [
+            "Juzgado de Familia N° 1",
+            "Juzgado de Familia N° 2",
+            "Juzgado Penal Juvenil",
+            "Defensoría de Niñez",
+            "Asesoría de Familia e Incapaces",
+        ],
+    ),
+    (
+        ("comisaría o dependencia", "comisaria o dependencia"),
+        ["Comisaría 1ª", "Comisaría 3ª", "Comisaría de la Mujer", "División Minoridad"],
+    ),
+    (
+        ("departamento de la dependencia",),
+        ["Rawson", "Escalante", "Futaleufú", "Biedma", "Cushamen"],
+    ),
+    (
+        ("descripción causa", "descripcion causa"),
+        [
+            "Hurto simple",
+            "Robo en grado de tentativa",
+            "Lesiones leves",
+            "Daño",
+            "Infracción a la ley de estupefacientes",
+            "Amenazas",
+        ],
+    ),
+    (
+        ("enfermedad crónica", "enfermedad cronica", "consumo problemático"),
+        ["Sí", "No", "No", "Sin datos"],
+    ),
+    (
+        ("seguridad social",),
+        ["Obra social", "Programa SUMAR", "Monotributo social", "Sin cobertura"],
+    ),
+    (
+        ("pueblo originario",),
+        ["Mapuche", "Tehuelche", "Qom", "Ninguno", "Ninguno", "Sin datos"],
+    ),
+    (
+        ("plazos en la intervención", "plazos en la intervencion"),
+        ["Hasta 90 días", "De 90 a 180 días", "De 180 a 365 días", "Más de un año"],
+    ),
+    (
+        ("causas del cese",),
+        [
+            "Revinculación familiar",
+            "Egreso por mayoría de edad",
+            "Adopción",
+            "Cambio de medida",
+            "Traslado a otra jurisdicción",
+        ],
+    ),
+    (
+        ("otras temáticas", "otras tematicas"),
+        ["", "", "", "Acompañamiento terapéutico", "Discapacidad"],
+    ),
+]
 
 
 def valor_inventado(
@@ -343,6 +495,28 @@ def valor_inventado(
 
     if opciones:
         return rnd.choice(opciones)
+
+    # Estos dos van ANTES del tipo declarado, a propósito.
+    #
+    # «Capacidad de alojamiento» está declarada TEXTO en la Capa 1, no ENTERO
+    # —la planilla trae la anotación «Número» en una fila que el extractor no
+    # leyó como tipo—, así que nunca entraba por la rama de los enteros y salía
+    # con «Dato 3» en una columna que cuenta plazas. Se le da un número igual:
+    # el dato de prueba tiene que parecerse al dato, no al tipo mal inferido.
+    if "capacidad" in t or "plaza" in t:
+        return rnd.randint(8, 60) if tipo == "ENTERO" else str(rnd.randint(8, 60))
+
+    # El identificador del chico o la chica: es la clave con la que la nómina
+    # se va a enganchar al legajo. Un «Dato 5» ahí no se entiende.
+    #
+    # El formato depende del tipo que declara la Capa 1, y no se puede adivinar:
+    # el mismo concepto está declarado ENTERO en el MPI y TEXTO en el MPE. Con
+    # un código lindo tipo «CHU-2026-0007» en el campo entero, el archivo entero
+    # se caía con TIPO_INVALIDO en las treinta filas.
+    if t.startswith("id del") or t.startswith("id de la") or t == "id familia":
+        if tipo in ("ENTERO", "DECIMAL"):
+            return i
+        return f"{(jurisdiccion or 'XX')[:3].upper()}-2026-{i:04d}"
 
     if tipo == "FECHA":
         hoy = date.today()
@@ -404,6 +578,17 @@ def valor_inventado(
         return rnd.choice(["", "", f"Nota de ejemplo {i}"])
     if "equipo" in t or "responsable" in t:
         return f"{rnd.choice(NOMBRES)} {rnd.choice(APELLIDOS)}"
+
+    # Campos sin catálogo en ninguna parte. Antes caían todos en «Dato 7», que
+    # es lo que hacía que el archivo de prueba no se pareciera a una
+    # importación: una pantalla entera de «Dato 12» no deja ver nada.
+    #
+    # Estos valores son INVENTADOS, a diferencia de los que salen de un
+    # catálogo. Son verosímiles y alcanzan para mostrar el circuito; antes de
+    # usarlos para otra cosa hay que confirmarlos con la DNPYPI.
+    for claves, valores in VOCABULARIO:
+        if any(k in t for k in claves):
+            return rnd.choice(valores)
     return f"Dato {i}"
 
 
@@ -424,6 +609,61 @@ ERRORES = [
     ("texto_muy_largo", "un texto más largo de lo admitido", "TEXTO", "X" * 400),
     ("documento_repetido", "el mismo documento dos veces", None, None),
 ]
+
+
+# Catálogos que existen en la Capa 1 pero que el campo NO declara. El nombre no
+# siempre coincide con el del campo, así que acá van los que hay que emparejar a
+# mano. Son listas reales, sacadas de la planilla de la DNPYPI.
+ALIAS_DE_CATALOGO = {
+    "motivo_de_intervencion": "motivos_de_intervencion_aplican_tanto_para_mpe_y_mpi_"
+    "acordadas_en_2019_con_las_24_jurisdicciones",
+    "submotivo_de_intervencion": "causas_de_las_medidas_mpi",
+    "causas_de_las_medidas": "causas_de_las_medidas_mpi",
+    "causas_del_cese_de_la_mpi": "causas_de_las_medidas_mpi",
+}
+
+# Un catálogo de una sola opción no es una lista: es la fila de anotaciones de
+# la planilla, que dice de qué tipo es la columna. Sirve para tipar, no para
+# elegir un valor.
+ANOTACIONES = {"número", "numero", "texto", "fecha", "entero", "decimal", "sí/no"}
+
+
+def catalogo_suelto(cur, campo: dict):
+    """Las opciones reales de un campo que no declara catálogo.
+
+    Hay campos cuya lista **existe en la Capa 1 y el campo no la usa** —el
+    mismo defecto que tenía «Modalidad de cuidado», que apuntaba a provincias—.
+    Para el importador eso significa que el campo no se valida; para los datos
+    de prueba significaba algo peor: que salía relleno con «Dato 1», «Dato 2»,
+    y una pantalla llena de «Dato 7» no se parece a una importación de verdad.
+
+    Acá se busca la lista por nombre y se la usa **sólo para inventar valores**.
+    No se toca la definición: el campo sigue sin catálogo y el importador sigue
+    sin validarlo. Lo que se gana es que el archivo de prueba diga «Secundaria
+    incompleta» donde una provincia escribiría eso.
+
+    Que haga falta esta función es, en sí, el registro de un pendiente: esas
+    listas deberían estar enganchadas al campo en la Capa 1.
+    """
+    nombre = campo["nombre"]
+    candidatos = [
+        ALIAS_DE_CATALOGO.get(nombre),
+        nombre,
+        f"{nombre}_2",
+        f"{nombre}_3",
+    ]
+    for codigo in [c for c in candidatos if c]:
+        cur.execute(
+            """SELECT o.valor_esperado
+                 FROM runac_c1_catalogo_opcion o
+                 JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
+                WHERE c.codigo = %s AND o.activo = 1 ORDER BY o.orden""",
+            (codigo,),
+        )
+        valores = [r["valor_esperado"] for r in cur.fetchall()]
+        if len(valores) >= 3 and not {v.strip().lower() for v in valores} & ANOTACIONES:
+            return valores
+    return []
 
 
 def leer_definicion(cur, codigo: str):
@@ -455,6 +695,14 @@ def leer_definicion(cur, codigo: str):
         h["campos"] = cur.fetchall()
         for campo in h["campos"]:
             campo["opciones"] = []
+            # Sin catálogo declarado, se busca igual la lista por nombre: es
+            # para inventar el valor, no para validarlo.
+            campo["catalogo_prestado"] = False
+            if not campo["catalogo"]:
+                prestadas = catalogo_suelto(cur, campo)
+                if prestadas:
+                    campo["opciones"] = prestadas
+                    campo["catalogo_prestado"] = True
             if campo["catalogo"]:
                 cur.execute(
                     """SELECT o.valor_esperado FROM runac_c1_catalogo_opcion o
@@ -581,17 +829,39 @@ def main():
             # Se calcula una vez por hoja: los campos que otro mira para
             # validarse no se ensucian, porque romperlos rompe al otro.
             intocables = campos_de_los_que_otro_depende(campos)
+            # Los campos que tienen alguna regla que avisa: son los únicos que
+            # se pueden ensuciar. Se calcula una vez por hoja.
+            ensuciables = [
+                c["nombre"]
+                for c in campos
+                if c["nombre"] not in intocables
+                and any(r["severidad"] == "ADVERTENCIA" for r in (c["reglas"] or []))
+            ]
             for i in range(1, args.filas + 1):
                 # Una de cada tres filas lleva advertencias: así el archivo
                 # tiene también filas correctas y se ve la diferencia.
                 sembrar = bool(args.con_advertencias) and i % 3 == 0
+                # Y dentro de esa fila, NO todos los campos que podrían fallar.
+                # Antes se ensuciaban todos, así que las cuatro columnas de
+                # personal salían mal juntas y en la misma fila: ninguna
+                # provincia se equivoca así. Ahora una fila trae uno o dos
+                # problemas y, de vez en cuando, tres.
+                elegidos: set = set()
+                if sembrar and ensuciables:
+                    cuantos = min(len(ensuciables), rnd.choice([1, 1, 1, 2, 2, 3]))
+                    elegidos = set(rnd.sample(ensuciables, cuantos))
                 generados: dict = {}
                 for k, campo in enumerate(campos, start=1):
                     v = valor_inventado(
                         campo, campo["opciones"], i, rnd, generados, args.jurisdiccion
                     )
                     v, aviso = valor_condicionado(
-                        campo, generados, v, rnd, sembrar, intocables
+                        campo,
+                        generados,
+                        v,
+                        rnd,
+                        sembrar and campo["nombre"] in elegidos,
+                        intocables,
                     )
                     if aviso:
                         avisos_puestos.append(

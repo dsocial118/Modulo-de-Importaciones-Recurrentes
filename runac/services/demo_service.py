@@ -22,15 +22,23 @@ ARCHIVOS = Path(__file__).resolve().parent.parent / "demo"
 JURISDICCION = "Chubut"
 PERIODO = "2026_T1"
 
-# El MPI va con la variante que trae advertencias, a propósito: un archivo
-# perfecto no permite mostrar la corrección dentro del sistema, que es la mitad
-# interesante del circuito.
+# Los CINCO archivos van con la variante que trae advertencias.
+#
+# Antes sólo el MPI las traía y los otros cuatro entraban perfectos: la
+# presentación quedaba con una sola pantalla que mostrara algo, y las
+# advertencias que había eran todas del mismo tipo. Una presentación real no se
+# parece a eso —los problemas aparecen repartidos y de distinta clase—, y esta
+# demostración se usa justamente para mostrar cómo se ve una importación de
+# verdad.
+#
+# Los cinco entran igual: una advertencia observa, no rechaza. Que el archivo
+# entre CON problemas anotados es lo que hay que poder mostrar.
 PLAN = [
-    ("DISP_PENAL", "DISP_PENAL_2026_T1_Chubut.xlsx"),
-    ("DISP_SCP", "DISP_SCP_2026_T1_Chubut.xlsx"),
+    ("DISP_PENAL", "DISP_PENAL_2026_T1_Chubut_CON_ADVERTENCIAS.xlsx"),
+    ("DISP_SCP", "DISP_SCP_2026_T1_Chubut_CON_ADVERTENCIAS.xlsx"),
     ("MPI", "MPI_2026_T1_Chubut_CON_ADVERTENCIAS.xlsx"),
-    ("MPE", "MPE_2026_T1_Chubut.xlsx"),
-    ("MPJ_DAE", "MPJ_DAE_2026_T1_Chubut.xlsx"),
+    ("MPE", "MPE_2026_T1_Chubut_CON_ADVERTENCIAS.xlsx"),
+    ("MPJ_DAE", "MPJ_DAE_2026_T1_Chubut_CON_ADVERTENCIAS.xlsx"),
 ]
 
 # Cómo se corrige cada tipo de advertencia sembrada. Se toma la primera fila que
@@ -42,15 +50,40 @@ PLAN = [
 # que el archivo efectivamente trajo, y con una lista más larga que las que se
 # van a usar.
 CORRECCIONES = [
-    ("edad", "15", "Se verificó contra la fecha de nacimiento"),
-    ("fecha_del_relevamiento", "02/03/2026", "Estaba cargada con una fecha futura"),
-    ("pueblo_originario_especificar", "Qom", "Lo informó la provincia por nota"),
-    ("tipo_de_discapacidad", "Motora", "Se completó con lo que informó el dispositivo"),
+    ("MPI", "edad", "15", "Se verificó contra la fecha de nacimiento"),
+    (
+        "MPI",
+        "fecha_del_relevamiento",
+        "02/03/2026",
+        "Estaba cargada con una fecha futura",
+    ),
+    ("MPI", "tipo_de_discapacidad", "Motora", "Lo informó el dispositivo"),
+    ("MPI", "pueblo_originario_especificar", "Qom", "Lo informó la provincia por nota"),
+    # Del archivo de dispositivos, para que el historial no sea de un archivo
+    # solo: la corrección de una dotación absurda es el caso más fácil de contar.
+    (
+        "DISP_PENAL",
+        "cantidad_de_agentes_equipo_tecnico_y_profesional_incluye_efd962",
+        "24",
+        "Se había informado la dotación de toda la provincia",
+    ),
+    (
+        "DISP_PENAL",
+        "cantidad_agentes_de_salud",
+        "6",
+        "Corregido con el parte del dispositivo",
+    ),
+    (
+        "MPE",
+        "fecha_de_inicio_mpe",
+        "02/03/2026",
+        "La fecha estaba adelantada un año",
+    ),
 ]
 
 # Suficientes para que el historial tenga contenido, y no tantas como para que
 # no quede nada que mostrar corrigiendo en vivo.
-A_CORREGIR = 3
+A_CORREGIR = 5
 
 
 def armar(borrar_antes: bool = True) -> dict:
@@ -81,34 +114,50 @@ def armar(borrar_antes: bool = True) -> dict:
     return resumen
 
 
-def _corregir() -> int:
-    """Deja hechas unas correcciones, para que el historial no esté vacío."""
+def _importacion_de(codigo: str):
+    """La última importación válida de ese archivo."""
     with connection.cursor() as cur:
         cur.execute(
             """SELECT i.id FROM runac_c2_importacion i
                  JOIN runac_c1_archivo a ON a.id = i.archivo_id
-                WHERE a.codigo = 'MPI' AND i.estado = 'VALIDA'
-                ORDER BY i.id DESC LIMIT 1"""
+                WHERE a.codigo = %s AND i.estado = 'VALIDA'
+                ORDER BY i.id DESC LIMIT 1""",
+            [codigo],
         )
         fila = cur.fetchone()
-    if not fila:
-        return 0
+    return fila[0] if fila else None
 
-    importacion = fila[0]
-    contexto = edicion.contexto_de(importacion)
-    hoja = contexto["hojas"][0]
-    campos = {c["nombre"]: c for c in edicion.campos_de_la_hoja(hoja["id"])}
 
+def _corregir() -> int:
+    """Deja hechas unas correcciones, para que el historial no esté vacío.
+
+    Recorre varios archivos, no uno: con los cinco trayendo advertencias, un
+    historial armado sobre el MPI solo deja la impresión de que la corrección
+    dentro del sistema sirve para las nóminas y no para los dispositivos.
+    """
     hechas = 0
-    for nombre, valor, motivo in CORRECCIONES:
+    for codigo, nombre, valor, motivo in CORRECCIONES:
         if hechas >= A_CORREGIR:
             break
-        campo = campos.get(nombre)
-        if not campo:
+        importacion = _importacion_de(codigo)
+        if importacion is None:
             continue
-        numero = _fila_con_aviso(importacion, hoja, campo)
-        if numero is None:
+        contexto = edicion.contexto_de(importacion)
+        # El campo puede estar en cualquiera de las hojas del archivo: los
+        # dispositivos penales tienen cinco.
+        objetivo = None
+        for hoja in contexto["hojas"]:
+            campos = {c["nombre"]: c for c in edicion.campos_de_la_hoja(hoja["id"])}
+            campo = campos.get(nombre)
+            if not campo:
+                continue
+            numero = _fila_con_aviso(importacion, hoja, campo)
+            if numero is not None:
+                objetivo = (hoja, numero)
+                break
+        if objetivo is None:
             continue
+        hoja, numero = objetivo
         try:
             edicion.editar(
                 importacion, hoja["id"], numero, nombre, valor, "operador", motivo
