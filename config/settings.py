@@ -91,6 +91,15 @@ DATABASES = {
     }
 }
 
+# Las dos instancias -la v1 en el 8100 y la v2 en el 8101- corren en el MISMO
+# localhost, y una galleta de sesion no distingue puerto: se llaman igual y se
+# pisan. Entrar en una deslogueaba la otra, y parecia que el usuario o la clave
+# estaban mal. Se le pone a cada una el nombre de su base, asi conviven abiertas
+# en dos pestanas.
+_BASE = DATABASES["default"]["NAME"]
+SESSION_COOKIE_NAME = "sesion_" + _BASE
+CSRF_COOKIE_NAME = "csrf_" + _BASE
+
 AUTH_PASSWORD_VALIDATORS = []  # prototipo: no molestar al equipo con esto
 
 LANGUAGE_CODE = "es-ar"
