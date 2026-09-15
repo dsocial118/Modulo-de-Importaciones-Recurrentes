@@ -17,6 +17,17 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
               rel="stylesheet" />
+        {% comment %} Esto va ANTES del estilo y antes del cuerpo, a proposito: si el tema se aplicara al final, la pantalla aparece clara y salta a oscura en cada navegacion. Sin try/catch, un navegador con el almacenamiento bloqueado -una ventana privada- tiraba error y no pintaba nada. {% endcomment %}
+        <script>
+          (function () {
+            var guardado = null;
+            try { guardado = localStorage.getItem("app.theme"); } catch (e) {}
+            if (guardado === "dark") {
+              document.documentElement.setAttribute("data-tema", "oscuro");
+              document.documentElement.setAttribute("data-bs-theme", "dark");
+            }
+          })();
+        </script>
         <style>
     /* ===================================================================
        Mobile first: lo que sigue es el diseño para teléfono. Tablet y
@@ -70,6 +81,16 @@
          -el tema no tiene rojo- y por eso vive aca, declarada aparte. */
       --error-fondo: #F8D7DA;    --error-borde: #B02A37;    --error-tinta: #842029;
 
+      /* Tres pares que NO son un rol invertido, y por eso se declaran aparte:
+         al pasar a oscuro, el fondo y la tinta no intercambian papeles solos.
+           · la etiqueta «Prueba», que es tinta sobre color
+           · el estado CONSOLIDADA, que es el negativo del resto
+           · lo que va ESCRITO sobre el naranja de atencion */
+      --prueba-fondo: #7A3B00;       --prueba-tinta: #FFFFFF;
+      --consolidada-fondo: #1C1917;  --consolidada-tinta: #FAFAF9;
+      --sobre-atencion: #FFFFFF;
+      --sobre-error: #FFFFFF;
+
       /* Bootstrap viene del CDN con su azul. Se le reasignan las variables
          para que los componentes de la libreria hablen el mismo idioma que
          el resto; los que calculan su color al compilar y no en el navegador
@@ -84,6 +105,81 @@
       --bs-border-color: #D6D3D1;
       --bs-emphasis-color: #1C1917;
     }
+
+    /* ===================================================================
+       MODO OSCURO — los mismos roles, otros valores.
+       Ni una sola regla de las de abajo cambia: eso es lo que el sistema de
+       diseno promete y la unica forma de que el modo oscuro no sea una
+       segunda hoja de estilos que se desincroniza.
+
+       Bootstrap trae su propio modo oscuro con `data-bs-theme`, asi que se
+       encienden los dos a la vez: la libreria oscurece sus controles -campos,
+       desplegables, tablas- y nosotros los roles de marca. Sin eso habria que
+       perseguir a mano cada componente.
+       =================================================================== */
+    :root[data-tema="oscuro"] {
+      --marca: #379F9B;
+      --marca-oscura: #6FD0CC;     /* sobre fondo oscuro, la marca ACLARA */
+      --marca-clara: #54C4C0;
+      --marca-superficie: #0C3B39;
+      --marca-chip: #0C3B39;
+
+      --lienzo: #1C1917;
+      --papel: #292524;
+      --divisor: #44403C;
+      --borde: #57534E;
+      --borde-control: #78716C;
+
+      --tinta: #FAFAF9;
+      --tinta-suave: #D6D3D1;
+      --tinta-tenue: #A8A29E;
+
+      --nav: #073B38;
+      --nav-activo: #0A2E2B;
+      --nav-acento: #FFCD33;       /* el ambar, aclarado */
+      --nav-tinta: #FAFAF9;
+      --nav-tinta-tenue: #D6D3D1;
+
+      --info-fondo: #0E2F3F;     --info-borde: #3DC1FD;     --info-tinta: #9FDDFB;
+      --atencion-fondo: #3A2A1A; --atencion-borde: #FFB74D; --atencion-tinta: #FFCF99;
+      --espera-fondo: #2B2725;   --espera-borde: #78716C;   --espera-tinta: #D6D3D1;
+      --error-fondo: #3B1F22;    --error-borde: #F1707B;    --error-tinta: #FFB3B9;
+
+      --prueba-fondo: #FFCF99;       --prueba-tinta: #3A2A1A;
+      --consolidada-fondo: #FAFAF9;  --consolidada-tinta: #1C1917;
+      --sobre-atencion: #1C1917;
+      --sobre-error: #1C1917;
+
+      --bs-primary: #379F9B;
+      --bs-primary-rgb: 55, 159, 155;
+      --bs-link-color: #6FD0CC;
+      --bs-link-color-rgb: 111, 208, 204;
+      --bs-link-hover-color: #54C4C0;
+      --bs-body-color: #FAFAF9;
+      --bs-body-bg: #1C1917;
+      --bs-border-color: #57534E;
+      --bs-emphasis-color: #FAFAF9;
+    }
+
+    /* El foco, que en oscuro tiene que aclarar para verse. */
+    :root[data-tema="oscuro"] .form-control:focus,
+    :root[data-tema="oscuro"] .form-select:focus,
+    :root[data-tema="oscuro"] .btn:focus-visible {
+      border-color: var(--marca-clara);
+      box-shadow: 0 0 0 .2rem rgba(84, 196, 192, .3);
+    }
+
+    /* El interruptor, en la barra. */
+    .btn-tema {
+      background: transparent; border: 1px solid rgba(250,250,249,.35);
+      color: var(--nav-tinta); border-radius: .3rem; line-height: 1;
+      padding: .25rem .5rem; min-height: auto;
+    }
+    .btn-tema:hover { background: var(--nav-activo); color: var(--nav-acento); }
+    /* Se ve el sol o la luna, nunca los dos. */
+    .btn-tema .bi-sun { display: none; }
+    :root[data-tema="oscuro"] .btn-tema .bi-sun { display: inline; }
+    :root[data-tema="oscuro"] .btn-tema .bi-moon { display: none; }
 
     /* Los botones y focos que Bootstrap resuelve al compilar, no en el navegador. */
     .btn-primary {
@@ -124,12 +220,32 @@
     .text-success { color: var(--marca-oscura) !important; }
     .bg-success   { background: var(--marca) !important; }
     .text-danger  { color: var(--error-tinta) !important; }
-    .btn-warning  { --bs-btn-bg: var(--atencion-borde); --bs-btn-border-color: var(--atencion-borde); --bs-btn-color: #fff;
-                    --bs-btn-hover-bg: var(--atencion-tinta); --bs-btn-hover-border-color: var(--atencion-tinta); --bs-btn-hover-color: #fff; }
+    .btn-warning  { --bs-btn-bg: var(--atencion-borde); --bs-btn-border-color: var(--atencion-borde); --bs-btn-color: var(--sobre-atencion);
+                    --bs-btn-hover-bg: var(--atencion-tinta); --bs-btn-hover-border-color: var(--atencion-tinta); --bs-btn-hover-color: var(--sobre-atencion); }
     .btn-outline-warning { --bs-btn-color: var(--atencion-tinta); --bs-btn-border-color: var(--atencion-borde);
-                    --bs-btn-hover-bg: var(--atencion-borde); --bs-btn-hover-border-color: var(--atencion-borde); --bs-btn-hover-color: #fff; }
+                    --bs-btn-hover-bg: var(--atencion-borde); --bs-btn-hover-border-color: var(--atencion-borde); --bs-btn-hover-color: var(--sobre-atencion); }
     .table-light  { --bs-table-bg: var(--lienzo); --bs-table-color: var(--tinta); }
     .bg-light     { background: var(--lienzo) !important; }
+    /* `bg-white` es blanco literal: en oscuro deja un rectangulo encandilante
+       en medio de la pantalla. Lo que se quiere decir ahi es «superficie». */
+    .bg-white     { background: var(--papel) !important; }
+
+    /* El resumen de hallazgos de cada archivo, y las celdas que no se pueden
+       editar. Antes usaban `bg-light text-dark` de la libreria: al invertir a
+       oscuro quedaba tinta oscura sobre fondo oscuro y el texto desaparecia.
+       Con roles, el par se invierte junto. */
+    .chip-hallazgo {
+      background: var(--espera-fondo); color: var(--espera-tinta);
+      border: 1px solid var(--borde); font-weight: 400;
+    }
+    .celda-solo-lectura { background: var(--espera-fondo); color: var(--tinta-suave); }
+
+    /* El encabezado del aviso de importacion. Va con roles y no con
+       `bg-success`/`text-white`: en oscuro, el verde de marca se aclara y el
+       texto blanco encima pierde contraste. Estos dos pares estan elegidos
+       para leerse igual en los dos modos. */
+    .aviso-entro    { background: var(--nav); color: var(--nav-tinta); }
+    .aviso-no-entro { background: var(--error-borde); color: var(--sobre-error); }
 
     body {
       background: var(--lienzo);
@@ -170,7 +286,7 @@
       background: var(--atencion-fondo); padding: .35rem .5rem;
     }
     .etiqueta-prueba {
-      display: inline-block; background: var(--atencion-tinta); color: var(--papel);
+      display: inline-block; background: var(--prueba-fondo); color: var(--prueba-tinta);
       font-size: .62rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: .05em; padding: .05rem .4rem; border-radius: .25rem;
       white-space: nowrap;
@@ -219,7 +335,7 @@
     .e-CERRADA, .e-EN_REVISION { background: var(--info-fondo); color: var(--info-tinta); }
     .e-OBSERVADA, .e-SUBSANADA { background: var(--atencion-fondo); color: var(--atencion-tinta); }
     .e-HABILITADA, .e-PRESENTADA { background: var(--marca-superficie); color: var(--marca-oscura); }
-    .e-CONSOLIDADA { background: var(--tinta); color: var(--nav-tinta); }
+    .e-CONSOLIDADA { background: var(--consolidada-fondo); color: var(--consolidada-tinta); }
     .e-ABIERTO { background: var(--marca-superficie); color: var(--marca-oscura); }
     .e-PREPARACION { background: var(--info-fondo); color: var(--info-tinta); }
     .e-CERRADO { background: var(--espera-fondo); color: var(--espera-tinta); }
@@ -330,7 +446,11 @@
     /* Impresión: el comprobante se imprime, y no con la barra de navegación. */
     @media print {
       .encabezado-fijo, .navbar, .aviso-prototipo, .d-print-none { display: none !important; }
-      body { background: #fff; }
+      /* El comprobante se imprime en claro aunque la pantalla este en oscuro:
+         es un documento, y una hoja con el fondo negro se lee peor. */
+      :root[data-tema="oscuro"] { --lienzo: #fff; --papel: #fff; --tinta: #000;
+        --tinta-suave: #333; --borde: #999; --divisor: #ccc; }
+      body { background: #fff; color: #000; }
       .card { border: 1px solid #999; box-shadow: none; }
     }
         </style>
@@ -371,6 +491,15 @@
                                     {% if rol %}· {{ rol }}{% endif %}
                                     {% if jurisdiccion %}· {{ jurisdiccion }}{% endif %}
                                 </span>
+                                {% comment %} Claro y oscuro. La preferencia es de quien mira, no del sistema: se guarda en su navegador y no viaja al servidor. {% endcomment %}
+                                <button class="btn btn-tema align-self-center me-lg-2 my-1 my-lg-0"
+                                        type="button"
+                                        id="cambiarTema"
+                                        title="Cambiar entre modo claro y oscuro"
+                                        aria-label="Cambiar entre modo claro y oscuro">
+                                    <i class="bi bi-moon"></i><i class="bi bi-sun"></i>
+                                    <span class="d-lg-none ms-1">Cambiar el tema</span>
+                                </button>
                                 <a class="nav-link" href="{% url 'runac:salir' %}" title="Salir">
                                     <i class="bi bi-box-arrow-right"></i> <span class="d-lg-none">Salir</span>
                                 </a>
@@ -387,6 +516,30 @@
             {% block contenido %}{% endblock %}
         </div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+          // Se encienden los DOS atributos: `data-tema` manda sobre los roles de
+          // marca y `data-bs-theme` sobre los controles de Bootstrap. Con uno
+          // solo, los campos y desplegables se quedaban claros sobre el fondo
+          // oscuro.
+          (function () {
+            var boton = document.getElementById("cambiarTema");
+            if (!boton) return;
+            boton.addEventListener("click", function () {
+              var raiz = document.documentElement;
+              var oscuro = raiz.getAttribute("data-tema") !== "oscuro";
+              if (oscuro) {
+                raiz.setAttribute("data-tema", "oscuro");
+                raiz.setAttribute("data-bs-theme", "dark");
+              } else {
+                raiz.removeAttribute("data-tema");
+                raiz.removeAttribute("data-bs-theme");
+              }
+              // Que no se pueda guardar la preferencia no es motivo para que el
+              // boton no funcione: el cambio ya esta hecho arriba.
+              try { localStorage.setItem("app.theme", oscuro ? "dark" : "light"); } catch (e) {}
+            });
+          })();
+        </script>
         {% block scripts %}
         {% endblock %}
     </body>

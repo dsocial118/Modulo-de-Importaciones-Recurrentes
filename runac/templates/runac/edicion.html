@@ -145,7 +145,7 @@
                                                value="{{ celda.valor }}" />
                                     {% endif %}
                                 {% else %}
-                                    <div class="form-control form-control-sm bg-light">{{ celda.valor|default:"—" }}</div>
+                                    <div class="form-control form-control-sm celda-solo-lectura">{{ celda.valor|default:"—" }}</div>
                                 {% endif %}
                             </div>
                         {% endfor %}
