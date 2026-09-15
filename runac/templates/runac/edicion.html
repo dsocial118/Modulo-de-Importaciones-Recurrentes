@@ -17,6 +17,15 @@
             <span class="estado e-{{ contexto.estado_presentacion }} ms-1">{{ contexto.estado_presentacion }}</span>
         </h5>
         <div class="ayuda">{{ contexto.jurisdiccion }} · {{ contexto.periodo }} · estructura v{{ contexto.version }}</div>
+        {% comment %} El historial vive al final de esta pantalla, que es larga: sin un acceso arriba habia que recorrerla entera para llegar. Es un salto dentro de la misma pantalla, no otra. {% endcomment %}
+        {% if historial %}
+            <a class="btn btn-outline-secondary btn-sm mt-2"
+               href="#historial-de-cambios"
+               title="Quien cambio que, cuando y por que">
+                <i class="bi bi-clock-history"></i> Ver historial de cambios
+                <span class="ayuda ms-1">{{ historial|length }}</span>
+            </a>
+        {% endif %}
     </div>
 
     {% if not contexto.editable %}
