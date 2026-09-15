@@ -17,15 +17,6 @@
             <span class="estado e-{{ contexto.estado_presentacion }} ms-1">{{ contexto.estado_presentacion }}</span>
         </h5>
         <div class="ayuda">{{ contexto.jurisdiccion }} · {{ contexto.periodo }} · estructura v{{ contexto.version }}</div>
-        {% comment %} El historial vive al final de esta pantalla, que es larga: sin un acceso arriba habia que recorrerla entera para llegar. Es un salto dentro de la misma pantalla, no otra. {% endcomment %}
-        {% if historial %}
-            <a class="btn btn-outline-secondary btn-sm mt-2"
-               href="#historial-de-cambios"
-               title="Quien cambio que, cuando y por que">
-                <i class="bi bi-clock-history"></i> Ver historial de cambios
-                <span class="ayuda ms-1">{{ historial|length }}</span>
-            </a>
-        {% endif %}
     </div>
 
     {% if not contexto.editable %}
@@ -43,9 +34,9 @@
     {% else %}
         <div class="alert alert-light border py-2 ayuda mb-3">
             <i class="bi bi-pencil-square"></i>
-            Tocá un valor para corregirlo. Cada cambio queda registrado con usuario, fecha,
+            Seleccionar un valor para corregirlo. Cada cambio queda registrado con usuario, fecha,
             valor anterior y valor nuevo. Los errores <strong>bloqueantes</strong> no se
-            corrigen acá: se arreglan en el Excel y el archivo se vuelve a importar.
+            corrigen en esta pantalla: se arreglan en el Excel y el archivo se vuelve a importar.
         </div>
     {% endif %}
 
@@ -76,7 +67,16 @@
                 <label class="form-check-label" for="solo">Sólo las filas con advertencia ({{ con_advertencia }})</label>
             </div>
         </div>
-        <div class="col-12 col-md-auto ms-md-auto ayuda">
+        {% comment %} Junto a los controles de edicion y no en el encabezado: se consulta mientras se corrige, para ver que quedo registrado. Presente siempre, apagado cuando no hay nada: un boton que aparece y desaparece hace dudar de si la pantalla lo tiene. {% endcomment %}
+        <div class="col-12 col-md-auto ms-md-auto">
+            <a class="btn btn-outline-secondary btn-sm {% if not historial %}disabled{% endif %}"
+               href="#historial-de-cambios"
+               {% if not historial %}aria-disabled="true" tabindex="-1" title="Todavia no se corrigio ningun dato"{% else %}title="Quien cambio que, cuando y por que"{% endif %}>
+                <i class="bi bi-clock-history"></i> Ver historial de cambios
+                {% if historial %}<span class="ayuda ms-1">{{ historial|length }}</span>{% endif %}
+            </a>
+        </div>
+        <div class="col-12 col-md-auto ayuda">
             {{ total }} fila{{ total|pluralize }} · página {{ pagina }} de {{ paginas }}
         </div>
     </form>
@@ -301,7 +301,7 @@
               }
             })
             .catch(function () {
-              avisar(campo, false, "No se pudo guardar. Revisá la conexión.");
+              avisar(campo, false, "No se pudo guardar. Verificar la conexión.");
             });
         });
       });
