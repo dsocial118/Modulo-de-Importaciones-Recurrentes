@@ -70,10 +70,11 @@
         {% comment %} Junto a los controles de edicion y no en el encabezado: se consulta mientras se corrige, para ver que quedo registrado. Presente siempre, apagado cuando no hay nada: un boton que aparece y desaparece hace dudar de si la pantalla lo tiene. {% endcomment %}
         <div class="col-12 col-md-auto ms-md-auto">
             <a class="btn btn-outline-secondary btn-sm {% if not historial %}disabled{% endif %}"
+               id="boton-historial"
                href="#historial-de-cambios"
                {% if not historial %}aria-disabled="true" tabindex="-1" title="Todavia no se corrigio ningun dato"{% else %}title="Quien cambio que, cuando y por que"{% endif %}>
                 <i class="bi bi-clock-history"></i> Ver historial de cambios
-                {% if historial %}<span class="ayuda ms-1">{{ historial|length }}</span>{% endif %}
+                <span class="ayuda ms-1" id="cuenta-boton-historial" {% if not historial %}hidden{% endif %}>{{ historial|length }}</span>
             </a>
         </div>
         <div class="col-12 col-md-auto ayuda">
@@ -118,7 +119,7 @@
                                        for="c{{ fila.numero_fila }}_{{ celda.nombre }}">
                                     {{ celda.titulo }}
                                     {% if celda.obligatorio %}<span class="text-danger">*</span>{% endif %}
-                                    {% if celda.tiene_aviso %}<i class="bi bi-exclamation-triangle-fill sev-ADVERTENCIA"></i>{% endif %}
+                                    {% if celda.tiene_aviso %}<i class="bi bi-exclamation-triangle-fill sev-ADVERTENCIA aviso-celda"></i>{% endif %}
                                 </label>
                                 {% if puede_editar %}
                                     {% if celda.opciones %}
@@ -189,13 +190,13 @@
     {% endif %}
 
     {# --- Historial de correcciones ------------------------------------- #}
-    {% if historial %}
-        <div class="card mt-4" id="historial-de-cambios">
+    {% comment %} La tarjeta se arma siempre y se esconde si no hay nada: asi, al guardar la primera correccion, el guion solo tiene que agregar un renglon y mostrarla. Si la tarjeta no existiera, tendria que fabricar la tabla entera, que es donde estas cosas se rompen. {% endcomment %}
+        <div class="card mt-4" id="historial-de-cambios" {% if not historial %}hidden{% endif %}>
             {% comment %} Abierto y no detrás de un botón: un historial que hay que ir a buscar parece no existir, y acá la constancia de quién cambió qué es media razón de ser de la pantalla. {% endcomment %}
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>
                     Últimas correcciones
-                    <span class="ayuda ms-1">{{ historial|length }}</span>
+                    <span class="ayuda ms-1" id="cuenta-historial">{{ historial|length }}</span>
                 </span>
                 <button class="btn btn-sm btn-outline-secondary"
                         type="button"
@@ -217,7 +218,7 @@
                                 <th>Cuándo</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="cuerpo-historial">
                             {% for h in historial %}
                                 <tr>
                                     <td>Fila {{ h.numero_fila }}</td>
@@ -234,7 +235,6 @@
                 </div>
             </div>
         </div>
-    {% endif %}
 
 {% endblock %}
 
@@ -259,6 +259,70 @@
         }
         nota.textContent = mensaje;
         nota.style.color = ok ? "var(--marca-oscura)" : "var(--error-tinta)";
+      }
+
+      // El triangulo de la etiqueta. Se ponia al dibujar la pantalla y ahi
+      // quedaba: corregias el dato, el aviso desaparecia de la base y el
+      // triangulo seguia. Y al reves, un dato que pasaba a estar mal no se
+      // marcaba hasta recargar.
+      function marcarAviso(campo, tiene) {
+        const etiqueta = document.querySelector('label[for="' + campo.id + '"]');
+        if (!etiqueta) return;
+        const puesto = etiqueta.querySelector(".aviso-celda");
+        if (tiene && !puesto) {
+          const i = document.createElement("i");
+          i.className = "bi bi-exclamation-triangle-fill sev-ADVERTENCIA aviso-celda";
+          etiqueta.appendChild(document.createTextNode(" "));
+          etiqueta.appendChild(i);
+        } else if (!tiene && puesto) {
+          puesto.remove();
+        }
+      }
+
+      // El historial, sin recargar. El renglon lo arma el servidor -es el que
+      // sabe la hora, el usuario y el documento de esa fila- y aca solo se
+      // cuelga arriba de todo, que es donde va: el listado esta al reves.
+      function sumarAlHistorial(r) {
+        if (!r.historial_ultimo) return;
+        const h = r.historial_ultimo;
+        const cuerpo = document.getElementById("cuerpo-historial");
+        if (cuerpo) {
+          const tr = document.createElement("tr");
+          const celdas = [
+            ["", "Fila " + h.numero_fila],
+            ["Documento", h.documento || "—"],
+            ["Campo", h.campo],
+            ["Antes", h.valor_anterior || "—"],
+            ["Después", h.valor_nuevo || "—"],
+            ["Quién", h.usuario],
+            ["Cuándo", h.fecha],
+          ];
+          celdas.forEach(function (par, i) {
+            const td = document.createElement("td");
+            if (par[0]) td.setAttribute("data-etiqueta", par[0]);
+            if (i === 1) td.className = "mono";
+            if (i === 3 || i === 5 || i === 6) td.className = "ayuda";
+            td.textContent = par[1];
+            tr.appendChild(td);
+          });
+          cuerpo.insertBefore(tr, cuerpo.firstChild);
+        }
+        const tarjeta = document.getElementById("historial-de-cambios");
+        if (tarjeta) tarjeta.hidden = false;
+        const cuenta = document.getElementById("cuenta-historial");
+        if (cuenta) cuenta.textContent = r.historial_total;
+        const boton = document.getElementById("boton-historial");
+        if (boton) {
+          boton.classList.remove("disabled");
+          boton.removeAttribute("aria-disabled");
+          boton.removeAttribute("tabindex");
+          boton.title = "Quien cambio que, cuando y por que";
+        }
+        const cuentaBoton = document.getElementById("cuenta-boton-historial");
+        if (cuentaBoton) {
+          cuentaBoton.textContent = r.historial_total;
+          cuentaBoton.hidden = false;
+        }
       }
 
       document.querySelectorAll(".celda-editable").forEach(function (campo) {
@@ -295,6 +359,8 @@
                   }
                 }
                 avisar(campo, !propias.length, mensaje);
+                marcarAviso(campo, propias.length > 0);
+                sumarAlHistorial(r);
               } else {
                 avisar(campo, false, r.error);
                 campo.value = campo.dataset.original;

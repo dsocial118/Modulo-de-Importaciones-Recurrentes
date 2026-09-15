@@ -130,12 +130,13 @@
             <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
                 <thead class="table-light">
                     <tr>
-                        <th style="width:24%">Archivo</th>
+                        <th style="width:22%">Archivo</th>
                         <th style="width:9rem">Importación</th>
                         <th style="width:6rem" class="text-end">Filas leídas</th>
-                        <th style="width:6rem" class="text-end">Incorporadas</th>
-                        <th style="width:7rem" class="text-end">◆ Bloqueantes</th>
-                        <th style="width:7rem" class="text-end">▲ Advertencias</th>
+                        {% comment %} «Incorporadas» es una palabra larga: con 6rem el titulo se partia en dos y la columna quedaba mas alta que el resto. El lugar sale de la columna de botones, que es la unica sin ancho declarado y se queda con lo que sobra. {% endcomment %}
+                        <th style="width:7.5rem" class="text-end">Incorporadas</th>
+                        <th style="width:8rem" class="text-end">◆ Bloqueantes</th>
+                        <th style="width:8rem" class="text-end">▲ Advertencias</th>
                         <th></th>
                     </tr>
                 </thead>

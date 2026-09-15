@@ -105,6 +105,25 @@ class EditarCampoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
             # decía «Guardado» y nada más: se podía escribir un número absurdo,
             # ver que se guardaba, y no enterarse de que había dejado una
             # advertencia. Guardar y quedar bien no son lo mismo.
+            # Y el historial, para que la pantalla lo muestre sin recargar.
+            # Antes el renglón quedaba escrito en la base pero el listado del
+            # final seguía mostrando lo de antes: había que apretar F5 para ver
+            # la corrección que uno acababa de hacer.
+            historial = edicion.historial_de(importacion_id)
+            ultimo = None
+            if historial and not resultado["sin_cambios"]:
+                h = historial[0]
+                ultimo = {
+                    "numero_fila": h["numero_fila"],
+                    "documento": h.get("documento") or "",
+                    "campo": h.get("campo") or "",
+                    "valor_anterior": h.get("valor_anterior") or "",
+                    "valor_nuevo": h.get("valor_nuevo") or "",
+                    "usuario": h.get("usuario") or "",
+                    "fecha": (
+                        h["fecha"].strftime("%d/%m/%Y %H:%M") if h.get("fecha") else ""
+                    ),
+                }
             return JsonResponse(
                 {
                     "ok": True,
@@ -114,6 +133,8 @@ class EditarCampoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
                     "valor": (
                         "" if resultado["valor"] is None else str(resultado["valor"])
                     ),
+                    "historial_total": len(historial),
+                    "historial_ultimo": ultimo,
                 }
             )
 

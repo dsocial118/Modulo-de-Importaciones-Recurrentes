@@ -66,11 +66,20 @@ def datos_de_la_importacion(importacion_id: int) -> dict[str, Any]:
 
         cur.execute(
             """
-            SELECT nombre_hoja, numero_fila, columna, nombre_campo, severidad,
-                   codigo, valor_encontrado, descripcion, identificador_registro
-            FROM runac_c2_reglas_incumplidas
-            WHERE importacion_id = %s
-            ORDER BY nombre_hoja, numero_fila, columna
+            SELECT r.nombre_hoja, r.numero_fila, r.columna, r.nombre_campo,
+                   r.severidad, r.codigo, r.valor_encontrado, r.descripcion,
+                   r.identificador_registro
+            FROM runac_c2_reglas_incumplidas r
+            JOIN runac_c2_importacion i ON i.id = r.importacion_id
+            -- El orden de las hojas lo manda la Capa 1, no el alfabeto. Ordenado
+            -- por nombre, el informe abria por CAD y seguia por CRC: el operador
+            -- lo recorre contra su Excel, donde las hojas estan en otro orden.
+            LEFT JOIN runac_c1_hoja h
+                   ON h.archivo_version_id = i.archivo_version_id
+                  AND h.nombre_esperado = r.nombre_hoja
+            WHERE r.importacion_id = %s
+            ORDER BY COALESCE(h.orden_procesamiento, 99), r.nombre_hoja,
+                     r.numero_fila, r.columna
             """,
             [importacion_id],
         )
