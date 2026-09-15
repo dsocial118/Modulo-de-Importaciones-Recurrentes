@@ -30,6 +30,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
+from comun import titulo_sin_instrucciones
+
 CONEXION = dict(
     host=os.environ.get("RUNAC_DB_HOST", "mysql"),
     port=3306,
@@ -216,8 +218,18 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
         (fila_dim - 1) if fila_dim else (fila_enc - 1 if fila_enc > 1 else None)
     )
 
-    if archivo["titulo"] and fila_titulo and fila_titulo >= 1:
-        ws.cell(row=fila_titulo, column=1, value=archivo["titulo"])
+    # El titulo es de la HOJA, no del archivo. Se usaba `archivo["titulo"]`, que
+    # es el de la PRIMERA hoja copiado hacia arriba: las cinco hojas de
+    # DISP_PENAL salian rotuladas «Centros de Regimen Cerrado», incluida la de
+    # guardias en comisaria. El titulo correcto de cada una ya estaba guardado
+    # en `hoja["descripcion"]`.
+    #
+    # Y sale sin «MODELO PARA COMPLETAR Y ADJUNTAR»: eso no es titulo, es una
+    # consigna, y en una planilla que el sistema entrega para completar no dice
+    # nada que no se sepa.
+    titulo = titulo_sin_instrucciones(hoja.get("descripcion") or archivo["titulo"] or "")
+    if titulo and fila_titulo and fila_titulo >= 1:
+        ws.cell(row=fila_titulo, column=1, value=titulo)
         ws.merge_cells(
             start_row=fila_titulo, start_column=1, end_row=fila_titulo, end_column=n
         )
@@ -226,6 +238,30 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
         c.fill = PatternFill("solid", fgColor=AZUL)
         c.alignment = Alignment(horizontal="center", vertical="center")
         ws.row_dimensions[fila_titulo].height = 24
+    # La fila 1, cuando el titulo no la ocupa.
+    #
+    # En las hojas sin grupos de campos -las de dispositivos- el titulo cae en
+    # la fila 2 y la 1 quedaba vacia, con aspecto de error. En el insumo
+    # original esa fila NO esta vacia: lleva el aviso sobre los desplegables.
+    #
+    # No se sube todo una fila para taparla: la fila de encabezados la declara
+    # la Capa 1 y es contra ese numero que se valida el archivo que sube la
+    # provincia. Moverla obligaria a cambiar la definicion y dejaria afuera
+    # cualquier archivo armado sobre la planilla anterior.
+    if fila_titulo and fila_titulo > 1 and not archivo["subtitulo"]:
+        ws.cell(
+            row=1,
+            column=1,
+            value="ATENCIÓN: en las columnas con lista desplegable sólo se "
+            "admiten los valores de la lista.",
+        )
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=n)
+        c = ws.cell(row=1, column=1)
+        c.font = Font(bold=True, size=10, color="7A3B00")
+        c.fill = PatternFill("solid", fgColor="FBEEE1")
+        c.alignment = Alignment(horizontal="center", vertical="center")
+        ws.row_dimensions[1].height = 18
+
     if archivo["subtitulo"] and fila_titulo and fila_titulo > 1:
         ws.cell(row=fila_titulo - 1, column=1, value=archivo["subtitulo"])
         ws.merge_cells(
