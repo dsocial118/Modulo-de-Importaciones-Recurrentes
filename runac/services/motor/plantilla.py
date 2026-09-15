@@ -241,26 +241,23 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
     # La fila 1, cuando el titulo no la ocupa.
     #
     # En las hojas sin grupos de campos -las de dispositivos- el titulo cae en
-    # la fila 2 y la 1 quedaba vacia, con aspecto de error. En el insumo
-    # original esa fila NO esta vacia: lleva el aviso sobre los desplegables.
+    # la fila 2 y la 1 queda vacia. Se ESCONDE: la planilla abre mostrando el
+    # titulo arriba de todo, que es lo que se espera ver.
     #
-    # No se sube todo una fila para taparla: la fila de encabezados la declara
-    # la Capa 1 y es contra ese numero que se valida el archivo que sube la
-    # provincia. Moverla obligaria a cambiar la definicion y dejaria afuera
-    # cualquier archivo armado sobre la planilla anterior.
+    # Por que esconderla y no subir todo una fila: la fila de encabezados la
+    # declara la Capa 1, y es contra ese numero que el importador valida el
+    # archivo que sube la provincia. Subir el contenido obliga a cambiar la
+    # definicion, y entonces cualquier archivo armado sobre el Excel original
+    # de la DNPYPI -que los tiene en la fila 3- deja de entrar. Esconder la
+    # fila no cambia una sola posicion: es una decision de como se ve la
+    # planilla, y vive entera en este archivo.
+    #
+    # En el insumo original esa fila lleva un aviso sobre los desplegables. Si
+    # se decide reponerlo, el lugar es la definicion -`archivo_version`
+    # tiene `subtitulo`, vacio y ya contemplado unas lineas mas abajo-, no una
+    # cadena escrita aca. Es tema a acordar con la DNPYPI.
     if fila_titulo and fila_titulo > 1 and not archivo["subtitulo"]:
-        ws.cell(
-            row=1,
-            column=1,
-            value="ATENCIÓN: en las columnas con lista desplegable sólo se "
-            "admiten los valores de la lista.",
-        )
-        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=n)
-        c = ws.cell(row=1, column=1)
-        c.font = Font(bold=True, size=10, color="7A3B00")
-        c.fill = PatternFill("solid", fgColor="FBEEE1")
-        c.alignment = Alignment(horizontal="center", vertical="center")
-        ws.row_dimensions[1].height = 18
+        ws.row_dimensions[1].hidden = True
 
     if archivo["subtitulo"] and fila_titulo and fila_titulo > 1:
         ws.cell(row=fila_titulo - 1, column=1, value=archivo["subtitulo"])
