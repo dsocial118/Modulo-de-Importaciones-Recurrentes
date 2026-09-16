@@ -126,7 +126,8 @@
                                         <select class="form-select form-select-sm celda-editable"
                                                 id="c{{ fila.numero_fila }}_{{ celda.nombre }}"
                                                 data-fila="{{ fila.numero_fila }}"
-                                                data-campo="{{ celda.nombre }}">
+                                                data-campo="{{ celda.nombre }}"
+                                                data-titulo="{{ celda.titulo }}">
                                             <option value="">—</option>
                                             {% for opcion in celda.opciones %}
                                                 <option value="{{ opcion }}"
@@ -141,6 +142,7 @@
                                                id="c{{ fila.numero_fila }}_{{ celda.nombre }}"
                                                data-fila="{{ fila.numero_fila }}"
                                                data-campo="{{ celda.nombre }}"
+                                               data-titulo="{{ celda.titulo }}"
                                                {% if celda.campo.tipo_dato == "ENTERO" %}type="number" step="1" inputmode="numeric"{% elif celda.campo.tipo_dato == "DECIMAL" %}type="number" step="any" inputmode="decimal"{% elif celda.campo.tipo_dato == "FECHA" %}type="text" placeholder="dd/mm/aaaa"{% else %}type="text"{% if celda.campo.longitud_maxima %} maxlength="{{ celda.campo.longitud_maxima }}"{% endif %}
                                                {% endif %}
                                                value="{{ celda.valor }}" />
@@ -188,6 +190,31 @@
             </ul>
         </nav>
     {% endif %}
+
+    {% comment %} Se pregunta antes de escribir. Pedido en la reunion del 2026-09-16: el dato lo corrige una persona sobre lo que informo una provincia, y un cambio accidental no se distingue de uno deliberado una vez guardado. {% endcomment %}
+    <div class="modal fade"
+         id="confirmarCambio"
+         tabindex="-1"
+         aria-labelledby="tituloConfirmar"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tituloConfirmar">
+                        <i class="bi bi-pencil-square"></i> Confirmar el cambio
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2" id="textoConfirmar"></p>
+                    <div class="ayuda">El cambio queda registrado con usuario, fecha y valor anterior.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="cancelarCambio">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="aceptarCambio">Sí, cambiar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {# --- Historial de correcciones ------------------------------------- #}
     {% comment %} La tarjeta se arma siempre y se esconde si no hay nada: asi, al guardar la primera correccion, el guion solo tiene que agregar un renglon y mostrarla. Si la tarjeta no existiera, tendria que fabricar la tabla entera, que es donde estas cosas se rompen. {% endcomment %}
@@ -325,10 +352,59 @@
         }
       }
 
+      // Preguntar antes de escribir. El dato lo corrige una persona sobre lo
+      // que informo una provincia, y una vez guardado un cambio accidental no
+      // se distingue de uno deliberado.
+      //
+      // Devuelve una promesa para no partir el flujo del guardado en dos. Si
+      // Bootstrap no estuviera -sin internet, por ejemplo- cae en el cartel
+      // del navegador, que es feo pero pregunta igual: lo que no puede pasar
+      // es que se guarde sin preguntar.
+      const cartel = document.getElementById("confirmarCambio");
+      function confirmarCambio(titulo, desde, hasta) {
+        const dice =
+          "¿Confirma cambiar «" + titulo + "» de " +
+          (desde ? "«" + desde + "»" : "vacío") + " a " +
+          (hasta ? "«" + hasta + "»" : "vacío") + "?";
+        if (!cartel || !window.bootstrap) {
+          return Promise.resolve(window.confirm(dice));
+        }
+        document.getElementById("textoConfirmar").textContent = dice;
+        const ventana = window.bootstrap.Modal.getOrCreateInstance(cartel);
+        return new Promise(function (resolver) {
+          let dijoQueSi = false;
+          function aceptar() {
+            dijoQueSi = true;
+            ventana.hide();
+          }
+          function alCerrar() {
+            // Cerrar con la cruz, con Escape o clickeando afuera es cancelar.
+            document.getElementById("aceptarCambio").removeEventListener("click", aceptar);
+            cartel.removeEventListener("hidden.bs.modal", alCerrar);
+            resolver(dijoQueSi);
+          }
+          document.getElementById("aceptarCambio").addEventListener("click", aceptar);
+          document.getElementById("cancelarCambio").onclick = function () { ventana.hide(); };
+          cartel.addEventListener("hidden.bs.modal", alCerrar);
+          ventana.show();
+        });
+      }
+
       document.querySelectorAll(".celda-editable").forEach(function (campo) {
         campo.dataset.original = campo.value;
-        campo.addEventListener("change", function () {
+        campo.addEventListener("change", async function () {
           if (campo.value === campo.dataset.original) return;
+          const siga = await confirmarCambio(
+            campo.dataset.titulo || campo.dataset.campo,
+            campo.dataset.original,
+            campo.value
+          );
+          if (!siga) {
+            // Se vuelve al valor que habia. No se guarda nada y no queda
+            // rastro: cancelar tiene que ser como no haber tocado.
+            campo.value = campo.dataset.original;
+            return;
+          }
           const datos = new FormData();
           datos.append("hoja_id", hoja);
           datos.append("numero_fila", campo.dataset.fila);
