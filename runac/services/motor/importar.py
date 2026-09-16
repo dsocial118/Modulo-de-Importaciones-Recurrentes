@@ -124,6 +124,21 @@ def convertir(valor, tipo: str):
                 continue
         return None, f'"{t}" no es una fecha válida. El formato esperado es dd/mm/aaaa.'
 
+    if tipo == "HORA":
+        # Excel guarda una hora suelta como `time`, y a veces como un `datetime`
+        # con una fecha de mentira (1899-12-31) que hay que descartar.
+        if isinstance(valor, time):
+            return valor, None
+        if isinstance(valor, datetime):
+            return valor.time(), None
+        t = norm(valor)
+        for fmt in ("%H:%M:%S", "%H:%M", "%H.%M"):
+            try:
+                return datetime.strptime(t, fmt).time(), None
+            except ValueError:
+                continue
+        return None, f'"{t}" no es una hora válida. El formato esperado es hh:mm.'
+
     if tipo == "ENTERO":
         if isinstance(valor, bool):
             return None, "Se esperaba un número entero."

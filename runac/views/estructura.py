@@ -47,6 +47,7 @@ TOPE_PARA_ENUMERAR = 8
 
 TIPO_EN_CASTELLANO = {
     "FECHA": "Fecha",
+    "HORA": "Hora",
     "ENTERO": "Número entero",
     "DECIMAL": "Número con decimales",
     "TEXTO": "Texto",

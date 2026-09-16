@@ -131,6 +131,7 @@ def leer_definicion(cur, codigo: str) -> dict:
 
 TIPOS_EN_CASTELLANO = {
     "FECHA": "una fecha, con formato dd/mm/aaaa",
+    "HORA": "una hora, con formato hh:mm",
     "ENTERO": "un número entero",
     "DECIMAL": "un número, puede tener decimales",
     "TEXTO": "texto",
@@ -327,6 +328,9 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
         if campo["tipo_dato"] == "FECHA":
             for r in range(primera_dato, ultima_dato + 1):
                 ws.cell(row=r, column=k).number_format = "dd/mm/yyyy"
+        elif campo["tipo_dato"] == "HORA":
+            for r in range(primera_dato, ultima_dato + 1):
+                ws.cell(row=r, column=k).number_format = "hh:mm"
         elif campo["tipo_dato"] in ("ENTERO", "DECIMAL"):
             fmt = "0" if campo["tipo_dato"] == "ENTERO" else "0.00"
             for r in range(primera_dato, ultima_dato + 1):
@@ -390,6 +394,8 @@ def escribir_hoja_instrucciones(wb, archivo):
                 )
             if campo["tipo_dato"] == "FECHA":
                 partes.append("Formato de fecha: dd/mm/aaaa.")
+            if campo["tipo_dato"] == "HORA":
+                partes.append("Formato de hora: hh:mm.")
             ws.cell(row=f, column=2, value="\n".join(partes) or None).alignment = (
                 Alignment(wrap_text=True, vertical="top")
             )

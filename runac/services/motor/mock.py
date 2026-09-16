@@ -31,7 +31,7 @@ import json
 import re
 import os
 import random
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 import mysql.connector
 from openpyxl import load_workbook
@@ -518,6 +518,11 @@ def valor_inventado(
             return i
         return f"{(jurisdiccion or 'XX')[:3].upper()}-2026-{i:04d}"
 
+    if tipo == "HORA":
+        # Horas verosímiles: un ingreso a un dispositivo no pasa a las 4 de la
+        # mañana en la mayoría de los casos, pero tampoco es imposible.
+        return time(rnd.randint(6, 23), rnd.choice([0, 15, 30, 45]))
+
     if tipo == "FECHA":
         hoy = date.today()
         if "nacimiento" in t:
@@ -576,6 +581,12 @@ def valor_inventado(
         return rnd.choice(LOCALIDADES.get(jurisdiccion or "", LOCALIDAD_POR_DEFECTO))
     if "observacion" in t or "observación" in t or "detalle" in t or "especificar" in t:
         return rnd.choice(["", "", f"Nota de ejemplo {i}"])
+    # «Familia» y «Familia Ampliada» del MPE son el nombre de la familia con la
+    # que esta el chico: el par del identificador que va al lado. Sin esto caian
+    # en «Dato 4», que fue como se descubrio que estaban declaradas FECHA.
+    if t in ("familia", "familia ampliada") or t.startswith("familia "):
+        return "Familia " + rnd.choice(APELLIDOS)
+
     if "equipo" in t or "responsable" in t:
         return f"{rnd.choice(NOMBRES)} {rnd.choice(APELLIDOS)}"
 

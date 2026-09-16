@@ -143,7 +143,7 @@
                                                data-fila="{{ fila.numero_fila }}"
                                                data-campo="{{ celda.nombre }}"
                                                data-titulo="{{ celda.titulo }}"
-                                               {% if celda.campo.tipo_dato == "ENTERO" %}type="number" step="1" inputmode="numeric"{% elif celda.campo.tipo_dato == "DECIMAL" %}type="number" step="any" inputmode="decimal"{% elif celda.campo.tipo_dato == "FECHA" %}type="text" placeholder="dd/mm/aaaa"{% else %}type="text"{% if celda.campo.longitud_maxima %} maxlength="{{ celda.campo.longitud_maxima }}"{% endif %}
+                                               {% if celda.campo.tipo_dato == "HORA" %}type="time"{% elif celda.campo.tipo_dato == "ENTERO" %}type="number" step="1" inputmode="numeric"{% elif celda.campo.tipo_dato == "DECIMAL" %}type="number" step="any" inputmode="decimal"{% elif celda.campo.tipo_dato == "FECHA" %}type="text" placeholder="dd/mm/aaaa"{% else %}type="text"{% if celda.campo.longitud_maxima %} maxlength="{{ celda.campo.longitud_maxima }}"{% endif %}
                                                {% endif %}
                                                value="{{ celda.valor }}" />
                                     {% endif %}

@@ -51,6 +51,8 @@ def tipo_sql(campo: dict) -> str:
     t = campo["tipo_dato"]
     if t == "FECHA":
         return "date"
+    if t == "HORA":
+        return "time"
     if t == "ENTERO":
         return "bigint"
     if t == "DECIMAL":

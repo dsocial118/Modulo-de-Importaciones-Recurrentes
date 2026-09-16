@@ -19,11 +19,17 @@ from comun import clase_de_formato, clave
 # Orden importante: gana la primera que coincida.
 PISTAS = [
     (
-        r"\bfecha\b|\bnacimiento\b|\bvencimiento\b|\balta\b|\begreso\b|\bingreso\b",
+        # «ingreso», «egreso» y «alta» NO alcanzan por sí solas: son momentos,
+        # y lo que se informa de un momento puede ser la fecha, la hora, la
+        # edad o el destino. «Edad al ingreso» es un número y «Especificar
+        # destino al egreso» es texto libre, y las dos entraban acá.
+        # Una fecha de verdad lo dice: dice «fecha».
+        r"\bfecha\b|\bnacimiento\b|\bvencimiento\b",
         "FECHA",
         None,
         None,
     ),
+    (r"\bhora\b|\bhorario\b", "HORA", None, None),
     (
         r"\bcuil\b|\bcuit\b",
         "TEXTO",
@@ -66,6 +72,33 @@ PISTAS = [
         None,
     ),
 ]
+
+# Nombres que NO pueden ser una fecha, por más que la celda tenga formato de
+# fecha aplicado.
+#
+# Hace falta una lista aparte porque el mecanismo que hace ganar al nombre sólo
+# se activa cuando el nombre propone OTRO tipo. Un campo llamado «ID familia
+# ampliada» no propone nada —no matchea ninguna pista— así que el formato
+# ganaba sin oposición, y la columna quedaba declarada FECHA.
+#
+# Acá el nombre no propone: VETA. Y el veto queda documentado como conflicto,
+# igual que cuando propone.
+NUNCA_ES_FECHA = [
+    (r"\bid\b|\bidentificador\b", "es un identificador"),
+    (r"\bhora\b", "es una hora, no una fecha"),
+    (r"\bedad\b|\bcantidad\b|\bcant\.|\btotal\b", "cuenta algo"),
+    (r"\bespecificar\b|\bespecifique\b", "es el texto libre de otro campo"),
+    (r"\bnombre\b|\bapellido\b", "es un nombre"),
+]
+
+
+def _veto_de_fecha(titulo_clave: str):
+    """Si el nombre prohíbe que sea una fecha, devuelve por qué."""
+    for patron, motivo in NUNCA_ES_FECHA:
+        if re.search(patron, titulo_clave):
+            return motivo
+    return None
+
 
 # Campos que, por su rol, suelen ser imprescindibles para identificar la fila.
 IDENTIFICATORIOS = [
@@ -164,6 +197,21 @@ def inferir_campo(
 
     # 1. Evidencia dura: el formato de celda que Excel guarda.
     clase = "general" if formato_masivo else clase_de_formato(col.get("formato"))
+
+    # ...salvo que el nombre lo prohíba. Un formato de fecha sobre una columna
+    # que se llama «ID algo» es un formato mal aplicado, no un dato de fecha.
+    veto = _veto_de_fecha(t) if clase == "fecha" else None
+    if veto:
+        conflicto = {
+            "segun_formato": "FECHA",
+            "segun_nombre": (por_nombre or {}).get("tipo") or "TEXTO",
+            "detalle": (
+                f'El formato de celda es "{col.get("formato")}", pero el campo se llama '
+                f'"{col.get("titulo")}" y {veto}. El formato está mal aplicado.'
+            ),
+        }
+        clase = "general"
+
     if clase == "fecha":
         tipo, confianza, origen = (
             "FECHA",
@@ -183,9 +231,9 @@ def inferir_campo(
             f'formato de celda "{col.get("formato")}"',
         )
     elif clase == "hora":
-        tipo, confianza, largo = "TEXTO", "media", 8
+        tipo, confianza = "HORA", "alta"
         origen = f'formato de celda "{col.get("formato")}"'
-        nota = "el modelo no tiene tipo HORA; se guarda como texto"
+        nota = None
 
     # 2. Evidencia dura: si tiene lista de valores, es texto de un catálogo.
     if tipo is None and tiene_catalogo:
@@ -201,6 +249,15 @@ def inferir_campo(
             tipo = "DECIMAL" if con_decimales else "ENTERO"
             confianza = "media"
             origen = f"los {len(muestras)} valores cargados son numéricos"
+
+    # Un formato de celda sin nada que lo respalde no merece «confianza alta».
+    # El formato lo pone quien arma la planilla, a veces a lo ancho de la hoja y
+    # sin mirar la columna; un nombre que dice lo mismo es otra cosa. Bajarlo a
+    # «media» hace que aparezca como INFERIDO en el Excel de supuestos, que es
+    # donde una persona lo mira. Fue lo que faltó con «Familia» y «Familia
+    # Ampliada», que no tienen nada en el nombre para apoyarse.
+    if confianza == "alta" and origen and origen.startswith("formato") and not por_nombre:
+        confianza = "media"
 
     # El formato y el nombre se contradicen: pasa cuando la planilla quedó mal
     # formateada. Gana el nombre, y queda documentado.
