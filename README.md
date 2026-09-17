@@ -1,27 +1,83 @@
 # MIR — Módulo de Importaciones Recurrentes
 
-**Implementación: RUNAC** — Registro Único Nacional de Medidas de Protección y
-Medidas Penales Juveniles.
+**Esto no es un sistema para RUNAC. Es un motor, y RUNAC es lo primero que se
+construyó con él.**
 
-MIR recibe planillas que las jurisdicciones mandan cada período, las valida
-contra una definición declarada, permite corregirlas dentro del sistema y las
-consolida en una base única.
+Hay una necesidad que se repite en toda la Secretaría: un programa tiene que
+juntar información que le mandan otros, cada cierto tiempo, en planillas. Cada
+vez que aparece, se construye un sistema nuevo desde cero. MIR es ese sistema,
+construido una sola vez y parametrizable.
 
-**Lo que hace distinto:** la definición de cada archivo —hojas, columnas, tipos,
-listas de valores y reglas de validación— vive en la base de datos, no en el
-código. El motor la lee y la ejecuta: **no sabe qué es una MPI**. Cuando llega
-una planilla nueva se cambian datos, no programas.
+## Qué resuelve
+
+| | |
+|---|---|
+| **Define** | qué archivo se espera: hojas, columnas, tipos, listas de valores y reglas |
+| **Entrega** | la plantilla Excel generada desde esa definición, no escrita a mano |
+| **Recibe** | el archivo completado, en períodos sucesivos |
+| **Valida** | contra la definición, distinguiendo lo que avisa de lo que bloquea |
+| **Devuelve** | el error en criollo, y el archivo propio con las celdas marcadas |
+| **Corrige** | dentro del sistema, sin volver a mandar el Excel, con historial de quién cambió qué |
+| **Circula** | carga → cierre → revisión → observaciones → subsanación → presentación formal |
+| **Consolida** | en una base única, sabiendo de dónde vino cada dato |
+
+**No es sólo importar.** Es un sistema de gestión: quien carga corrige adentro,
+quien revisa observa, quien responde subsana, y todo queda registrado. El Excel
+entra una vez; a partir de ahí se trabaja en el sistema.
+
+## Quién presenta no es necesariamente una provincia
+
+Hoy son las 24 jurisdicciones porque la primera implementación es federal. Pero
+la pieza que reparte el trabajo es **genérica**: puede ser un organismo, un área,
+un sector, un municipio, una delegación, una universidad. El módulo sólo necesita
+saber que hay **entidades que presentan** y **períodos en los que presentan**.
+
+Lo mismo vale para la normalización de los datos: un catálogo puede ser único
+para todo el universo, o distinto por entidad. Quién es la entidad lo define la
+implementación, no el motor.
+
+## Por qué se puede reusar
+
+La definición de cada archivo **vive en filas de la base de datos, no en el
+código**. El motor la lee y la ejecuta: **no sabe qué es una MPI**.
+
+No es una aspiración de diseño, es verificable: en todo el motor no hay una sola
+regla de negocio de RUNAC. Se buscó —MPI, MPE, dispositivos, medida de
+protección— y lo único que aparece es un ejemplo dentro de un comentario.
+
+Por eso, cuando una planilla cambia, **se cambian datos y no programas**. Y
+cuando aparezca el próximo programa que recibe novedades periódicas, el motor
+sirve sin tocarlo.
 
 ## Las tres cosas y cómo se llaman
 
 ```
-MIR        el módulo. Define, recibe, valida, corrige y consolida.
+MIR        el módulo. Define, recibe, valida, corrige, circula y consolida.
 RUNAC      una implementación: su definición, su base, sus usuarios.
-           Mañana puede haber otras, cada una con su base.
 ```
 
-Para los usuarios finales cada implementación lleva su propio nombre; «MIR» es
+Para los usuarios finales cada implementación lleva su propio nombre. «MIR» es
 cómo le decimos al módulo entre nosotros.
+
+### Las implementaciones
+
+| | Programa | Estado |
+|---|---|---|
+| 1 | **RUNAC** — Registro Único Nacional de Medidas de Protección y Medidas Penales Juveniles | **Construida.** Es lo que se ve en este repositorio |
+| 2 | **Decreto 5/2023** | Planteado el 27-08-2026. Mismo universo que el MPE, hoy en Excel |
+| 3 | **PAE** — Programa de Acompañamiento para el Egreso | Planteado el 27-08-2026. Mismo universo que el MPE, hoy en Excel y PDF |
+| — | **RENNYA** | En evaluación. **No encaja tal cual**: no participan las provincias, es gestión de expedientes caso por caso |
+
+Que dos de los tres compartan universo con RUNAC —las mismas provincias, el mismo
+período, la misma persona— es lo que vuelve razonable que compartan motor en vez
+de construirse tres veces.
+
+> **Falta el administrador de instancias**, y es deliberado: la prioridad es que
+> RUNAC funcione. Hoy cada implementación tendría su propia base. Lo que va
+> arriba —qué implementaciones existen, sus datos de conexión, qué tableros se
+> habilitan a cada una— es una segunda etapa. Las dos condiciones para que siga
+> siendo posible ya se cumplen: cada implementación tiene sus datos separados, y
+> el motor no tiene lógica de ninguna.
 
 > **Todavía no está en producción.** Trabaja con datos de prueba y le falta lo
 > que exige el repositorio de SISOC: auditoría de accesos, control de alcance
@@ -70,7 +126,7 @@ La contraseña de todos es `runac`.
 | `revisor` | Revisor técnico nacional | — |
 | `admin` | Administrador nacional | — |
 
-Para recrearlos: `docker exec runac_proto_web python manage.py datos_iniciales`
+Para recrearlos: `docker compose exec web python manage.py datos_iniciales`
 
 ---
 
@@ -217,7 +273,7 @@ la definición de las tablas.
 Para regenerarlos si cambia la base:
 
 ```
-docker exec runac_proto_web python manage.py inspectdb <tablas> > runac/models.py
+docker compose exec web python manage.py inspectdb <tablas> > runac/models.py
 ```
 
 ---
@@ -254,10 +310,10 @@ configuración (`.pylintrc`, `.djlintrc` y `pyproject.toml` son copia del
 repositorio). Es lo que pide `AGENTS.md` en su sección *Validación*.
 
 ```
-docker exec runac_proto_web black runac/ config/
-docker exec runac_proto_web pylint runac/ config/
-docker exec runac_proto_web djlint runac/templates/ --reformat
-docker exec runac_proto_web pytest runac/tests/ -q
+docker compose exec web black runac/ config/
+docker compose exec web pylint runac/ config/
+docker compose exec web djlint runac/templates/ --reformat
+docker compose exec web pytest runac/tests/ -q
 ```
 
 Los tests cubren las reglas del circuito —quién puede hacer qué, desde qué
