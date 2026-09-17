@@ -28,14 +28,29 @@ echo "== 1. Levantando los contenedores =="
 docker compose up -d
 
 echo
-echo "== 2. Esperando a que la base responda =="
-for intento in $(seq 1 60); do
-  if docker compose exec -T mysql mysqladmin ping -h localhost -uroot -p"$CLAVE" >/dev/null 2>&1; then
-    echo "   la base responde"
-    break
+echo "== 2. Esperando a que la base esté realmente lista =="
+# La imagen de MySQL arranca DOS veces: primero un servidor temporal para
+# inicializarse, que responde por el socket y no por TCP, y después el
+# definitivo. Entre los dos hay una ventana en la que la base parece estar y no
+# está, y ahí es donde se cae la carga con un error que no dice nada del
+# verdadero motivo.
+#
+# Por eso se exige una consulta de verdad, por TCP, TRES veces seguidas. Una
+# sola respuesta puede ser la del servidor temporal.
+seguidas=0
+for intento in $(seq 1 90); do
+  if docker compose exec -T mysql mysql -h 127.0.0.1 -uroot -p"$CLAVE" \
+       -N -B -e "SELECT 1" >/dev/null 2>&1; then
+    seguidas=$((seguidas + 1))
+    if [ "$seguidas" -ge 3 ]; then
+      echo "   la base responde"
+      break
+    fi
+  else
+    seguidas=0
   fi
-  if [ "$intento" = 60 ]; then
-    echo "   La base no respondió en 60 intentos. Ver: docker compose logs mysql"
+  if [ "$intento" = 90 ]; then
+    echo "   La base no terminó de levantar. Ver: docker compose logs mysql"
     exit 1
   fi
   sleep 2

@@ -28,7 +28,10 @@ services:
       # interna al 3306.
       - "3399:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DATABASE_PASSWORD:-runac_local}"]
+      # Por TCP, no por el socket: el socket tambien responde mientras la base
+      # se esta inicializando, y sirve para conectarse a un servidor que
+      # todavia no es el definitivo.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DATABASE_PASSWORD:-runac_local}"]
       interval: 5s
       timeout: 5s
       retries: 20
