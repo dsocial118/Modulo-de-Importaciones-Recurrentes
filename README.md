@@ -32,11 +32,11 @@ cómo le decimos al módulo entre nosotros.
 Hace falta **Docker Desktop y nada más**. En Windows, Git Bash.
 
 ```bash
-git clone https://github.com/danielc76/runac-prototipo.git
+git clone https://github.com/danielc76/mir-runac.git
 ```
 
 ```bash
-cd runac-prototipo && bash entorno/preparar.sh
+cd mir-runac && bash entorno/preparar.sh
 ```
 
 Y se abre en **http://localhost:8100**. Después, para levantarlo alcanza con

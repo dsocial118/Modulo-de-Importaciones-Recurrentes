@@ -12,11 +12,11 @@ En Windows, los comandos van en **Git Bash**, no en PowerShell.
 ## Los dos comandos
 
 ```bash
-git clone https://github.com/danielc76/runac-prototipo.git
+git clone https://github.com/danielc76/mir-runac.git
 ```
 
 ```bash
-cd runac-prototipo && bash entorno/preparar.sh
+cd mir-runac && bash entorno/preparar.sh
 ```
 
 La primera vez tarda unos minutos: descarga MySQL, construye la imagen de la
