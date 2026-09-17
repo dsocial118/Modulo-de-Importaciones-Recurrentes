@@ -9,6 +9,7 @@
 set -euo pipefail
 
 BASE="${DATABASE_NAME:-runac}"
+PUERTO_WEB="${PUERTO_WEB:-8100}"
 CLAVE="${DATABASE_PASSWORD:-runac_local}"
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RAIZ="$(dirname "$AQUI")"
@@ -117,5 +118,5 @@ print(f"   acentos                       : {acento}   (tiene que decir «Sí»)"
 PY
 
 echo
-echo "Listo.  http://localhost:8100"
+echo "Listo.  http://localhost:${PUERTO_WEB:-8100}"
 echo "Usuarios: operador · responsable · revisor · admin   —   contraseña: runac"
