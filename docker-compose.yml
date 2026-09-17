@@ -23,10 +23,12 @@ services:
     volumes:
       - datos_mysql:/var/lib/mysql
     ports:
-      # Expuesto para poder mirar la base con un cliente. Si el 3399 está
-      # ocupado, cambiarlo acá: la aplicación no lo usa, se conecta por la red
-      # interna al 3306.
-      - "3399:3306"
+      # Expuesto sólo para poder mirar la base con un cliente: la aplicación no
+      # lo usa, se conecta por la red interna al 3306.
+      #
+      # Si el 3399 ya está ocupado en la máquina, el contenedor no levanta. Se
+      # cambia sin tocar este archivo:  PUERTO_BASE=3400 docker compose up -d
+      - "${PUERTO_BASE:-3399}:3306"
     healthcheck:
       # Por TCP, no por el socket: el socket tambien responde mientras la base
       # se esta inicializando, y sirve para conectarse a un servidor que
@@ -53,7 +55,8 @@ services:
       # `/trabajo/capa1/plantillas`, que es `entorno/plantillas`.
       - ./entorno:/trabajo/capa1:ro
     ports:
-      - "8100:8000"
+      # Igual que el de la base:  PUERTO_WEB=8200 docker compose up -d
+      - "${PUERTO_WEB:-8100}:8000"
     environment:
       DJANGO_DEBUG: "1"
       DATABASE_HOST: mysql
