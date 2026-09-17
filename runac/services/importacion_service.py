@@ -463,6 +463,7 @@ def procesar(
         jurisdiccion=jurisdiccion,
         periodo=codigo_periodo,
         usuario=usuario,
+        informe=str(settings.RUNAC_INFORMES),
         asignacion=asignacion or {},
         conexion={
             "host": settings.DATABASES["default"]["HOST"],

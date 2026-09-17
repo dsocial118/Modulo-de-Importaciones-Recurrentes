@@ -123,6 +123,12 @@ LOGOUT_REDIRECT_URL = "/entrar/"
 RUNAC_CAPA1 = Path(os.getenv("RUNAC_CAPA1", "/trabajo/capa1"))
 RUNAC_PLANTILLAS = RUNAC_CAPA1 / "plantillas"
 RUNAC_CARGAS = BASE_DIR / "media" / "cargas"
+# Los informes de cada importación son SALIDA, así que van a `media/` y no a
+# `entorno/`, que se monta de sólo lectura porque es entrada: la definición, las
+# plantillas y los archivos de prueba. Antes caían dentro de la carpeta montada
+# y la importación moría con «read-only file system», un error que no dice nada
+# de lo que en realidad pasa.
+RUNAC_INFORMES = BASE_DIR / "media" / "informes"
 
 # Marca visible en todas las pantallas. No es una nota de modestia: es una
 # etiqueta de seguridad. Lo que hace el trabajo es «datos de prueba» — que nadie

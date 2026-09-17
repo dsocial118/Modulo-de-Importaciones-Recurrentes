@@ -922,8 +922,10 @@ def procesar_carpeta(
     carpeta,
     jurisdiccion,
     periodo,
-    usuario="prototipo",
-    informe="/trabajo/capa1/informes",
+    usuario="mir",
+    # Por omisión, al lado de la carpeta que se importa. Quien llama desde la
+    # aplicación pasa el suyo: `settings.RUNAC_INFORMES`.
+    informe="informes",
     asignacion=None,
     conexion=None,
     silencioso=True,
@@ -941,7 +943,7 @@ def main():
     p.add_argument("--jurisdiccion", default="Salta")
     p.add_argument("--periodo", default="2026_T1")
     p.add_argument("--usuario", default="prueba")
-    p.add_argument("--informe", default="/trabajo/capa1/informes")
+    p.add_argument("--informe", default="informes")
     args = p.parse_args()
     args.asignacion = {}
     args.silencioso = False
