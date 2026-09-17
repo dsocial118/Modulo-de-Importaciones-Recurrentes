@@ -130,7 +130,7 @@ Para recrearlos: `docker compose exec web python manage.py datos_iniciales`
 
 ---
 
-## Publicarlo con ngrok
+## Primeras pruebas - se publicará con ngrok
 
 **Siempre con contraseña.** La URL de ngrok es pública y se filtra sola: queda
 en un mail reenviado, en un chat, en el historial de alguien.
