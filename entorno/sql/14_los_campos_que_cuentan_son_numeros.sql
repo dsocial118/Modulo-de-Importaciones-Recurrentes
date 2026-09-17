@@ -62,9 +62,9 @@ SET NAMES utf8mb4;
 -- ---------------------------------------------------------------------------
 -- 1. El tipo declarado.
 -- ---------------------------------------------------------------------------
-UPDATE `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+UPDATE `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
  SET c.`tipo_dato` = 'ENTERO', c.`longitud_maxima` = NULL
  WHERE c.`titulo_esperado` LIKE 'Capacidad de alojamiento%'
     OR c.`titulo_esperado` LIKE 'Tiempo máximo de permanencia%'
@@ -74,72 +74,72 @@ UPDATE `runac_c1_campo` c
 -- 2. Las reglas nuevas, sólo las que no existen. Los dos techos: uno avisa,
 --    el otro impide importar.
 -- ---------------------------------------------------------------------------
-INSERT INTO `runac_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
+INSERT INTO `mir_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
 SELECT tr.id, 'rango_horas_de_permanencia',
        'Permanencia declarada en horas: más de una semana llama la atención en un dispositivo de tránsito.',
        '{"minimo": 0, "maximo": 168}'
-  FROM `runac_c1_tipo_regla` tr
+  FROM `mir_c1_tipo_regla` tr
  WHERE tr.`nombre` = 'RANGO'
-   AND NOT EXISTS (SELECT 1 FROM `runac_c1_regla` r WHERE r.`nombre` = 'rango_horas_de_permanencia');
+   AND NOT EXISTS (SELECT 1 FROM `mir_c1_regla` r WHERE r.`nombre` = 'rango_horas_de_permanencia');
 
-INSERT INTO `runac_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
+INSERT INTO `mir_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
 SELECT tr.id, 'tope_horas_de_permanencia',
        'Más de un año en horas no es un dato: es un error de carga.',
        '{"minimo": 0, "maximo": 8760}'
-  FROM `runac_c1_tipo_regla` tr
+  FROM `mir_c1_tipo_regla` tr
  WHERE tr.`nombre` = 'RANGO'
-   AND NOT EXISTS (SELECT 1 FROM `runac_c1_regla` r WHERE r.`nombre` = 'tope_horas_de_permanencia');
+   AND NOT EXISTS (SELECT 1 FROM `mir_c1_regla` r WHERE r.`nombre` = 'tope_horas_de_permanencia');
 
 -- ---------------------------------------------------------------------------
 -- 3. Colgar las reglas de cada campo. `INSERT IGNORE` para que correr el guion
 --    dos veces no duplique nada.
 -- ---------------------------------------------------------------------------
-INSERT IGNORE INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
+INSERT IGNORE INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
 SELECT c.id, r.id, 'ADVERTENCIA'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_regla` r ON r.`nombre` = 'rango_alojados'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_regla` r ON r.`nombre` = 'rango_alojados'
  WHERE c.`titulo_esperado` LIKE 'Capacidad de alojamiento%';
 
-INSERT IGNORE INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
+INSERT IGNORE INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
 SELECT c.id, r.id, 'BLOQUEANTE'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_regla` r ON r.`nombre` = 'tope_alojados'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_regla` r ON r.`nombre` = 'tope_alojados'
  WHERE c.`titulo_esperado` LIKE 'Capacidad de alojamiento%';
 
-INSERT IGNORE INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
+INSERT IGNORE INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
 SELECT c.id, r.id, 'ADVERTENCIA'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_regla` r ON r.`nombre` = 'rango_horas_de_permanencia'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_regla` r ON r.`nombre` = 'rango_horas_de_permanencia'
  WHERE c.`titulo_esperado` LIKE 'Tiempo máximo de permanencia%';
 
-INSERT IGNORE INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
+INSERT IGNORE INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
 SELECT c.id, r.id, 'BLOQUEANTE'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_regla` r ON r.`nombre` = 'tope_horas_de_permanencia'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_regla` r ON r.`nombre` = 'tope_horas_de_permanencia'
  WHERE c.`titulo_esperado` LIKE 'Tiempo máximo de permanencia%';
 
-INSERT IGNORE INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
+INSERT IGNORE INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
 SELECT c.id, r.id, 'ADVERTENCIA'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_regla` r ON r.`nombre` = 'rango_edad'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_regla` r ON r.`nombre` = 'rango_edad'
  WHERE c.`titulo_esperado` = 'Edad al ingreso';
 
-INSERT IGNORE INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
+INSERT IGNORE INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
 SELECT c.id, r.id, 'BLOQUEANTE'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_regla` r ON r.`nombre` = 'tope_edad'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_regla` r ON r.`nombre` = 'tope_edad'
  WHERE c.`titulo_esperado` = 'Edad al ingreso';
 
 -- ---------------------------------------------------------------------------
@@ -147,26 +147,26 @@ SELECT c.id, r.id, 'BLOQUEANTE'
 --    deduce por convención y no se puede reconstruir en SQL, igual que en los
 --    guiones 06, 11 y 12.
 -- ---------------------------------------------------------------------------
-ALTER TABLE `runac_c2_disp_penal_v1_crc`
+ALTER TABLE `mir_c2_disp_penal_v1_crc`
   MODIFY `capacidad_de_alojamiento_mujeres_plazas_disponibles` int NULL,
   MODIFY `capacidad_de_alojamiento_varones_plazas_disponibles` int NULL;
 
-ALTER TABLE `runac_c2_disp_penal_v1_crsc`
+ALTER TABLE `mir_c2_disp_penal_v1_crsc`
   MODIFY `capacidad_de_alojamiento_mujeres_plazas_disponibles` int NULL,
   MODIFY `capacidad_de_alojamiento_varones_plazas_disponibles` int NULL;
 
-ALTER TABLE `runac_c2_disp_penal_v1_cad`
+ALTER TABLE `mir_c2_disp_penal_v1_cad`
   MODIFY `capacidad_de_alojamiento_mujeres_plazas_disponibles` int NULL,
   MODIFY `capacidad_de_alojamiento_varones_plazas_disponibles` int NULL,
   MODIFY `tiempo_maximo_de_permanencia_dentro_del_dispositivo_en_horas` int NULL;
 
-ALTER TABLE `runac_c2_disp_penal_v1_guardiacomis`
+ALTER TABLE `mir_c2_disp_penal_v1_guardiacomis`
   MODIFY `tiempo_maximo_de_permanencia_dentro_del_dispositivo_en_horas` int NULL;
 
-ALTER TABLE `runac_c2_disp_scp_v1`
+ALTER TABLE `mir_c2_disp_scp_v1`
   MODIFY `capacidad_de_alojamiento_plazas` int NULL;
 
-ALTER TABLE `runac_c2_mpj_dae_v1_dae`
+ALTER TABLE `mir_c2_mpj_dae_v1_dae`
   MODIFY `edad_al_ingreso` int NULL;
 
 -- ---------------------------------------------------------------------------
@@ -175,13 +175,13 @@ ALTER TABLE `runac_c2_mpj_dae_v1_dae`
 SELECT a.`codigo` AS archivo, h.`nombre_esperado` AS hoja,
        LEFT(c.`titulo_esperado`, 44) AS campo, c.`tipo_dato`,
        (SELECT GROUP_CONCAT(CONCAT(r.`nombre`, '/', cr.`severidad`) ORDER BY cr.`severidad`)
-          FROM `runac_c1_campo_regla` cr
-          JOIN `runac_c1_regla` r ON r.id = cr.regla_id
+          FROM `mir_c1_campo_regla` cr
+          JOIN `mir_c1_regla` r ON r.id = cr.regla_id
          WHERE cr.campo_id = c.id) AS reglas
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  WHERE c.`titulo_esperado` LIKE 'Capacidad de alojamiento%'
     OR c.`titulo_esperado` LIKE 'Tiempo máximo de permanencia%'
     OR c.`titulo_esperado` = 'Edad al ingreso'
@@ -197,8 +197,8 @@ SELECT a.`codigo` AS archivo, h.`nombre_esperado` AS hoja,
 --
 -- Se saca el enganche, no la regla: la usan los campos que sí son fechas.
 -- ---------------------------------------------------------------------------
-DELETE cr FROM `runac_c1_campo_regla` cr
-  JOIN `runac_c1_regla` r ON r.id = cr.regla_id
-  JOIN `runac_c1_campo` c ON c.id = cr.campo_id
+DELETE cr FROM `mir_c1_campo_regla` cr
+  JOIN `mir_c1_regla` r ON r.id = cr.regla_id
+  JOIN `mir_c1_campo` c ON c.id = cr.campo_id
  WHERE c.`titulo_esperado` = 'Edad al ingreso'
    AND r.`nombre` = 'mpj_dae_edad_al_ingreso_comparar_valor';

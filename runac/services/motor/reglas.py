@@ -3,8 +3,8 @@
 Los tipos de regla salen del apartado técnico:
     C:\\CNCPS\\RUNAC\\analisis_funcional\\02_apartado_tecnico.docx
 
-Son configuración: van a las tablas runac_c1_tipo_regla y
-runac_c1_tipo_regla_parametro, no a condiciones dentro de un programa.
+Son configuración: van a las tablas mir_c1_tipo_regla y
+mir_c1_tipo_regla_parametro, no a condiciones dentro de un programa.
 
 ADVERTENCIA: las reglas concretas que sugiere este módulo son tentativas. Salen
 del nombre del campo y de los ejemplos del apartado técnico, no de mirar datos

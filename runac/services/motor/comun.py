@@ -158,7 +158,7 @@ def abrev(texto: str, largo: int) -> str:
 def nombre_tabla_receptora(
     codigo: str, hoja: str, varias_hojas: bool, version: int
 ) -> str:
-    """runac_c2_<archivo>_v<n>[_<hoja>].
+    """mir_c2_<archivo>_v<n>[_<hoja>].
 
     La versión va en el nombre porque cada versión de estructura tiene su propia
     tabla: los datos de un período conservan la forma que tenían al cargarse.
@@ -167,7 +167,7 @@ def nombre_tabla_receptora(
         sufijo = f"{abrev(codigo, 12)}_v{version}_{abrev(hoja, 12)}"
     else:
         sufijo = f"{abrev(codigo, 20)}_v{version}"
-    return f"runac_c2_{sufijo}"[:MAX_IDENT]
+    return f"mir_c2_{sufijo}"[:MAX_IDENT]
 
 
 # Instrucciones que las planillas traen pegadas al título de la hoja. No son

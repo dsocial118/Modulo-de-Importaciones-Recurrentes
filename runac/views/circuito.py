@@ -165,13 +165,13 @@ class RevisionView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
                 """
                 SELECT s.id, s.estado, s.version, s.cerrada_el, s.habilitada_el,
                        s.presentada_el, s.expediente, j.nombre AS jurisdiccion,
-                       (SELECT COUNT(*) FROM runac_c2_importacion i
+                       (SELECT COUNT(*) FROM mir_c2_importacion i
                          WHERE i.presentacion_id = s.id AND i.estado = 'VALIDA') AS importados,
-                       (SELECT COUNT(*) FROM runac_c2_observacion o
+                       (SELECT COUNT(*) FROM mir_c2_observacion o
                          WHERE o.presentacion_id = s.id AND o.estado = 'ABIERTA') AS observaciones
-                FROM runac_c2_presentacion s
-                JOIN runac_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
-                JOIN runac_c2_periodo p ON p.id = s.periodo_id
+                FROM mir_c2_presentacion s
+                JOIN mir_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
+                JOIN mir_c2_periodo p ON p.id = s.periodo_id
                 WHERE p.codigo = %s
                 ORDER BY j.nombre
             """,

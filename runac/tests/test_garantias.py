@@ -450,7 +450,7 @@ def test_volver_a_empezar_incluye_poder_empezar():
     from runac.services import circuito_service as circuito
 
     fuente = inspect.getsource(circuito.borrar_todas_las_importaciones)
-    assert "runac_c2_periodo SET estado = 'ABIERTO'" in fuente, (
+    assert "mir_c2_periodo SET estado = 'ABIERTO'" in fuente, (
         "dejar el prototipo sin importaciones y con el período cerrado lo deja "
         "inutilizable, que es lo contrario de lo que esta herramienta hace"
     )

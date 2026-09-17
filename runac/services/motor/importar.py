@@ -397,10 +397,10 @@ def leer_configuracion(cur, periodo: str) -> list[dict]:
         SELECT a.id AS archivo_id, a.codigo,
                av.id AS version_id, av.numero AS version,
                av.nombre_esperado, av.titulo, av.orden_importacion, av.obligatorio
-        FROM runac_c2_periodo_archivo pa
-        JOIN runac_c2_periodo p ON p.id = pa.periodo_id
-        JOIN runac_c1_archivo_version av ON av.id = pa.archivo_version_id
-        JOIN runac_c1_archivo a ON a.id = av.archivo_id
+        FROM mir_c2_periodo_archivo pa
+        JOIN mir_c2_periodo p ON p.id = pa.periodo_id
+        JOIN mir_c1_archivo_version av ON av.id = pa.archivo_version_id
+        JOIN mir_c1_archivo a ON a.id = av.archivo_id
         WHERE p.codigo = %s
         ORDER BY av.orden_importacion
     """,
@@ -412,7 +412,7 @@ def leer_configuracion(cur, periodo: str) -> list[dict]:
         cur.execute(
             """
             SELECT h.id, h.nombre_esperado, h.fila_encabezados, h.orden_procesamiento, h.obligatoria
-            FROM runac_c1_hoja h
+            FROM mir_c1_hoja h
             WHERE h.archivo_version_id = %s ORDER BY h.orden_procesamiento
         """,
             (a["version_id"],),
@@ -429,7 +429,7 @@ def leer_configuracion(cur, periodo: str) -> list[dict]:
                 """
                 SELECT c.id, c.nombre, c.titulo_esperado, c.orden, c.tipo_dato,
                        c.longitud_maxima, c.obligatorio, cat.codigo AS catalogo
-                FROM runac_c1_campo c LEFT JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
+                FROM mir_c1_campo c LEFT JOIN mir_c1_catalogo cat ON cat.id = c.catalogo_id
                 WHERE c.hoja_id = %s ORDER BY c.orden
             """,
                 (h["id"],),
@@ -445,8 +445,8 @@ def leer_configuracion(cur, periodo: str) -> list[dict]:
                     # agregó después no vale hacia atrás.
                     cur.execute(
                         """
-                        SELECT o.id, o.valor_esperado FROM runac_c1_catalogo_opcion o
-                        JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
+                        SELECT o.id, o.valor_esperado FROM mir_c1_catalogo_opcion o
+                        JOIN mir_c1_catalogo c ON c.id = o.catalogo_id
                         WHERE c.codigo = %s AND o.activo = 1
                           AND (o.vigente_desde_periodo IS NULL
                                OR o.vigente_desde_periodo <= %s)
@@ -462,9 +462,9 @@ def leer_configuracion(cur, periodo: str) -> list[dict]:
                     """
                     SELECT r.id, r.nombre, r.parametros, tr.nombre AS tipo_regla,
                            cr.severidad, cr.mensaje AS mensaje_configurado
-                    FROM runac_c1_campo_regla cr
-                    JOIN runac_c1_regla r ON r.id = cr.regla_id
-                    JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+                    FROM mir_c1_campo_regla cr
+                    JOIN mir_c1_regla r ON r.id = cr.regla_id
+                    JOIN mir_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
                     WHERE cr.campo_id = %s
                 """,
                     (campo["id"],),
@@ -604,7 +604,7 @@ def valores_referenciados(cur, archivos, archivo, presentacion_id) -> dict:
                         continue
                     cur.execute(
                         f"""SELECT DISTINCT t.`{columna}` FROM `{tabla}` t
-                            JOIN runac_c2_importacion i ON i.id = t.importacion_id
+                            JOIN mir_c2_importacion i ON i.id = t.importacion_id
                             WHERE i.presentacion_id = %s AND i.archivo_id = %s
                               AND i.estado = 'VALIDA'""",
                         (presentacion_id, destino["archivo_id"]),
@@ -851,7 +851,7 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
     # Importación restrictiva: con un solo bloqueante no entra ninguna fila.
     # Por eso hay una sola tabla receptora y no dos: todo lo que se incorpora
     # pudo convertirse a su tipo. El valor que provocó cada incumplimiento queda
-    # en runac_c2_reglas_incumplidas.
+    # en mir_c2_reglas_incumplidas.
     cols = ", ".join(f"`{c['nombre']}`" for c in campos)
     bloqueantes = sum(1 for h in hallazgos if h["severidad"] == "BLOQUEANTE")
 
@@ -1042,7 +1042,7 @@ def _ejecutar_con(args, cn):
 
     # Presentación del período.
     cur2 = cn.cursor()
-    cur2.execute("SELECT id FROM runac_c2_periodo WHERE codigo=%s", (args.periodo,))
+    cur2.execute("SELECT id FROM mir_c2_periodo WHERE codigo=%s", (args.periodo,))
     fila = cur2.fetchone()
     if not fila:
         raise SystemExit(f"No existe el período {args.periodo}.")
@@ -1050,7 +1050,7 @@ def _ejecutar_con(args, cn):
 
     # La jurisdicción es una entidad: si no existe, se da de alta.
     cur2.execute(
-        "SELECT id FROM runac_c2_jurisdiccion WHERE codigo=%s OR nombre=%s",
+        "SELECT id FROM mir_c2_jurisdiccion WHERE codigo=%s OR nombre=%s",
         (args.jurisdiccion.upper(), args.jurisdiccion),
     )
     fila = cur2.fetchone()
@@ -1058,7 +1058,7 @@ def _ejecutar_con(args, cn):
         jurisdiccion_id = fila[0]
     else:
         cur2.execute(
-            """INSERT INTO runac_c2_jurisdiccion (codigo, nombre, modalidad, activa)
+            """INSERT INTO mir_c2_jurisdiccion (codigo, nombre, modalidad, activa)
                         VALUES (%s, %s, 'PRESENTACION_PERIODICA', 1)""",
             (args.jurisdiccion.upper()[:20], args.jurisdiccion),
         )
@@ -1070,13 +1070,13 @@ def _ejecutar_con(args, cn):
     # que nadie lo decidiera. Quién puede reabrirla y cuándo es una decisión
     # del circuito, no un efecto de subir un archivo.
     cur2.execute(
-        """INSERT INTO runac_c2_presentacion (periodo_id, jurisdiccion_id, version, estado)
+        """INSERT INTO mir_c2_presentacion (periodo_id, jurisdiccion_id, version, estado)
                     VALUES (%s, %s, 1, 'EN_CARGA')
                     ON DUPLICATE KEY UPDATE id = id""",
         (periodo_id, jurisdiccion_id),
     )
     cur2.execute(
-        """SELECT id FROM runac_c2_presentacion
+        """SELECT id FROM mir_c2_presentacion
                     WHERE periodo_id=%s AND jurisdiccion_id=%s AND version=1""",
         (periodo_id, jurisdiccion_id),
     )
@@ -1098,7 +1098,7 @@ def _ejecutar_con(args, cn):
             sha = hashlib.sha1(fh.read()).hexdigest()
 
         cur2.execute(
-            """INSERT INTO runac_c2_importacion
+            """INSERT INTO mir_c2_importacion
             (presentacion_id, archivo_id, archivo_version_id, nombre_archivo, sha1, bytes,
              ruta_archivo, estado, usuario)
             VALUES (%s, %s, %s, %s, %s, %s, %s, 'FALLIDA', %s)""",
@@ -1123,12 +1123,12 @@ def _ejecutar_con(args, cn):
             # entero, y se informan todos juntos para corregir una sola vez.
             for pr in problemas[:200]:
                 cur2.execute(
-                    """INSERT INTO runac_c2_errores_de_importacion
+                    """INSERT INTO mir_c2_errores_de_importacion
                     (importacion_id, tipo, descripcion) VALUES (%s,'COLUMNA_FALTANTE',%s)""",
                     (importacion_id, pr),
                 )
             cur2.execute(
-                "UPDATE runac_c2_importacion SET terminada_el=NOW() WHERE id=%s",
+                "UPDATE mir_c2_importacion SET terminada_el=NOW() WHERE id=%s",
                 (importacion_id,),
             )
             cn.commit()
@@ -1187,14 +1187,14 @@ def _ejecutar_con(args, cn):
                         else "ARCHIVO_ILEGIBLE"
                     )
                     cur2.execute(
-                        """INSERT INTO runac_c2_errores_de_importacion
+                        """INSERT INTO mir_c2_errores_de_importacion
                         (importacion_id, tipo, hoja, numero_fila, descripcion)
                         VALUES (%s,%s,%s,%s,%s)""",
                         (importacion_id, tipo, h["hoja"], hg["fila"], hg["detalle"]),
                     )
                     continue
                 cur2.execute(
-                    """INSERT INTO runac_c2_reglas_incumplidas
+                    """INSERT INTO mir_c2_reglas_incumplidas
                     (importacion_id, campo_id, regla_id, codigo, severidad, nombre_hoja,
                      numero_fila, columna, nombre_campo, valor_encontrado, descripcion)
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
@@ -1218,7 +1218,7 @@ def _ejecutar_con(args, cn):
         incorporadas = 0 if bloqueantes else total
         ms = int((datetime.now() - inicio).total_seconds() * 1000)
         cur2.execute(
-            """UPDATE runac_c2_importacion SET estado=%s, filas_leidas=%s, filas_incorporadas=%s,
+            """UPDATE mir_c2_importacion SET estado=%s, filas_leidas=%s, filas_incorporadas=%s,
                         bloqueantes=%s, advertencias=%s, terminada_el=NOW(),
                         duracion_ms=%s WHERE id=%s""",
             (
@@ -1243,7 +1243,7 @@ def _ejecutar_con(args, cn):
         # la provincia lo que ya tenía cargado.
         if estado == "VALIDA":
             cur2.execute(
-                """UPDATE runac_c2_importacion SET estado='ANULADA'
+                """UPDATE mir_c2_importacion SET estado='ANULADA'
                     WHERE presentacion_id=%s AND archivo_id=%s AND id<>%s
                       AND estado='VALIDA'""",
                 (presentacion_id, a["archivo_id"], importacion_id),

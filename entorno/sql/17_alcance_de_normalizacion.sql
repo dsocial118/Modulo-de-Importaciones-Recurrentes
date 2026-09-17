@@ -47,12 +47,12 @@
 
 SET NAMES utf8mb4;
 
-ALTER TABLE `runac_c1_campo`
+ALTER TABLE `mir_c1_campo`
   ADD COLUMN `normalizacion` enum('SIN_NORMALIZAR','UNIVERSO','POR_ENTIDAD')
       NOT NULL DEFAULT 'SIN_NORMALIZAR'
       COMMENT 'Si los valores de este campo se unifican contra un diccionario, y con qué alcance. No afecta la importacion: es una declaracion para la normalizacion posterior.'
       AFTER `longitud_maxima`;
 
 SELECT `normalizacion`, COUNT(*) AS campos
-  FROM `runac_c1_campo`
+  FROM `mir_c1_campo`
  GROUP BY `normalizacion`;

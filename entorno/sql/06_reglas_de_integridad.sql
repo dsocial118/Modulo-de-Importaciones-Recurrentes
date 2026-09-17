@@ -27,17 +27,17 @@ SET NAMES utf8mb4;
 -- 1. Los dos tipos de regla y sus parámetros
 -- ---------------------------------------------------------------------------
 
-INSERT INTO `runac_c1_tipo_regla` (`nombre`, `descripcion`) VALUES
+INSERT INTO `mir_c1_tipo_regla` (`nombre`, `descripcion`) VALUES
   ('PROHIBIDO_SI',
    'Determina que un campo deba quedar vacío cuando otro campo cumple una condición.'),
   ('EXISTE_EN_ARCHIVO',
    'Verifica que el valor exista en otro archivo ya importado del mismo período.')
 ON DUPLICATE KEY UPDATE `descripcion` = VALUES(`descripcion`);
 
-INSERT INTO `runac_c1_tipo_regla_parametro`
+INSERT INTO `mir_c1_tipo_regla_parametro`
   (`tipo_regla_id`, `nombre`, `tipo_parametro`, `obligatorio`, `orden`, `descripcion`)
 SELECT t.id, p.nombre, p.tipo_parametro, p.obligatorio, p.orden, p.descripcion
-  FROM `runac_c1_tipo_regla` t
+  FROM `mir_c1_tipo_regla` t
   JOIN (
     SELECT 'PROHIBIDO_SI' AS tipo, 'campo_condicion' AS nombre, 'CAMPO' AS tipo_parametro,
            1 AS obligatorio, 1 AS orden,
@@ -77,9 +77,9 @@ ON DUPLICATE KEY UPDATE `descripcion` = VALUES(`descripcion`);
 -- los bloqueantes, y no dentro del sistema.
 -- ---------------------------------------------------------------------------
 
-INSERT INTO `runac_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
+INSERT INTO `mir_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
 SELECT t.id, r.nombre, r.descripcion, r.parametros
-  FROM `runac_c1_tipo_regla` t
+  FROM `mir_c1_tipo_regla` t
   JOIN (
     SELECT 'PROHIBIDO_SI' AS tipo, CONCAT(a.cod, '_n_dni_prohibido_si') AS nombre,
            'El número de DNI no se completa cuando la situación de documentación declara que no hay número.' AS descripcion,
@@ -115,27 +115,27 @@ ON DUPLICATE KEY UPDATE `parametros` = VALUES(`parametros`);
 -- declara la planilla.
 -- La condición va como JOIN y no como EXISTS: MySQL no deja consultar en una
 -- subconsulta la misma tabla que se está actualizando.
-UPDATE `runac_c1_campo` c
-  JOIN `runac_c1_campo` c2
+UPDATE `mir_c1_campo` c
+  JOIN `mir_c1_campo` c2
     ON c2.hoja_id = c.hoja_id AND c2.nombre = 'situacion_de_documentacion'
  SET c.`obligatorio` = 0
  WHERE c.`nombre` = 'n_dni';
 
 -- Las dos reglas se enganchan al campo n_dni de cada nómina. La hoja se usa
 -- para armar el nombre de la regla: MPJ y DAE viven en el mismo archivo.
-INSERT INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`, `mensaje`)
+INSERT INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`, `mensaje`)
 SELECT c.id, r.id, 'BLOQUEANTE',
        CASE WHEN r.nombre LIKE '%_prohibido_si'
             THEN 'La situación de documentación dice que no hay número de DNI, y sin embargo el campo trae uno. Hay que corregir una de las dos cosas en el Excel.'
             ELSE 'La situación de documentación dice que la persona tiene número de DNI, y el campo está vacío.'
        END
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_regla` r
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_regla` r
     ON r.nombre IN (CONCAT(LOWER(h.nombre_esperado), '_n_dni_prohibido_si'),
                     CONCAT(LOWER(h.nombre_esperado), '_n_dni_obligatorio_si'))
  WHERE c.`nombre` = 'n_dni'
-   AND EXISTS (SELECT 1 FROM `runac_c1_campo` c2
+   AND EXISTS (SELECT 1 FROM `mir_c1_campo` c2
                 WHERE c2.hoja_id = c.hoja_id
                   AND c2.nombre = 'situacion_de_documentacion')
 ON DUPLICATE KEY UPDATE `mensaje` = VALUES(`mensaje`);
@@ -156,21 +156,21 @@ ON DUPLICATE KEY UPDATE `mensaje` = VALUES(`mensaje`);
 -- y no un dispositivo declarado. Hasta que se confirme, no se declara.
 -- ---------------------------------------------------------------------------
 
-INSERT INTO `runac_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
+INSERT INTO `mir_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
 SELECT t.id, CONCAT(a.cod, '_nombre_del_dispositivo_existe_en_archivo'),
        'El dispositivo nombrado en la nómina tiene que estar declarado en el archivo de dispositivos penales.',
        JSON_OBJECT('archivo', 'DISP_PENAL', 'campo', 'nombre_del_dispositvo')
-  FROM `runac_c1_tipo_regla` t
+  FROM `mir_c1_tipo_regla` t
   JOIN (SELECT 'mpj' AS cod UNION ALL SELECT 'dae') a
  WHERE t.`nombre` = 'EXISTE_EN_ARCHIVO'
 ON DUPLICATE KEY UPDATE `parametros` = VALUES(`parametros`);
 
-INSERT INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`, `mensaje`)
+INSERT INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`, `mensaje`)
 SELECT c.id, r.id, 'ADVERTENCIA',
        'El dispositivo no figura en el archivo de dispositivos penales de este período. Puede ser un nombre escrito distinto o un dispositivo que falta declarar.'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_regla` r
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_regla` r
     ON r.nombre = CONCAT(LOWER(h.nombre_esperado), '_nombre_del_dispositivo_existe_en_archivo')
  WHERE c.`nombre` = 'nombre_del_dispositivo'
 ON DUPLICATE KEY UPDATE `mensaje` = VALUES(`mensaje`);
@@ -183,7 +183,7 @@ ON DUPLICATE KEY UPDATE `mensaje` = VALUES(`mensaje`);
 -- definición y la importación falla al insertar.
 --
 -- Esto nombraba las cuatro tablas a mano, con el número de versión escrito
--- (`runac_c2_mpe_v1`). Con una estructura v2 apuntaba a la tabla vieja y dejaba
+-- (`mir_c2_mpe_v1`). Con una estructura v2 apuntaba a la tabla vieja y dejaba
 -- la nueva sin corregir. Ahora no nombra ninguna: recorre las que existen y
 -- relaja las que contradicen a la Capa 1, sea cual sea la versión.
 --
@@ -228,18 +228,18 @@ ON DUPLICATE KEY UPDATE `mensaje` = VALUES(`mensaje`);
 -- cuidado deba importarse antes que el MPE.
 -- ---------------------------------------------------------------------------
 
-INSERT INTO `runac_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
+INSERT INTO `mir_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
 SELECT t.id, 'mpe_nombre_de_la_residencia_existe_en_archivo',
        'La residencia u hogar que nombra el MPE tiene que estar declarada en el archivo de dispositivos de cuidado.',
        JSON_OBJECT('archivo', 'DISP_SCP', 'campo', 'nombre_del_dispositvo')
-  FROM `runac_c1_tipo_regla` t
+  FROM `mir_c1_tipo_regla` t
  WHERE t.`nombre` = 'EXISTE_EN_ARCHIVO'
 ON DUPLICATE KEY UPDATE `parametros` = VALUES(`parametros`);
 
-INSERT INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`, `mensaje`)
+INSERT INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`, `mensaje`)
 SELECT c.id, r.id, 'ADVERTENCIA',
        'La residencia no figura en el archivo de dispositivos de cuidado de este período. Puede ser un nombre escrito distinto o un dispositivo que falta declarar.'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_regla` r ON r.nombre = 'mpe_nombre_de_la_residencia_existe_en_archivo'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_regla` r ON r.nombre = 'mpe_nombre_de_la_residencia_existe_en_archivo'
  WHERE c.`nombre` = 'nombre_de_la_residencia_hogar'
 ON DUPLICATE KEY UPDATE `mensaje` = VALUES(`mensaje`);

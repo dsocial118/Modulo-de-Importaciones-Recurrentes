@@ -6,7 +6,7 @@ Lee la estructura real de la base de trabajo, así el diagrama siempre refleja
 lo que hay y no lo que creemos que hay.
 
 Por defecto NO incluye las tablas receptoras generadas
-(runac_c2_<archivo>_v<n>[_<hoja>]): son decenas de tablas con hasta 64 columnas
+(mir_c2_<archivo>_v<n>[_<hoja>]): son decenas de tablas con hasta 64 columnas
 cada una y harían el diagrama ilegible. Se agregan con --incluir-receptoras.
 """
 
@@ -27,9 +27,9 @@ CONEXION = dict(
 )
 
 GRUPOS = {
-    "1": ("Capa 1 — definición de los archivos", "runac_c1_"),
-    "2": ("Capa 2 — importación y staging", "runac_c2_"),
-    "3": ("Capa 3 — base consolidada", "runac_c3_"),
+    "1": ("Capa 1 — definición de los archivos", "mir_c1_"),
+    "2": ("Capa 2 — importación y staging", "mir_c2_"),
+    "3": ("Capa 3 — base consolidada", "mir_c3_"),
 }
 
 
@@ -73,8 +73,8 @@ def main():
         if not n.startswith(prefijos):
             continue
         # Las receptoras se reconocen por llevar la versión en el nombre
-        # (runac_c2_<archivo>_v<n>[_<hoja>]); las de control, no.
-        if not args.incluir_receptoras and re.search(r"^runac_c2_.+_v\d+(_.+)?$", n):
+        # (mir_c2_<archivo>_v<n>[_<hoja>]); las de control, no.
+        if not args.incluir_receptoras and re.search(r"^mir_c2_.+_v\d+(_.+)?$", n):
             continue
         tablas.append(t)
     nombres = {t["TABLE_NAME"] for t in tablas}

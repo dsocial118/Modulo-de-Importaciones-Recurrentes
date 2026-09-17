@@ -255,9 +255,9 @@ class DetalleView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
                 """
                 SELECT i.*, a.codigo AS archivo_codigo, av.titulo AS archivo_titulo,
                        av.numero AS version
-                FROM runac_c2_importacion i
-                LEFT JOIN runac_c1_archivo a ON a.id = i.archivo_id
-                LEFT JOIN runac_c1_archivo_version av ON av.id = i.archivo_version_id
+                FROM mir_c2_importacion i
+                LEFT JOIN mir_c1_archivo a ON a.id = i.archivo_id
+                LEFT JOIN mir_c1_archivo_version av ON av.id = i.archivo_version_id
                 WHERE i.id = %s
             """,
                 [importacion_id],
@@ -267,7 +267,7 @@ class DetalleView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
             importacion = dict(zip(columnas, fila)) if fila else None
 
             cur.execute(
-                """SELECT DISTINCT nombre_hoja FROM runac_c2_reglas_incumplidas
+                """SELECT DISTINCT nombre_hoja FROM mir_c2_reglas_incumplidas
                            WHERE importacion_id = %s AND nombre_hoja IS NOT NULL""",
                 [importacion_id],
             )
@@ -276,7 +276,7 @@ class DetalleView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
             # Los problemas del archivo entero van aparte de las reglas incumplidas.
             cur.execute(
                 """SELECT tipo, hoja, numero_fila, esperado, encontrado, descripcion
-                           FROM runac_c2_errores_de_importacion
+                           FROM mir_c2_errores_de_importacion
                            WHERE importacion_id = %s ORDER BY id LIMIT 200""",
                 [importacion_id],
             )

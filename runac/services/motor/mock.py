@@ -666,8 +666,8 @@ def catalogo_suelto(cur, campo: dict):
     for codigo in [c for c in candidatos if c]:
         cur.execute(
             """SELECT o.valor_esperado
-                 FROM runac_c1_catalogo_opcion o
-                 JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
+                 FROM mir_c1_catalogo_opcion o
+                 JOIN mir_c1_catalogo c ON c.id = o.catalogo_id
                 WHERE c.codigo = %s AND o.activo = 1 ORDER BY o.orden""",
             (codigo,),
         )
@@ -680,8 +680,8 @@ def catalogo_suelto(cur, campo: dict):
 def leer_definicion(cur, codigo: str):
     cur.execute(
         """SELECT a.id, a.codigo, av.id AS version_id, av.nombre_esperado
-                   FROM runac_c1_archivo a
-                   JOIN runac_c1_archivo_version av ON av.archivo_id = a.id AND av.estado='VIGENTE'
+                   FROM mir_c1_archivo a
+                   JOIN mir_c1_archivo_version av ON av.archivo_id = a.id AND av.estado='VIGENTE'
                    WHERE a.codigo=%s""",
         (codigo,),
     )
@@ -690,7 +690,7 @@ def leer_definicion(cur, codigo: str):
         raise SystemExit(f"No existe {codigo} con una versión vigente en la Capa 1.")
     cur.execute(
         """SELECT id, nombre_esperado, fila_encabezados, orden_procesamiento
-                   FROM runac_c1_hoja WHERE archivo_version_id=%s ORDER BY orden_procesamiento""",
+                   FROM mir_c1_hoja WHERE archivo_version_id=%s ORDER BY orden_procesamiento""",
         (archivo["version_id"],),
     )
     hojas = cur.fetchall()
@@ -699,7 +699,7 @@ def leer_definicion(cur, codigo: str):
             """
             SELECT c.id, c.nombre, c.titulo_esperado, c.orden, c.tipo_dato,
                    c.longitud_maxima, c.obligatorio, cat.codigo AS catalogo
-            FROM runac_c1_campo c LEFT JOIN runac_c1_catalogo cat ON cat.id=c.catalogo_id
+            FROM mir_c1_campo c LEFT JOIN mir_c1_catalogo cat ON cat.id=c.catalogo_id
             WHERE c.hoja_id=%s ORDER BY c.orden""",
             (h["id"],),
         )
@@ -716,8 +716,8 @@ def leer_definicion(cur, codigo: str):
                     campo["catalogo_prestado"] = True
             if campo["catalogo"]:
                 cur.execute(
-                    """SELECT o.valor_esperado FROM runac_c1_catalogo_opcion o
-                               JOIN runac_c1_catalogo c ON c.id=o.catalogo_id
+                    """SELECT o.valor_esperado FROM mir_c1_catalogo_opcion o
+                               JOIN mir_c1_catalogo c ON c.id=o.catalogo_id
                                WHERE c.codigo=%s AND o.activo=1 ORDER BY o.orden""",
                     (campo["catalogo"],),
                 )
@@ -727,9 +727,9 @@ def leer_definicion(cur, codigo: str):
             cur.execute(
                 """SELECT r.id, r.nombre, r.parametros, tr.nombre AS tipo_regla,
                           cr.severidad
-                     FROM runac_c1_campo_regla cr
-                     JOIN runac_c1_regla r ON r.id = cr.regla_id
-                     JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+                     FROM mir_c1_campo_regla cr
+                     JOIN mir_c1_regla r ON r.id = cr.regla_id
+                     JOIN mir_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
                     WHERE cr.campo_id = %s""",
                 (campo["id"],),
             )
@@ -780,8 +780,8 @@ def main():
 
     if args.todos:
         cur.execute(
-            """SELECT a.codigo FROM runac_c1_archivo a
-                       JOIN runac_c1_archivo_version av ON av.archivo_id = a.id AND av.estado='VIGENTE'
+            """SELECT a.codigo FROM mir_c1_archivo a
+                       JOIN mir_c1_archivo_version av ON av.archivo_id = a.id AND av.estado='VIGENTE'
                        ORDER BY av.orden_importacion"""
         )
         codigos = [r["codigo"] for r in cur.fetchall()]

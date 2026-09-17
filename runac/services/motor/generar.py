@@ -143,17 +143,17 @@ def main():
     w("-- ============================================================")
     for t in TIPOS_REGLA:
         w(
-            f'INSERT INTO runac_c1_tipo_regla (nombre, descripcion) VALUES ({q(t["nombre"])}, {q(t["descripcion"])})'
+            f'INSERT INTO mir_c1_tipo_regla (nombre, descripcion) VALUES ({q(t["nombre"])}, {q(t["descripcion"])})'
         )
         w("  ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion);")
         for i, (nom, tipo_par, oblig, desc) in enumerate(t["parametros"], start=1):
             w(
-                "INSERT INTO runac_c1_tipo_regla_parametro (tipo_regla_id, nombre, tipo_parametro, obligatorio, orden, descripcion)"
+                "INSERT INTO mir_c1_tipo_regla_parametro (tipo_regla_id, nombre, tipo_parametro, obligatorio, orden, descripcion)"
             )
             w(
                 f"  SELECT id, {q(nom)}, {q(tipo_par)}, {1 if oblig else 0}, {i}, {q(desc)}"
             )
-            w(f'    FROM runac_c1_tipo_regla WHERE nombre = {q(t["nombre"])}')
+            w(f'    FROM mir_c1_tipo_regla WHERE nombre = {q(t["nombre"])}')
             w(
                 "  ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion), tipo_parametro = VALUES(tipo_parametro);"
             )
@@ -173,7 +173,7 @@ def main():
         )
         w(f'-- {d["codigo"]}: {len(d["opciones"])} opciones')
         w(
-            "INSERT INTO runac_c1_catalogo (codigo, nombre, descripcion) VALUES "
+            "INSERT INTO mir_c1_catalogo (codigo, nombre, descripcion) VALUES "
             f'({q(d["codigo"])}, {q(d["nombre"][:255])}, {q(desc)})'
         )
         w(
@@ -181,11 +181,11 @@ def main():
         )
         for o in d["opciones"]:
             w(
-                "INSERT INTO runac_c1_catalogo_opcion (catalogo_id, codigo, valor_esperado, orden, activo)"
+                "INSERT INTO mir_c1_catalogo_opcion (catalogo_id, codigo, valor_esperado, orden, activo)"
             )
             w(
                 f'  SELECT id, {q(o["codigo"])}, {q(o["valor_esperado"][:255])}, {o["orden"]}, 1 '
-                f'FROM runac_c1_catalogo WHERE codigo = {q(d["codigo"])}'
+                f'FROM mir_c1_catalogo WHERE codigo = {q(d["codigo"])}'
             )
             w(
                 "  ON DUPLICATE KEY UPDATE valor_esperado = VALUES(valor_esperado), orden = VALUES(orden), activo = 1;"
@@ -205,10 +205,10 @@ def main():
     w("-- ============================================================")
     w("-- El archivo es la IDENTIDAD y no cambia nunca. Todo lo que puede variar")
     w("-- entre períodos vive en la versión de estructura.")
-    w("INSERT INTO runac_c1_archivo (codigo, descripcion, activo)")
+    w("INSERT INTO mir_c1_archivo (codigo, descripcion, activo)")
     w(f"VALUES ({q(codigo)}, {q(desc_archivo)}, 1)")
     w("ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion), activo = 1;")
-    w(f"SET @archivo := (SELECT id FROM runac_c1_archivo WHERE codigo = {q(codigo)});")
+    w(f"SET @archivo := (SELECT id FROM mir_c1_archivo WHERE codigo = {q(codigo)});")
     w("")
     w(
         f"-- Versión {args.version} de la estructura. El .sql se regenera entero, así que"
@@ -216,22 +216,22 @@ def main():
     w("-- se rehace el contenido de esa versión de abajo hacia arriba, para no violar")
     w("-- las claves foráneas. Una versión ya usada por un período NO debería")
     w("-- regenerarse: correspondería crear la siguiente.")
-    w("SET @version := (SELECT id FROM runac_c1_archivo_version")
+    w("SET @version := (SELECT id FROM mir_c1_archivo_version")
     w(f"                  WHERE archivo_id = @archivo AND numero = {args.version});")
-    w("DELETE cr FROM runac_c1_campo_regla cr")
-    w("  JOIN runac_c1_campo c ON c.id = cr.campo_id")
+    w("DELETE cr FROM mir_c1_campo_regla cr")
+    w("  JOIN mir_c1_campo c ON c.id = cr.campo_id")
     w(
-        "  JOIN runac_c1_hoja h ON h.id = c.hoja_id WHERE h.archivo_version_id = @version;"
+        "  JOIN mir_c1_hoja h ON h.id = c.hoja_id WHERE h.archivo_version_id = @version;"
     )
     w(
-        "DELETE c FROM runac_c1_campo c JOIN runac_c1_hoja h ON h.id = c.hoja_id WHERE h.archivo_version_id = @version;"
+        "DELETE c FROM mir_c1_campo c JOIN mir_c1_hoja h ON h.id = c.hoja_id WHERE h.archivo_version_id = @version;"
     )
     w(
-        "DELETE d FROM runac_c1_dimension d JOIN runac_c1_hoja h ON h.id = d.hoja_id WHERE h.archivo_version_id = @version;"
+        "DELETE d FROM mir_c1_dimension d JOIN mir_c1_hoja h ON h.id = d.hoja_id WHERE h.archivo_version_id = @version;"
     )
-    w("DELETE FROM runac_c1_hoja WHERE archivo_version_id = @version;")
+    w("DELETE FROM mir_c1_hoja WHERE archivo_version_id = @version;")
     w("")
-    w("INSERT INTO runac_c1_archivo_version")
+    w("INSERT INTO mir_c1_archivo_version")
     w(
         "  (archivo_id, numero, estado, nombre_esperado, titulo, subtitulo, orden_importacion, obligatorio, nota)"
     )
@@ -244,7 +244,7 @@ def main():
         "ON DUPLICATE KEY UPDATE estado = VALUES(estado), nombre_esperado = VALUES(nombre_esperado), "
         "titulo = VALUES(titulo), subtitulo = VALUES(subtitulo), orden_importacion = VALUES(orden_importacion);"
     )
-    w("SET @version := (SELECT id FROM runac_c1_archivo_version")
+    w("SET @version := (SELECT id FROM mir_c1_archivo_version")
     w(f"                  WHERE archivo_id = @archivo AND numero = {args.version});")
     w("")
 
@@ -252,7 +252,7 @@ def main():
     for i_hoja, h in enumerate(mapa["hojas"], start=1):
         w(f'-- --- hoja "{h["nombre"]}" ---')
         w(
-            "INSERT INTO runac_c1_hoja (archivo_version_id, nombre_esperado, descripcion, orden_procesamiento, "
+            "INSERT INTO mir_c1_hoja (archivo_version_id, nombre_esperado, descripcion, orden_procesamiento, "
             "fila_encabezados, obligatoria)"
         )
         w(
@@ -268,7 +268,7 @@ def main():
                 f'({d["cantidad_columnas"]} campos).'
             )
             w(
-                "INSERT INTO runac_c1_dimension (hoja_id, nombre_esperado, descripcion, orden)"
+                "INSERT INTO mir_c1_dimension (hoja_id, nombre_esperado, descripcion, orden)"
             )
             w(f'VALUES (@hoja, {q(d["nombre"])}, {q(desc_dim)}, {d["orden"]});')
         w("")
@@ -276,7 +276,7 @@ def main():
         for col in h["columnas"]:
             n_campos += 1
             dim_sub = (
-                f'(SELECT id FROM runac_c1_dimension WHERE hoja_id = @hoja AND nombre_esperado = {q(col["dimension"])})'
+                f'(SELECT id FROM mir_c1_dimension WHERE hoja_id = @hoja AND nombre_esperado = {q(col["dimension"])})'
                 if col.get("dimension")
                 else "NULL"
             )
@@ -286,7 +286,7 @@ def main():
                 else None
             )
             cat_sub = (
-                f'(SELECT id FROM runac_c1_catalogo WHERE codigo = {q(cat["codigo"])})'
+                f'(SELECT id FROM mir_c1_catalogo WHERE codigo = {q(cat["codigo"])})'
                 if cat
                 else "NULL"
             )
@@ -299,7 +299,7 @@ def main():
             if col.get("ayuda_origen"):
                 w(f'--    ayuda tomada de {col["ayuda_origen"]}')
             w(
-                "INSERT INTO runac_c1_campo (hoja_id, dimension_id, catalogo_id, nombre, titulo_esperado, orden, "
+                "INSERT INTO mir_c1_campo (hoja_id, dimension_id, catalogo_id, nombre, titulo_esperado, orden, "
                 "tipo_dato, longitud_maxima, obligatorio, ayuda)"
             )
             w(
@@ -315,23 +315,23 @@ def main():
                 )
                 desc_regla = f'{r["motivo"]} (confianza {r["confianza"]})'
                 w(
-                    "INSERT INTO runac_c1_regla (tipo_regla_id, nombre, descripcion, parametros)"
+                    "INSERT INTO mir_c1_regla (tipo_regla_id, nombre, descripcion, parametros)"
                 )
                 w(
                     f"  SELECT id, {q(nombre_regla)}, {q(desc_regla)}, "
                     f'{q(json.dumps(r["parametros"], ensure_ascii=False))}'
                 )
-                w(f'    FROM runac_c1_tipo_regla WHERE nombre = {q(r["tipo_regla"])}')
+                w(f'    FROM mir_c1_tipo_regla WHERE nombre = {q(r["tipo_regla"])}')
                 w(
                     "  ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion), parametros = VALUES(parametros);"
                 )
                 # El mensaje al usuario queda vacío a propósito: se redacta en la
                 # matriz de reglas de validación, en lenguaje claro. No se infiere.
                 w(
-                    "INSERT INTO runac_c1_campo_regla (campo_id, regla_id, severidad, mensaje)"
+                    "INSERT INTO mir_c1_campo_regla (campo_id, regla_id, severidad, mensaje)"
                 )
                 w(f'  SELECT c.id, r.id, {q(r["severidad"])}, NULL')
-                w("    FROM runac_c1_campo c, runac_c1_regla r")
+                w("    FROM mir_c1_campo c, mir_c1_regla r")
                 w(
                     f'   WHERE c.hoja_id = @hoja AND c.nombre = {q(col["nombre_tecnico"])} '
                     f"AND r.nombre = {q(nombre_regla)}"

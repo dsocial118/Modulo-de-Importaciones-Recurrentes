@@ -146,12 +146,12 @@ def test_un_archivo_que_no_existe_espera_igual_a_los_dispositivos(sin_base):
 
 
 def test_archivo_de_una_sola_hoja():
-    assert nombre_tabla_receptora("MPE", "MPE", False, 1) == "runac_c2_mpe_v1"
+    assert nombre_tabla_receptora("MPE", "MPE", False, 1) == "mir_c2_mpe_v1"
 
 
 def test_archivo_de_varias_hojas_lleva_la_hoja_en_el_nombre():
     nombre = nombre_tabla_receptora("MPJ_DAE", "DAE", True, 1)
-    assert nombre == "runac_c2_mpj_dae_v1_dae"
+    assert nombre == "mir_c2_mpj_dae_v1_dae"
 
 
 def test_la_version_forma_parte_del_nombre():

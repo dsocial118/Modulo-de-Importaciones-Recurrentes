@@ -48,8 +48,8 @@ def periodos():
         cur.execute(
             """
             SELECT p.id, p.codigo, p.anio, p.numero, p.fecha_desde, p.fecha_hasta, p.estado,
-                   (SELECT COUNT(*) FROM runac_c2_presentacion s WHERE s.periodo_id = p.id) AS presentaciones
-            FROM runac_c2_periodo p ORDER BY p.anio DESC, p.numero DESC
+                   (SELECT COUNT(*) FROM mir_c2_presentacion s WHERE s.periodo_id = p.id) AS presentaciones
+            FROM mir_c2_periodo p ORDER BY p.anio DESC, p.numero DESC
         """
         )
         return _fila_a_dict(cur)
@@ -57,7 +57,7 @@ def periodos():
 
 def periodo(codigo: str):
     with connection.cursor() as cur:
-        cur.execute("SELECT * FROM runac_c2_periodo WHERE codigo = %s", [codigo])
+        cur.execute("SELECT * FROM mir_c2_periodo WHERE codigo = %s", [codigo])
         filas = _fila_a_dict(cur)
     return filas[0] if filas else None
 
@@ -75,13 +75,13 @@ def archivos_esperados(codigo_periodo: str):
                    COUNT(DISTINCT c.id) AS campos,
                    COUNT(DISTINCT c.catalogo_id) AS catalogos,
                    COUNT(DISTINCT cr.id) AS reglas
-            FROM runac_c2_periodo p
-            JOIN runac_c2_periodo_archivo pa ON pa.periodo_id = p.id
-            JOIN runac_c1_archivo_version av ON av.id = pa.archivo_version_id
-            JOIN runac_c1_archivo a ON a.id = av.archivo_id
-            LEFT JOIN runac_c1_hoja h ON h.archivo_version_id = av.id
-            LEFT JOIN runac_c1_campo c ON c.hoja_id = h.id
-            LEFT JOIN runac_c1_campo_regla cr ON cr.campo_id = c.id
+            FROM mir_c2_periodo p
+            JOIN mir_c2_periodo_archivo pa ON pa.periodo_id = p.id
+            JOIN mir_c1_archivo_version av ON av.id = pa.archivo_version_id
+            JOIN mir_c1_archivo a ON a.id = av.archivo_id
+            LEFT JOIN mir_c1_hoja h ON h.archivo_version_id = av.id
+            LEFT JOIN mir_c1_campo c ON c.hoja_id = h.id
+            LEFT JOIN mir_c1_campo_regla cr ON cr.campo_id = c.id
             WHERE p.codigo = %s
             GROUP BY a.id, av.id ORDER BY av.orden_importacion
         """,
@@ -105,7 +105,7 @@ def archivos_esperados(codigo_periodo: str):
 def nombre_de_archivo(archivo: dict) -> str:
     """El nombre del archivo, que es un dato del archivo y no de sus hojas.
 
-    Vive en «runac_c1_archivo.descripcion», la tabla que NO se versiona: el
+    Vive en «mir_c1_archivo.descripcion», la tabla que NO se versiona: el
     archivo se sigue llamando igual aunque cambie su estructura. Lo va a
     administrar el Responsable Nacional cuando exista el CRUD de archivos.
 
@@ -123,15 +123,15 @@ def campos_de(codigo_archivo: str):
             SELECT h.nombre_esperado AS hoja, c.orden, c.nombre, c.titulo_esperado,
                    c.tipo_dato, c.longitud_maxima, c.obligatorio, c.ayuda,
                    d.nombre_esperado AS grupo, cat.codigo AS catalogo,
-                   (SELECT COUNT(*) FROM runac_c1_catalogo_opcion o
+                   (SELECT COUNT(*) FROM mir_c1_catalogo_opcion o
                      WHERE o.catalogo_id = cat.id AND o.activo = 1) AS opciones,
-                   (SELECT COUNT(*) FROM runac_c1_campo_regla cr WHERE cr.campo_id = c.id) AS reglas
-            FROM runac_c1_campo c
-            JOIN runac_c1_hoja h ON h.id = c.hoja_id
-            JOIN runac_c1_archivo_version av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-            JOIN runac_c1_archivo a ON a.id = av.archivo_id
-            LEFT JOIN runac_c1_dimension d ON d.id = c.dimension_id
-            LEFT JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
+                   (SELECT COUNT(*) FROM mir_c1_campo_regla cr WHERE cr.campo_id = c.id) AS reglas
+            FROM mir_c1_campo c
+            JOIN mir_c1_hoja h ON h.id = c.hoja_id
+            JOIN mir_c1_archivo_version av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+            JOIN mir_c1_archivo a ON a.id = av.archivo_id
+            LEFT JOIN mir_c1_dimension d ON d.id = c.dimension_id
+            LEFT JOIN mir_c1_catalogo cat ON cat.id = c.catalogo_id
             WHERE a.codigo = %s
             ORDER BY h.orden_procesamiento, c.orden
         """,
@@ -152,13 +152,13 @@ def presentacion_completa(presentacion_id: int) -> bool:
             """
             SELECT COUNT(*) AS obligatorios,
                    SUM(EXISTS (
-                       SELECT 1 FROM runac_c2_importacion i
+                       SELECT 1 FROM mir_c2_importacion i
                         WHERE i.presentacion_id = s.id
                           AND i.archivo_version_id = av.id
                           AND i.estado = 'VALIDA')) AS importados
-              FROM runac_c2_presentacion s
-              JOIN runac_c2_periodo_archivo pa ON pa.periodo_id = s.periodo_id
-              JOIN runac_c1_archivo_version av ON av.id = pa.archivo_version_id
+              FROM mir_c2_presentacion s
+              JOIN mir_c2_periodo_archivo pa ON pa.periodo_id = s.periodo_id
+              JOIN mir_c1_archivo_version av ON av.id = pa.archivo_version_id
              WHERE s.id = %s AND av.obligatorio = 1
             """,
             [presentacion_id],
@@ -184,11 +184,11 @@ def hojas_disponibles():
             """
             SELECT a.codigo AS archivo, h.nombre_esperado AS hoja,
                    av.titulo, COUNT(c.id) AS campos
-            FROM runac_c1_hoja h
-            JOIN runac_c1_archivo_version av ON av.id = h.archivo_version_id
+            FROM mir_c1_hoja h
+            JOIN mir_c1_archivo_version av ON av.id = h.archivo_version_id
                                             AND av.estado = 'VIGENTE'
-            JOIN runac_c1_archivo a ON a.id = av.archivo_id
-            LEFT JOIN runac_c1_campo c ON c.hoja_id = h.id
+            JOIN mir_c1_archivo a ON a.id = av.archivo_id
+            LEFT JOIN mir_c1_campo c ON c.hoja_id = h.id
             GROUP BY a.codigo, h.id
             HAVING campos > 0
             ORDER BY av.orden_importacion, h.orden_procesamiento
@@ -211,18 +211,18 @@ def reglas_de_hoja(codigo_archivo: str, nombre_hoja: str):
                    c.longitud_maxima, c.obligatorio,
                    c.ayuda, d.nombre_esperado AS grupo,
                    cat.codigo AS catalogo, cat.nombre AS lista,
-                   (SELECT COUNT(*) FROM runac_c1_catalogo_opcion o
+                   (SELECT COUNT(*) FROM mir_c1_catalogo_opcion o
                      WHERE o.catalogo_id = cat.id AND o.activo = 1) AS opciones,
                    (SELECT GROUP_CONCAT(o.valor_esperado ORDER BY o.orden SEPARATOR ' · ')
-                      FROM runac_c1_catalogo_opcion o
+                      FROM mir_c1_catalogo_opcion o
                      WHERE o.catalogo_id = cat.id AND o.activo = 1) AS valores
-            FROM runac_c1_campo c
-            JOIN runac_c1_hoja h ON h.id = c.hoja_id
-            JOIN runac_c1_archivo_version av ON av.id = h.archivo_version_id
+            FROM mir_c1_campo c
+            JOIN mir_c1_hoja h ON h.id = c.hoja_id
+            JOIN mir_c1_archivo_version av ON av.id = h.archivo_version_id
                                             AND av.estado = 'VIGENTE'
-            JOIN runac_c1_archivo a ON a.id = av.archivo_id
-            LEFT JOIN runac_c1_dimension d ON d.id = c.dimension_id
-            LEFT JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
+            JOIN mir_c1_archivo a ON a.id = av.archivo_id
+            LEFT JOIN mir_c1_dimension d ON d.id = c.dimension_id
+            LEFT JOIN mir_c1_catalogo cat ON cat.id = c.catalogo_id
             WHERE a.codigo = %s AND h.nombre_esperado = %s
             ORDER BY c.orden
         """,
@@ -235,14 +235,14 @@ def reglas_de_hoja(codigo_archivo: str, nombre_hoja: str):
             SELECT cr.campo_id, cr.severidad, tr.nombre AS tipo_regla,
                    r.parametros,
                    COALESCE(NULLIF(cr.mensaje, ''), r.descripcion, r.nombre) AS texto
-            FROM runac_c1_campo_regla cr
-            JOIN runac_c1_regla r ON r.id = cr.regla_id
-            JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
-            JOIN runac_c1_campo c ON c.id = cr.campo_id
-            JOIN runac_c1_hoja h ON h.id = c.hoja_id
-            JOIN runac_c1_archivo_version av ON av.id = h.archivo_version_id
+            FROM mir_c1_campo_regla cr
+            JOIN mir_c1_regla r ON r.id = cr.regla_id
+            JOIN mir_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+            JOIN mir_c1_campo c ON c.id = cr.campo_id
+            JOIN mir_c1_hoja h ON h.id = c.hoja_id
+            JOIN mir_c1_archivo_version av ON av.id = h.archivo_version_id
                                             AND av.estado = 'VIGENTE'
-            JOIN runac_c1_archivo a ON a.id = av.archivo_id
+            JOIN mir_c1_archivo a ON a.id = av.archivo_id
             WHERE a.codigo = %s AND h.nombre_esperado = %s
         """,
             [codigo_archivo, nombre_hoja],
@@ -273,9 +273,9 @@ def presentacion_de(jurisdiccion: str, codigo_periodo: str, crear: bool = False)
         cur.execute(
             """
             SELECT s.*, j.nombre AS jurisdiccion
-            FROM runac_c2_presentacion s
-            JOIN runac_c2_periodo p ON p.id = s.periodo_id
-            JOIN runac_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
+            FROM mir_c2_presentacion s
+            JOIN mir_c2_periodo p ON p.id = s.periodo_id
+            JOIN mir_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
             WHERE j.nombre = %s AND p.codigo = %s
             ORDER BY s.version DESC LIMIT 1
         """,
@@ -287,31 +287,31 @@ def presentacion_de(jurisdiccion: str, codigo_periodo: str, crear: bool = False)
         if not crear:
             return None
         cur.execute(
-            "SELECT id FROM runac_c2_periodo WHERE codigo = %s", [codigo_periodo]
+            "SELECT id FROM mir_c2_periodo WHERE codigo = %s", [codigo_periodo]
         )
         fila = cur.fetchone()
         if not fila:
             return None
         # La jurisdicción es una entidad: si no existe, se da de alta.
         cur.execute(
-            "SELECT id FROM runac_c2_jurisdiccion WHERE nombre = %s", [jurisdiccion]
+            "SELECT id FROM mir_c2_jurisdiccion WHERE nombre = %s", [jurisdiccion]
         )
         f_j = cur.fetchone()
         if f_j:
             jurisdiccion_id = f_j[0]
         else:
             cur.execute(
-                """INSERT INTO runac_c2_jurisdiccion (codigo, nombre, modalidad, activa)
+                """INSERT INTO mir_c2_jurisdiccion (codigo, nombre, modalidad, activa)
                            VALUES (%s, %s, 'PRESENTACION_PERIODICA', 1)""",
                 [jurisdiccion.upper()[:20], jurisdiccion],
             )
             cur.execute(
-                "SELECT id FROM runac_c2_jurisdiccion WHERE nombre = %s", [jurisdiccion]
+                "SELECT id FROM mir_c2_jurisdiccion WHERE nombre = %s", [jurisdiccion]
             )
             jurisdiccion_id = cur.fetchone()[0]
         cur.execute(
             """
-            INSERT INTO runac_c2_presentacion (periodo_id, jurisdiccion_id, version, estado)
+            INSERT INTO mir_c2_presentacion (periodo_id, jurisdiccion_id, version, estado)
             VALUES (%s, %s, 1, 'EN_CARGA')
         """,
             [fila[0], jurisdiccion_id],
@@ -326,9 +326,9 @@ def importaciones_de(presentacion_id: int):
             """
             SELECT i.*, a.codigo AS archivo_codigo, av.titulo AS archivo_titulo,
                    av.orden_importacion, av.obligatorio
-            FROM runac_c2_importacion i
-            LEFT JOIN runac_c1_archivo a ON a.id = i.archivo_id
-            LEFT JOIN runac_c1_archivo_version av ON av.id = i.archivo_version_id
+            FROM mir_c2_importacion i
+            LEFT JOIN mir_c1_archivo a ON a.id = i.archivo_id
+            LEFT JOIN mir_c1_archivo_version av ON av.id = i.archivo_version_id
             WHERE i.presentacion_id = %s
             ORDER BY av.orden_importacion, i.iniciada_el DESC
         """,
@@ -423,10 +423,10 @@ def reconocer(carpeta: Path, codigo_periodo: str):
             """
             SELECT a.id, a.codigo, av.id AS version_id,
                    av.nombre_esperado, av.orden_importacion, av.obligatorio
-            FROM runac_c2_periodo p
-            JOIN runac_c2_periodo_archivo pa ON pa.periodo_id = p.id
-            JOIN runac_c1_archivo_version av ON av.id = pa.archivo_version_id
-            JOIN runac_c1_archivo a ON a.id = av.archivo_id
+            FROM mir_c2_periodo p
+            JOIN mir_c2_periodo_archivo pa ON pa.periodo_id = p.id
+            JOIN mir_c1_archivo_version av ON av.id = pa.archivo_version_id
+            JOIN mir_c1_archivo a ON a.id = av.archivo_id
             WHERE p.codigo = %s ORDER BY av.orden_importacion
         """,
             [codigo_periodo],
@@ -484,11 +484,11 @@ def hallazgos_de(
     limite: int = 500,
 ):
     # Las reglas incumplidas son de un archivo que SÍ fue admitido. Los problemas
-    # del archivo entero viven en runac_c2_errores_de_importacion.
+    # del archivo entero viven en mir_c2_errores_de_importacion.
     sql = """
         SELECT h.numero_fila, h.nombre_hoja, h.columna, h.nombre_campo, h.severidad,
                h.codigo, h.valor_encontrado, h.descripcion
-        FROM runac_c2_reglas_incumplidas h WHERE h.importacion_id = %s
+        FROM mir_c2_reglas_incumplidas h WHERE h.importacion_id = %s
     """
     params: list = [importacion_id]
     if severidad:
@@ -512,7 +512,7 @@ def resumen_de_hallazgos(importacion_id: int):
         cur.execute(
             """
             SELECT codigo, severidad, COUNT(*) AS casos, MIN(descripcion) AS ejemplo
-            FROM runac_c2_reglas_incumplidas WHERE importacion_id = %s
+            FROM mir_c2_reglas_incumplidas WHERE importacion_id = %s
             GROUP BY codigo, severidad ORDER BY casos DESC
         """,
             [importacion_id],
@@ -542,15 +542,15 @@ def archivos_referenciados(codigo_archivo: str, codigo_periodo: str) -> list[str
         cur.execute(
             """
             SELECT DISTINCT JSON_UNQUOTE(JSON_EXTRACT(r.parametros, '$.archivo'))
-            FROM runac_c2_periodo_archivo pa
-            JOIN runac_c2_periodo p ON p.id = pa.periodo_id
-            JOIN runac_c1_archivo_version av ON av.id = pa.archivo_version_id
-            JOIN runac_c1_archivo a ON a.id = av.archivo_id
-            JOIN runac_c1_hoja h ON h.archivo_version_id = av.id
-            JOIN runac_c1_campo c ON c.hoja_id = h.id
-            JOIN runac_c1_campo_regla cr ON cr.campo_id = c.id
-            JOIN runac_c1_regla r ON r.id = cr.regla_id
-            JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+            FROM mir_c2_periodo_archivo pa
+            JOIN mir_c2_periodo p ON p.id = pa.periodo_id
+            JOIN mir_c1_archivo_version av ON av.id = pa.archivo_version_id
+            JOIN mir_c1_archivo a ON a.id = av.archivo_id
+            JOIN mir_c1_hoja h ON h.archivo_version_id = av.id
+            JOIN mir_c1_campo c ON c.hoja_id = h.id
+            JOIN mir_c1_campo_regla cr ON cr.campo_id = c.id
+            JOIN mir_c1_regla r ON r.id = cr.regla_id
+            JOIN mir_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
             WHERE p.codigo = %s AND a.codigo = %s
               AND tr.nombre = 'EXISTE_EN_ARCHIVO'
             """,

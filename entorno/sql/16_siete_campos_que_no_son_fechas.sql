@@ -60,9 +60,9 @@ SET NAMES utf8mb4;
 -- 1. Las reglas que sólo valen sobre una fecha. Se saca el enganche, no la
 --    regla: cada una la usan también los campos que sí son fechas.
 -- ---------------------------------------------------------------------------
-DELETE cr FROM `runac_c1_campo_regla` cr
-  JOIN `runac_c1_regla` r ON r.id = cr.regla_id
-  JOIN `runac_c1_campo` c ON c.id = cr.campo_id
+DELETE cr FROM `mir_c1_campo_regla` cr
+  JOIN `mir_c1_regla` r ON r.id = cr.regla_id
+  JOIN `mir_c1_campo` c ON c.id = cr.campo_id
  WHERE r.`nombre` IN (
         'mpe_familia_comparar_valor',
         'mpe_id_familia_ampliada_comparar_valor',
@@ -74,68 +74,68 @@ DELETE cr FROM `runac_c1_campo_regla` cr
 
 -- La bloqueante que rechaza el archivo entero. Sólo la del «especificar
 -- destino»: la de «hora de egreso» se conserva, ahí la comparación sí vale.
-DELETE cr FROM `runac_c1_campo_regla` cr
-  JOIN `runac_c1_regla` r ON r.id = cr.regla_id
+DELETE cr FROM `mir_c1_campo_regla` cr
+  JOIN `mir_c1_regla` r ON r.id = cr.regla_id
  WHERE r.`nombre` = 'mpj_dae_especificar_destino_al_egreso_comparar_campo';
 
 -- ---------------------------------------------------------------------------
 -- 2. Los tipos.
 -- ---------------------------------------------------------------------------
-UPDATE `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+UPDATE `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
  SET c.`tipo_dato` = 'TEXTO', c.`longitud_maxima` = 120
  WHERE c.`nombre` IN ('familia', 'familia_ampliada');
 
-UPDATE `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+UPDATE `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
  SET c.`tipo_dato` = 'TEXTO', c.`longitud_maxima` = 255
  WHERE c.`nombre` = 'especificar_destino_al_egreso';
 
-UPDATE `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+UPDATE `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
  SET c.`tipo_dato` = 'ENTERO', c.`longitud_maxima` = NULL
  WHERE c.`nombre` = 'id_familia_ampliada';
 
-UPDATE `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+UPDATE `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
  SET c.`tipo_dato` = 'HORA', c.`longitud_maxima` = NULL
  WHERE c.`nombre` IN ('hora_de_ingreso_al_dispositivo', 'hora_de_egreso_del_dispositivo');
 
 -- ---------------------------------------------------------------------------
 -- 3. El identificador nuevo lleva las mismas reglas que su par `id_familia`.
 -- ---------------------------------------------------------------------------
-INSERT IGNORE INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
+INSERT IGNORE INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
 SELECT c.id, r.id, 'ADVERTENCIA'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_regla` r ON r.`nombre` = 'rango_identificador'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_regla` r ON r.`nombre` = 'rango_identificador'
  WHERE c.`nombre` = 'id_familia_ampliada';
 
-INSERT IGNORE INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
+INSERT IGNORE INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
 SELECT c.id, r.id, 'BLOQUEANTE'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_regla` r ON r.`nombre` = 'tope_identificador'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_regla` r ON r.`nombre` = 'tope_identificador'
  WHERE c.`nombre` = 'id_familia_ampliada';
 
 -- ---------------------------------------------------------------------------
 -- 4. Las columnas que reciben el dato.
 -- ---------------------------------------------------------------------------
-ALTER TABLE `runac_c2_mpe_v1`
+ALTER TABLE `mir_c2_mpe_v1`
   MODIFY `familia` varchar(120) NULL,
   MODIFY `familia_ampliada` varchar(120) NULL,
   MODIFY `id_familia_ampliada` bigint NULL;
 
-ALTER TABLE `runac_c2_mpj_dae_v1_mpj`
+ALTER TABLE `mir_c2_mpj_dae_v1_mpj`
   MODIFY `especificar_destino_al_egreso` varchar(255) NULL;
 
-ALTER TABLE `runac_c2_mpj_dae_v1_dae`
+ALTER TABLE `mir_c2_mpj_dae_v1_dae`
   MODIFY `especificar_destino_al_egreso` varchar(255) NULL,
   MODIFY `hora_de_ingreso_al_dispositivo` time NULL,
   MODIFY `hora_de_egreso_del_dispositivo` time NULL;
@@ -146,14 +146,14 @@ ALTER TABLE `runac_c2_mpj_dae_v1_dae`
 SELECT a.`codigo` AS archivo, h.`nombre_esperado` AS hoja,
        c.`titulo_esperado` AS campo, c.`tipo_dato`,
        (SELECT GROUP_CONCAT(CONCAT(tr.`nombre`, '/', cr.`severidad`))
-          FROM `runac_c1_campo_regla` cr
-          JOIN `runac_c1_regla` r ON r.id = cr.regla_id
-          JOIN `runac_c1_tipo_regla` tr ON tr.id = r.tipo_regla_id
+          FROM `mir_c1_campo_regla` cr
+          JOIN `mir_c1_regla` r ON r.id = cr.regla_id
+          JOIN `mir_c1_tipo_regla` tr ON tr.id = r.tipo_regla_id
          WHERE cr.campo_id = c.id) AS reglas
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  WHERE c.`nombre` IN ('familia', 'familia_ampliada', 'id_familia_ampliada',
                       'especificar_destino_al_egreso',
                       'hora_de_ingreso_al_dispositivo', 'hora_de_egreso_del_dispositivo')
@@ -185,6 +185,6 @@ SELECT a.`codigo` AS archivo, h.`nombre_esperado` AS hoja,
 -- dejarla diciendo una falsedad.
 -- ===========================================================================
 
-DELETE cr FROM `runac_c1_campo_regla` cr
-  JOIN `runac_c1_regla` r ON r.id = cr.regla_id
+DELETE cr FROM `mir_c1_campo_regla` cr
+  JOIN `mir_c1_regla` r ON r.id = cr.regla_id
  WHERE r.`nombre` = 'mpj_dae_hora_de_egreso_del_dispositivo_comparar_campo';

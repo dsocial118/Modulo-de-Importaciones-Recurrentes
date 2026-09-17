@@ -34,9 +34,9 @@ SET NAMES utf8mb4;
 -- campos que le corresponden, en cualquier archivo y cualquier hoja.
 -- ---------------------------------------------------------------------------
 
-INSERT INTO `runac_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
+INSERT INTO `mir_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
 SELECT t.id, r.nombre, r.descripcion, r.parametros
-  FROM `runac_c1_tipo_regla` t
+  FROM `mir_c1_tipo_regla` t
   JOIN (
     SELECT 'rango_horas_semanales' AS nombre,
            'Las horas semanales no pueden superar las que tiene una semana.' AS descripcion,
@@ -69,9 +69,9 @@ ON DUPLICATE KEY UPDATE `parametros` = VALUES(`parametros`),
 -- quedan cubiertas todas sin enumerarlas.
 -- ---------------------------------------------------------------------------
 
-INSERT INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`, `mensaje`)
+INSERT INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`, `mensaje`)
 SELECT c.id, r.id, 'ADVERTENCIA', m.mensaje
-  FROM `runac_c1_campo` c
+  FROM `mir_c1_campo` c
   JOIN (
     SELECT 'rango_horas_semanales' AS regla,
            'cantidad_de_horas_semanales_%' AS patron,
@@ -93,6 +93,6 @@ SELECT c.id, r.id, 'ADVERTENCIA', m.mensaje
     UNION ALL SELECT 'rango_identificador', 'id_del_nino_nina_o_adolescente',
            'Un identificador empieza en uno.'
   ) m ON c.`nombre` LIKE m.patron
-  JOIN `runac_c1_regla` r ON r.`nombre` = m.regla
+  JOIN `mir_c1_regla` r ON r.`nombre` = m.regla
  WHERE c.`tipo_dato` IN ('ENTERO', 'DECIMAL')
 ON DUPLICATE KEY UPDATE `mensaje` = VALUES(`mensaje`);

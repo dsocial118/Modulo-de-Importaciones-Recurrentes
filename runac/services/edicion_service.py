@@ -10,7 +10,7 @@ Esto es lo segundo. Reglas que se aplican acá y no en las vistas:
   - Sólo se edita mientras la presentación está en carga o subsanando; con la
     carga cerrada, primero hay que reabrirla.
   - Toda edición queda registrada con usuario, fecha, valor anterior y valor
-    nuevo, en `runac_c2_historial_cambios`.
+    nuevo, en `mir_c2_historial_cambios`.
 
 La tabla que recibe los datos se deduce por convención, con la misma función que
 usan el generador y el importador: si se desincronizan, se escribe en una tabla
@@ -87,12 +87,12 @@ def contexto_de(importacion_id: int) -> dict[str, Any]:
                    av.id AS version_id, av.numero AS version,
                    s.id AS presentacion_id, s.estado AS estado_presentacion,
                    j.nombre AS jurisdiccion, p.codigo AS periodo
-            FROM runac_c2_importacion i
-            JOIN runac_c1_archivo a ON a.id = i.archivo_id
-            JOIN runac_c1_archivo_version av ON av.id = i.archivo_version_id
-            JOIN runac_c2_presentacion s ON s.id = i.presentacion_id
-            JOIN runac_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
-            JOIN runac_c2_periodo p ON p.id = s.periodo_id
+            FROM mir_c2_importacion i
+            JOIN mir_c1_archivo a ON a.id = i.archivo_id
+            JOIN mir_c1_archivo_version av ON av.id = i.archivo_version_id
+            JOIN mir_c2_presentacion s ON s.id = i.presentacion_id
+            JOIN mir_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
+            JOIN mir_c2_periodo p ON p.id = s.periodo_id
             WHERE i.id = %s
             """,
             [importacion_id],
@@ -105,7 +105,7 @@ def contexto_de(importacion_id: int) -> dict[str, Any]:
         cur.execute(
             """
             SELECT id, nombre_esperado, orden_procesamiento
-            FROM runac_c1_hoja WHERE archivo_version_id = %s
+            FROM mir_c1_hoja WHERE archivo_version_id = %s
             ORDER BY orden_procesamiento
             """,
             [datos["version_id"]],
@@ -122,8 +122,8 @@ def campos_de_la_hoja(hoja_id: int) -> list[dict[str, Any]]:
             """
             SELECT c.id, c.nombre, c.titulo_esperado, c.orden, c.tipo_dato,
                    c.longitud_maxima, c.obligatorio, cat.codigo AS catalogo
-            FROM runac_c1_campo c
-            LEFT JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
+            FROM mir_c1_campo c
+            LEFT JOIN mir_c1_catalogo cat ON cat.id = c.catalogo_id
             WHERE c.hoja_id = %s ORDER BY c.orden
             """,
             [hoja_id],
@@ -144,8 +144,8 @@ def opciones_de(catalogo: str, periodo: str | None = None) -> list[str]:
     if not catalogo:
         return []
     sql = """
-        SELECT o.valor_esperado FROM runac_c1_catalogo_opcion o
-        JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
+        SELECT o.valor_esperado FROM mir_c1_catalogo_opcion o
+        JOIN mir_c1_catalogo c ON c.id = o.catalogo_id
         WHERE c.codigo = %s AND o.activo = 1
     """
     parametros: list[Any] = [catalogo]
@@ -177,9 +177,9 @@ def reglas_de_los_campos(campos: list[dict]) -> dict[int, list[dict]]:
             SELECT cr.campo_id, r.id, r.nombre, r.parametros,
                    tr.nombre AS tipo_regla, cr.severidad,
                    cr.mensaje AS mensaje_configurado
-            FROM runac_c1_campo_regla cr
-            JOIN runac_c1_regla r ON r.id = cr.regla_id
-            JOIN runac_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+            FROM mir_c1_campo_regla cr
+            JOIN mir_c1_regla r ON r.id = cr.regla_id
+            JOIN mir_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
             WHERE cr.campo_id IN ({marcas})
             """,
             [c["id"] for c in campos],
@@ -240,7 +240,7 @@ def datos_de_la_hoja(
         cur.execute(
             """
             SELECT numero_fila, nombre_campo, severidad, descripcion, valor_encontrado
-            FROM runac_c2_reglas_incumplidas
+            FROM mir_c2_reglas_incumplidas
             WHERE importacion_id = %s AND nombre_hoja = %s AND resuelta = 0
             """,
             [importacion_id, hoja["nombre_esperado"]],
@@ -423,7 +423,7 @@ def _reconciliar_advertencias(
     cur.execute(
         """
         SELECT id, codigo, campo_id, regla_id, resuelta
-        FROM runac_c2_reglas_incumplidas
+        FROM mir_c2_reglas_incumplidas
         WHERE importacion_id = %s AND nombre_hoja = %s AND numero_fila = %s
         """,
         [importacion_id, nombre_hoja, numero_fila],
@@ -439,7 +439,7 @@ def _reconciliar_advertencias(
         if bool(reg["resuelta"]) is not sigue:
             continue  # ya está como corresponde
         cur.execute(
-            "UPDATE runac_c2_reglas_incumplidas SET resuelta = %s WHERE id = %s",
+            "UPDATE mir_c2_reglas_incumplidas SET resuelta = %s WHERE id = %s",
             [0 if sigue else 1, reg["id"]],
         )
 
@@ -449,7 +449,7 @@ def _reconciliar_advertencias(
             continue
         cur.execute(
             """
-            INSERT INTO runac_c2_reglas_incumplidas
+            INSERT INTO mir_c2_reglas_incumplidas
                 (importacion_id, campo_id, regla_id, codigo, severidad,
                  nombre_hoja, numero_fila, nombre_campo, valor_encontrado,
                  descripcion)
@@ -614,7 +614,7 @@ def editar(
         # La constancia: quién, cuándo, qué había y qué quedó.
         cur.execute(
             """
-            INSERT INTO runac_c2_historial_cambios
+            INSERT INTO mir_c2_historial_cambios
                 (importacion_id, numero_fila, campo_id, observacion_id,
                  valor_anterior, valor_nuevo, motivo, usuario)
             VALUES (%s, %s, %s, NULL, %s, %s, %s, %s)
@@ -668,8 +668,8 @@ def historial_de(importacion_id: int, numero_fila: int | None = None) -> list[di
     sql = """
         SELECT h.numero_fila, h.valor_anterior, h.valor_nuevo, h.motivo,
                h.fecha, h.usuario, c.titulo_esperado AS campo
-        FROM runac_c2_historial_cambios h
-        LEFT JOIN runac_c1_campo c ON c.id = h.campo_id
+        FROM mir_c2_historial_cambios h
+        LEFT JOIN mir_c1_campo c ON c.id = h.campo_id
         WHERE h.importacion_id = %s
     """
     parametros: list[Any] = [importacion_id]

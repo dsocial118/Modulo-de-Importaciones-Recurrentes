@@ -23,8 +23,8 @@
 
 SET NAMES utf8mb4;
 
-UPDATE `runac_c1_campo` c
-  JOIN `runac_c1_catalogo` correcto ON correcto.`codigo` = 'modalidad_de_cuidado'
+UPDATE `mir_c1_campo` c
+  JOIN `mir_c1_catalogo` correcto ON correcto.`codigo` = 'modalidad_de_cuidado'
  SET c.`catalogo_id` = correcto.id
  WHERE c.`nombre` = 'modalidad_de_cuidado'
    AND c.`catalogo_id` <> correcto.id;

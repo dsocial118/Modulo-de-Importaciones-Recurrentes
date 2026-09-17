@@ -36,38 +36,38 @@
 SET NAMES utf8mb4;
 
 -- 1. La regla. `NOT EXISTS` para que correr el guion dos veces no la duplique.
-INSERT INTO `runac_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
+INSERT INTO `mir_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
 SELECT tr.id,
        'mpe_residencia_solo_si_alojamiento_formal',
        'La residencia no se nombra cuando la modalidad de cuidado no es alojamiento formal.',
        '{"campo_condicion": "modalidad_de_cuidado", "operador": "DISTINTO", "valor_condicion": "Alojamiento formal"}'
-  FROM `runac_c1_tipo_regla` tr
+  FROM `mir_c1_tipo_regla` tr
  WHERE tr.`nombre` = 'PROHIBIDO_SI'
    AND NOT EXISTS (
-       SELECT 1 FROM `runac_c1_regla` r
+       SELECT 1 FROM `mir_c1_regla` r
         WHERE r.`nombre` = 'mpe_residencia_solo_si_alojamiento_formal');
 
 -- 2. Colgarla del campo.
-INSERT IGNORE INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
+INSERT IGNORE INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
 SELECT c.id, r.id, 'BLOQUEANTE'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
-  JOIN `runac_c1_regla` r ON r.`nombre` = 'mpe_residencia_solo_si_alojamiento_formal'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
+  JOIN `mir_c1_regla` r ON r.`nombre` = 'mpe_residencia_solo_si_alojamiento_formal'
  WHERE a.`codigo` = 'MPE'
    AND c.`nombre` = 'nombre_de_la_residencia_hogar';
 
 -- 3. Cómo quedó el campo.
 SELECT a.`codigo` AS archivo, c.`titulo_esperado` AS campo,
        tr.`nombre` AS tipo, cr.`severidad`, r.`parametros`
-  FROM `runac_c1_campo_regla` cr
-  JOIN `runac_c1_regla` r ON r.id = cr.regla_id
-  JOIN `runac_c1_tipo_regla` tr ON tr.id = r.tipo_regla_id
-  JOIN `runac_c1_campo` c ON c.id = cr.campo_id
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+  FROM `mir_c1_campo_regla` cr
+  JOIN `mir_c1_regla` r ON r.id = cr.regla_id
+  JOIN `mir_c1_tipo_regla` tr ON tr.id = r.tipo_regla_id
+  JOIN `mir_c1_campo` c ON c.id = cr.campo_id
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  WHERE a.`codigo` = 'MPE' AND c.`nombre` = 'nombre_de_la_residencia_hogar';
 
 -- ===========================================================================
@@ -92,42 +92,42 @@ SELECT a.`codigo` AS archivo, c.`titulo_esperado` AS campo,
 -- ===========================================================================
 
 -- 4.1. Deja de ser obligatorio siempre.
-UPDATE `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+UPDATE `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  SET c.`obligatorio` = 0
  WHERE a.`codigo` = 'MPE' AND c.`nombre` = 'nombre_de_la_residencia_hogar';
 
 -- 4.2. Pasa a ser obligatorio cuando la modalidad SÍ es alojamiento formal.
-INSERT INTO `runac_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
+INSERT INTO `mir_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
 SELECT tr.id,
        'mpe_residencia_obligatoria_si_alojamiento_formal',
        'Si la modalidad de cuidado es alojamiento formal, hay que decir en qué residencia.',
        '{"campo_condicion": "modalidad_de_cuidado", "operador": "IGUAL", "valor_condicion": "Alojamiento formal"}'
-  FROM `runac_c1_tipo_regla` tr
+  FROM `mir_c1_tipo_regla` tr
  WHERE tr.`nombre` = 'OBLIGATORIO_SI'
    AND NOT EXISTS (
-       SELECT 1 FROM `runac_c1_regla` r
+       SELECT 1 FROM `mir_c1_regla` r
         WHERE r.`nombre` = 'mpe_residencia_obligatoria_si_alojamiento_formal');
 
-INSERT IGNORE INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
+INSERT IGNORE INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`)
 SELECT c.id, r.id, 'BLOQUEANTE'
-  FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
-  JOIN `runac_c1_regla` r ON r.`nombre` = 'mpe_residencia_obligatoria_si_alojamiento_formal'
+  FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
+  JOIN `mir_c1_regla` r ON r.`nombre` = 'mpe_residencia_obligatoria_si_alojamiento_formal'
  WHERE a.`codigo` = 'MPE' AND c.`nombre` = 'nombre_de_la_residencia_hogar';
 
 -- 4.3. Cómo quedó.
 SELECT c.`titulo_esperado` AS campo, c.`obligatorio`,
        tr.`nombre` AS tipo, cr.`severidad`, r.`parametros`
-  FROM `runac_c1_campo_regla` cr
-  JOIN `runac_c1_regla` r ON r.id = cr.regla_id
-  JOIN `runac_c1_tipo_regla` tr ON tr.id = r.tipo_regla_id
-  JOIN `runac_c1_campo` c ON c.id = cr.campo_id
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+  FROM `mir_c1_campo_regla` cr
+  JOIN `mir_c1_regla` r ON r.id = cr.regla_id
+  JOIN `mir_c1_tipo_regla` tr ON tr.id = r.tipo_regla_id
+  JOIN `mir_c1_campo` c ON c.id = cr.campo_id
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  WHERE a.`codigo` = 'MPE' AND c.`nombre` = 'nombre_de_la_residencia_hogar';

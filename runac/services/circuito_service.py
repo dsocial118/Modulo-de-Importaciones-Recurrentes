@@ -156,7 +156,7 @@ def ejecutar(presentacion_id: int, accion: str, usuario, listo: bool = True) -> 
 
     with connection.cursor() as cur:
         cur.execute(
-            "SELECT estado FROM runac_c2_presentacion WHERE id = %s", [presentacion_id]
+            "SELECT estado FROM mir_c2_presentacion WHERE id = %s", [presentacion_id]
         )
         fila = cur.fetchone()
         if not fila:
@@ -179,42 +179,42 @@ def ejecutar(presentacion_id: int, accion: str, usuario, listo: bool = True) -> 
         if accion == "reabrir_carga":
             # Reabrir deshace el cierre: la revision anterior queda sin efecto.
             cur.execute(
-                """UPDATE runac_c2_presentacion
+                """UPDATE mir_c2_presentacion
                            SET estado = %s, cerrada_el = NULL, habilitada_el = NULL
                            WHERE id = %s""",
                 [destino, presentacion_id],
             )
         elif accion == "cerrar_carga":
             cur.execute(
-                """UPDATE runac_c2_presentacion
+                """UPDATE mir_c2_presentacion
                            SET estado = %s, cerrada_el = NOW(), usuario_cierra = %s
                            WHERE id = %s""",
                 [destino, usr, presentacion_id],
             )
         elif accion == "habilitar":
             cur.execute(
-                """UPDATE runac_c2_presentacion
+                """UPDATE mir_c2_presentacion
                            SET estado = %s, habilitada_el = NOW(), usuario_habilita = %s
                            WHERE id = %s""",
                 [destino, usr, presentacion_id],
             )
         elif accion == "presentar":
             cur.execute(
-                """UPDATE runac_c2_presentacion
+                """UPDATE mir_c2_presentacion
                            SET estado = %s, presentada_el = NOW(), usuario_presenta = %s
                            WHERE id = %s""",
                 [destino, usr, presentacion_id],
             )
         elif accion == "consolidar":
             cur.execute(
-                """UPDATE runac_c2_presentacion
+                """UPDATE mir_c2_presentacion
                            SET estado = %s, consolidada_el = NOW()
                            WHERE id = %s""",
                 [destino, presentacion_id],
             )
         else:
             cur.execute(
-                "UPDATE runac_c2_presentacion SET estado = %s WHERE id = %s",
+                "UPDATE mir_c2_presentacion SET estado = %s WHERE id = %s",
                 [destino, presentacion_id],
             )
     return destino
@@ -228,9 +228,9 @@ def ejecutar(presentacion_id: int, accion: str, usuario, listo: bool = True) -> 
 def observaciones_de(presentacion_id: int, solo_abiertas: bool = False) -> list[dict]:
     sql = """
         SELECT o.*, a.codigo AS archivo_codigo
-        FROM runac_c2_observacion o
-        LEFT JOIN runac_c2_importacion i ON i.id = o.importacion_id
-        LEFT JOIN runac_c1_archivo a ON a.id = i.archivo_id
+        FROM mir_c2_observacion o
+        LEFT JOIN mir_c2_importacion i ON i.id = o.importacion_id
+        LEFT JOIN mir_c1_archivo a ON a.id = i.archivo_id
         WHERE o.presentacion_id = %s
     """
     if solo_abiertas:
@@ -261,7 +261,7 @@ def crear_observacion(presentacion_id: int, usuario, texto: str, ubicacion=None)
     with connection.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO runac_c2_observacion
+            INSERT INTO mir_c2_observacion
                 (presentacion_id, importacion_id, numero_fila, identificador_registro,
                  texto, estado, usuario_observa)
             VALUES (%s, %s, %s, %s, %s, 'ABIERTA', %s)
@@ -276,7 +276,7 @@ def crear_observacion(presentacion_id: int, usuario, texto: str, ubicacion=None)
             ],
         )
         cur.execute(
-            """UPDATE runac_c2_presentacion SET estado = 'OBSERVADA'
+            """UPDATE mir_c2_presentacion SET estado = 'OBSERVADA'
                         WHERE id = %s AND estado IN ('EN_REVISION','CERRADA','HABILITADA')""",
             [presentacion_id],
         )
@@ -288,14 +288,14 @@ def responder_observacion(observacion_id: int, usuario, respuesta: str):
         raise TransicionInvalida("La respuesta no puede estar vacía.")
     with connection.cursor() as cur:
         cur.execute(
-            """UPDATE runac_c2_observacion
+            """UPDATE mir_c2_observacion
                        SET respuesta = %s, estado = 'RESPONDIDA',
                            respondida_el = NOW(), usuario_responde = %s
                        WHERE id = %s""",
             [respuesta.strip(), usuario.get_username(), observacion_id],
         )
         cur.execute(
-            "SELECT presentacion_id FROM runac_c2_observacion WHERE id = %s",
+            "SELECT presentacion_id FROM mir_c2_observacion WHERE id = %s",
             [observacion_id],
         )
         fila = cur.fetchone()
@@ -303,13 +303,13 @@ def responder_observacion(observacion_id: int, usuario, respuesta: str):
             return
         presentacion_id = fila[0]
         cur.execute(
-            """SELECT COUNT(*) FROM runac_c2_observacion
+            """SELECT COUNT(*) FROM mir_c2_observacion
                         WHERE presentacion_id = %s AND estado = 'ABIERTA'""",
             [presentacion_id],
         )
         if cur.fetchone()[0] == 0:
             cur.execute(
-                """UPDATE runac_c2_presentacion SET estado = 'SUBSANADA'
+                """UPDATE mir_c2_presentacion SET estado = 'SUBSANADA'
                             WHERE id = %s AND estado = 'OBSERVADA'""",
                 [presentacion_id],
             )
@@ -327,7 +327,7 @@ def registrar_expediente(presentacion_id: int, numero: str, usuario):
         )
     with connection.cursor() as cur:
         cur.execute(
-            "UPDATE runac_c2_presentacion SET expediente = %s WHERE id = %s",
+            "UPDATE mir_c2_presentacion SET expediente = %s WHERE id = %s",
             [(numero or "").strip()[:100], presentacion_id],
         )
 
@@ -350,7 +350,7 @@ def cambiar_estado_del_periodo(codigo: str, estado: str, usuario) -> str:
         raise TransicionInvalida(f"«{estado}» no es un estado de período.")
     with connection.cursor() as cur:
         cur.execute(
-            "UPDATE runac_c2_periodo SET estado = %s WHERE codigo = %s",
+            "UPDATE mir_c2_periodo SET estado = %s WHERE codigo = %s",
             [estado, codigo],
         )
         if not cur.rowcount:
@@ -379,11 +379,11 @@ def borrar_todas_las_importaciones() -> dict:
               FROM information_schema.COLUMNS c
              WHERE c.TABLE_SCHEMA = DATABASE()
                AND c.COLUMN_NAME = 'importacion_id'
-               AND c.TABLE_NAME LIKE 'runac_c2_%'
-               AND c.TABLE_NAME NOT IN ('runac_c2_reglas_incumplidas',
-                                        'runac_c2_errores_de_importacion',
-                                        'runac_c2_historial_cambios',
-                                        'runac_c2_observacion')
+               AND c.TABLE_NAME LIKE 'mir_c2_%'
+               AND c.TABLE_NAME NOT IN ('mir_c2_reglas_incumplidas',
+                                        'mir_c2_errores_de_importacion',
+                                        'mir_c2_historial_cambios',
+                                        'mir_c2_observacion')
         """
         )
         tablas = [f[0] for f in cur.fetchall()]
@@ -391,22 +391,22 @@ def borrar_todas_las_importaciones() -> dict:
         for tabla in tablas:
             # El nombre sale del catálogo de la base, no de la petición. Aun
             # así se comprueba antes de interpolarlo.
-            if not re.fullmatch(r"runac_c2_[a-z0-9_]{1,50}", tabla or ""):
+            if not re.fullmatch(r"mir_c2_[a-z0-9_]{1,50}", tabla or ""):
                 continue
             cur.execute(f"DELETE FROM `{tabla}`")
             borrados["filas"] += cur.rowcount
 
         for tabla in (
-            "runac_c2_reglas_incumplidas",
-            "runac_c2_errores_de_importacion",
-            "runac_c2_historial_cambios",
-            "runac_c2_observacion",
+            "mir_c2_reglas_incumplidas",
+            "mir_c2_errores_de_importacion",
+            "mir_c2_historial_cambios",
+            "mir_c2_observacion",
         ):
             cur.execute(f"DELETE FROM `{tabla}`")
 
-        cur.execute("DELETE FROM runac_c2_importacion")
+        cur.execute("DELETE FROM mir_c2_importacion")
         borrados["importaciones"] = cur.rowcount
-        cur.execute("DELETE FROM runac_c2_presentacion")
+        cur.execute("DELETE FROM mir_c2_presentacion")
         borrados["presentaciones"] = cur.rowcount
 
         # Y se reabre el período. Sin esto la herramienta dejaba el sistema a
@@ -415,7 +415,7 @@ def borrar_todas_las_importaciones() -> dict:
         # nada y no quedaba forma obvia de salir. «Volver a empezar» incluye
         # poder empezar.
         cur.execute(
-            "UPDATE runac_c2_periodo SET estado = 'ABIERTO' WHERE estado <> 'ABIERTO'"
+            "UPDATE mir_c2_periodo SET estado = 'ABIERTO' WHERE estado <> 'ABIERTO'"
         )
         borrados["periodos"] = cur.rowcount
 
@@ -430,9 +430,9 @@ def comprobante(presentacion_id: int) -> dict:
             SELECT s.id, s.version, s.estado, s.presentada_el, s.usuario_presenta,
                    s.expediente, j.nombre AS jurisdiccion,
                    p.codigo AS periodo, p.fecha_desde, p.fecha_hasta
-            FROM runac_c2_presentacion s
-            JOIN runac_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
-            JOIN runac_c2_periodo p ON p.id = s.periodo_id
+            FROM mir_c2_presentacion s
+            JOIN mir_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
+            JOIN mir_c2_periodo p ON p.id = s.periodo_id
             WHERE s.id = %s
         """,
             [presentacion_id],
@@ -446,8 +446,8 @@ def comprobante(presentacion_id: int) -> dict:
         cur.execute(
             """
             SELECT a.codigo, i.nombre_archivo, i.filas_incorporadas, i.iniciada_el
-            FROM runac_c2_importacion i
-            JOIN runac_c1_archivo a ON a.id = i.archivo_id
+            FROM mir_c2_importacion i
+            JOIN mir_c1_archivo a ON a.id = i.archivo_id
             WHERE i.presentacion_id = %s AND i.estado = 'VALIDA'
             ORDER BY a.codigo
         """,

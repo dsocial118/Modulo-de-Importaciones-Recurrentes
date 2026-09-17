@@ -2,13 +2,13 @@
 -- Capa 1 — Cómo se llama cada archivo
 --
 -- El archivo y la hoja son dos cosas distintas, y el modelo las tenía
--- mezcladas: `runac_c1_archivo_version.titulo` guardaba el encabezado de la
+-- mezcladas: `mir_c1_archivo_version.titulo` guardaba el encabezado de la
 -- PRIMERA HOJA de la planilla. Así, el archivo de dispositivos penales
 -- —que tiene cinco hojas: CRC, CRSC, MPT, CAD y Guardia Comisaría— aparecía en
 -- pantalla como «Listado de los dispositivos penales Centros de Régimen
 -- Cerrado», que es el título de una sola de ellas.
 --
--- El nombre del archivo es un dato del archivo. Va en `runac_c1_archivo`, que
+-- El nombre del archivo es un dato del archivo. Va en `mir_c1_archivo`, que
 -- es la tabla que no se versiona: el archivo se sigue llamando igual aunque
 -- cambie su estructura.
 --
@@ -26,7 +26,7 @@
 
 SET NAMES utf8mb4;
 
-UPDATE `runac_c1_archivo` SET `descripcion` = CASE `codigo`
+UPDATE `mir_c1_archivo` SET `descripcion` = CASE `codigo`
     WHEN 'DISP_PENAL' THEN 'Listado de dispositivos penales'
     WHEN 'DISP_SCP'   THEN 'Listado de dispositivos de cuidado residencial'
     WHEN 'MPI'        THEN 'Nómina de medidas de protección integral'

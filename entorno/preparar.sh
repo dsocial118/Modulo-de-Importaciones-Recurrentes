@@ -60,7 +60,7 @@ echo
 echo "== 3. Cargando la definición =="
 YA=$(mysql_en_el_contenedor -N -B -e \
   "SELECT COUNT(*) FROM information_schema.tables
-    WHERE table_schema='$BASE' AND table_name='runac_c1_campo';" 2>/dev/null || echo 0)
+    WHERE table_schema='$BASE' AND table_name='mir_c1_campo';" 2>/dev/null || echo 0)
 
 if [ "${YA//[$'\r\n ']/}" != "0" ]; then
   echo "   La base «$BASE» ya está armada. No se toca nada."
@@ -93,19 +93,19 @@ from django.db import connection
 
 with connection.cursor() as cur:
     cur.execute(
-        """SELECT COUNT(*) FROM runac_c1_campo c
-             JOIN runac_c1_hoja h ON h.id = c.hoja_id
-             JOIN runac_c1_archivo_version av
+        """SELECT COUNT(*) FROM mir_c1_campo c
+             JOIN mir_c1_hoja h ON h.id = c.hoja_id
+             JOIN mir_c1_archivo_version av
                ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'"""
     )
     campos = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM runac_c1_campo_regla")
+    cur.execute("SELECT COUNT(*) FROM mir_c1_campo_regla")
     reglas = cur.fetchone()[0]
     # Si acá sale «SÃ­» en vez de «Sí», la carga se hizo sin utf8mb4 y hay que
     # rehacerla desde cero, no arreglarla con un UPDATE.
     cur.execute(
-        """SELECT o.valor_esperado FROM runac_c1_catalogo_opcion o
-             JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
+        """SELECT o.valor_esperado FROM mir_c1_catalogo_opcion o
+             JOIN mir_c1_catalogo c ON c.id = o.catalogo_id
             WHERE c.codigo = 'si_no' ORDER BY o.orden LIMIT 1"""
     )
     fila = cur.fetchone()

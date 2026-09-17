@@ -118,8 +118,8 @@ def _importacion_de(codigo: str):
     """La última importación válida de ese archivo."""
     with connection.cursor() as cur:
         cur.execute(
-            """SELECT i.id FROM runac_c2_importacion i
-                 JOIN runac_c1_archivo a ON a.id = i.archivo_id
+            """SELECT i.id FROM mir_c2_importacion i
+                 JOIN mir_c1_archivo a ON a.id = i.archivo_id
                 WHERE a.codigo = %s AND i.estado = 'VALIDA'
                 ORDER BY i.id DESC LIMIT 1""",
             [codigo],
@@ -176,7 +176,7 @@ def _fila_con_aviso(importacion: int, hoja: dict, campo: dict):
     """La primera fila con una advertencia sin resolver en ese campo."""
     with connection.cursor() as cur:
         cur.execute(
-            """SELECT MIN(numero_fila) FROM runac_c2_reglas_incumplidas
+            """SELECT MIN(numero_fila) FROM mir_c2_reglas_incumplidas
                 WHERE importacion_id = %s AND nombre_hoja = %s
                   AND nombre_campo = %s AND resuelta = 0""",
             [importacion, hoja["nombre_esperado"], campo["titulo_esperado"]],

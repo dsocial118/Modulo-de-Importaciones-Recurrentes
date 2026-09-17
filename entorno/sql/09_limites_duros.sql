@@ -28,9 +28,9 @@ SET NAMES utf8mb4;
 -- Los techos duros
 -- ---------------------------------------------------------------------------
 
-INSERT INTO `runac_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
+INSERT INTO `mir_c1_regla` (`tipo_regla_id`, `nombre`, `descripcion`, `parametros`)
 SELECT t.id, r.nombre, r.descripcion, r.parametros
-  FROM `runac_c1_tipo_regla` t
+  FROM `mir_c1_tipo_regla` t
   JOIN (
     SELECT 'tope_plantel' AS nombre,
            'Techo imposible para la cantidad de personas que trabajan en un dispositivo.' AS descripcion,
@@ -55,9 +55,9 @@ SELECT t.id, r.nombre, r.descripcion, r.parametros
 ON DUPLICATE KEY UPDATE `parametros` = VALUES(`parametros`),
                         `descripcion` = VALUES(`descripcion`);
 
-INSERT INTO `runac_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`, `mensaje`)
+INSERT INTO `mir_c1_campo_regla` (`campo_id`, `regla_id`, `severidad`, `mensaje`)
 SELECT c.id, r.id, 'BLOQUEANTE', m.mensaje
-  FROM `runac_c1_campo` c
+  FROM `mir_c1_campo` c
   JOIN (
     SELECT 'tope_plantel' AS regla, 'cantidad_de_agentes_%' AS patron,
            'Ese número de personas no puede ser. Hay que corregirlo en el Excel.' AS mensaje
@@ -78,7 +78,7 @@ SELECT c.id, r.id, 'BLOQUEANTE', m.mensaje
     UNION ALL SELECT 'tope_identificador', 'id_del_nino_nina_o_adolescente',
            'Ese identificador no puede ser. Hay que corregirlo en el Excel.'
   ) m ON c.`nombre` LIKE m.patron
-  JOIN `runac_c1_regla` r ON r.`nombre` = m.regla
+  JOIN `mir_c1_regla` r ON r.`nombre` = m.regla
  WHERE c.`tipo_dato` IN ('ENTERO', 'DECIMAL')
 ON DUPLICATE KEY UPDATE `mensaje` = VALUES(`mensaje`);
 
@@ -86,8 +86,8 @@ ON DUPLICATE KEY UPDATE `mensaje` = VALUES(`mensaje`);
 -- Las horas semanales pasan a bloquear: no hay techo blando que discutir.
 -- ---------------------------------------------------------------------------
 
-UPDATE `runac_c1_campo_regla` cr
-  JOIN `runac_c1_regla` r ON r.id = cr.regla_id
+UPDATE `mir_c1_campo_regla` cr
+  JOIN `mir_c1_regla` r ON r.id = cr.regla_id
  SET cr.`severidad` = 'BLOQUEANTE',
      cr.`mensaje` = 'Son más horas de las que tiene una semana: el dato no puede ser correcto.'
  WHERE r.`nombre` = 'rango_horas_semanales';

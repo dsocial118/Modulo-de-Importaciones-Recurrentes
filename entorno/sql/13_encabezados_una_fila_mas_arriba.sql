@@ -45,9 +45,9 @@ SET NAMES utf8mb4;
 
 -- Sólo las hojas cuya fila 1 queda vacía, y sólo si todavía no se bajaron.
 -- Correr el guion dos veces no vuelve a restar.
-UPDATE `runac_c1_hoja` h
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+UPDATE `mir_c1_hoja` h
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  SET h.`fila_encabezados` = h.`fila_encabezados` - 1
  WHERE (a.`codigo` = 'DISP_PENAL' AND h.`fila_encabezados` = 3)
     OR (a.`codigo` = 'DISP_SCP' AND h.`fila_encabezados` = 4);
@@ -55,7 +55,7 @@ UPDATE `runac_c1_hoja` h
 -- Cómo quedó. Los dispositivos en 2 y 3; las nóminas, intactas en 3.
 SELECT a.`codigo` AS archivo, h.`nombre_esperado` AS hoja,
        h.`fila_encabezados` AS encabezados_en_la_fila
-  FROM `runac_c1_hoja` h
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+  FROM `mir_c1_hoja` h
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  ORDER BY a.`codigo`, h.`orden_procesamiento`;

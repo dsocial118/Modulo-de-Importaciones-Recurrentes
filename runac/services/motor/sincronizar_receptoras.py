@@ -47,12 +47,12 @@ def definicion(cur) -> dict[str, dict[str, int]]:
         """
         SELECT a.codigo, av.numero AS version, h.nombre_esperado AS hoja,
                c.nombre AS campo, c.obligatorio,
-               (SELECT COUNT(*) FROM runac_c1_hoja h2
+               (SELECT COUNT(*) FROM mir_c1_hoja h2
                  WHERE h2.archivo_version_id = av.id) AS hojas
-        FROM runac_c1_campo c
-        JOIN runac_c1_hoja h ON h.id = c.hoja_id
-        JOIN runac_c1_archivo_version av ON av.id = h.archivo_version_id
-        JOIN runac_c1_archivo a ON a.id = av.archivo_id
+        FROM mir_c1_campo c
+        JOIN mir_c1_hoja h ON h.id = c.hoja_id
+        JOIN mir_c1_archivo_version av ON av.id = h.archivo_version_id
+        JOIN mir_c1_archivo a ON a.id = av.archivo_id
         """
     )
     esperado: dict[str, dict[str, int]] = {}

@@ -44,21 +44,21 @@ SET NAMES utf8mb4;
 
 -- 1. Comprobaciones. Con una sola referencia en Capa 2, no se borra nada.
 SELECT COUNT(*) INTO @usos_hallazgo
-  FROM `runac_c2_reglas_incumplidas` r
-  JOIN `runac_c1_campo` c ON c.id = r.campo_id
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
+  FROM `mir_c2_reglas_incumplidas` r
+  JOIN `mir_c1_campo` c ON c.id = r.campo_id
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
  WHERE h.`nombre_esperado` = 'categ prision domi';
 
 SELECT COUNT(*) INTO @usos_historial
-  FROM `runac_c2_historial_cambios` x
-  JOIN `runac_c1_campo` c ON c.id = x.campo_id
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
+  FROM `mir_c2_historial_cambios` x
+  JOIN `mir_c1_campo` c ON c.id = x.campo_id
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
  WHERE h.`nombre_esperado` = 'categ prision domi';
 
 SELECT COUNT(*) INTO @usos_observacion
-  FROM `runac_c2_observacion` o
-  JOIN `runac_c1_campo` c ON c.id = o.campo_id
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
+  FROM `mir_c2_observacion` o
+  JOIN `mir_c1_campo` c ON c.id = o.campo_id
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
  WHERE h.`nombre_esperado` = 'categ prision domi';
 
 SET @se_puede = (@usos_hallazgo + @usos_historial + @usos_observacion = 0);
@@ -70,34 +70,34 @@ SELECT IF(@se_puede, 'sin referencias en Capa 2: se puede sacar',
 -- guion que aborta a la mitad y deja la hoja sin campos.
 
 -- 2. Las reglas colgadas de sus campos (hoy son cero, pero el guion no lo asume).
-DELETE cr FROM `runac_c1_campo_regla` cr
-  JOIN `runac_c1_campo` c ON c.id = cr.campo_id
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+DELETE cr FROM `mir_c1_campo_regla` cr
+  JOIN `mir_c1_campo` c ON c.id = cr.campo_id
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  WHERE a.`codigo` = 'DISP_PENAL' AND h.`nombre_esperado` = 'categ prision domi'
    AND @se_puede;
 
 -- 3. Los campos.
-DELETE c FROM `runac_c1_campo` c
-  JOIN `runac_c1_hoja` h ON h.id = c.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+DELETE c FROM `mir_c1_campo` c
+  JOIN `mir_c1_hoja` h ON h.id = c.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  WHERE a.`codigo` = 'DISP_PENAL' AND h.`nombre_esperado` = 'categ prision domi'
    AND @se_puede;
 
 -- 4. Los grupos de campos de la hoja, si los hubiera.
-DELETE d FROM `runac_c1_dimension` d
-  JOIN `runac_c1_hoja` h ON h.id = d.hoja_id
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+DELETE d FROM `mir_c1_dimension` d
+  JOIN `mir_c1_hoja` h ON h.id = d.hoja_id
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  WHERE a.`codigo` = 'DISP_PENAL' AND h.`nombre_esperado` = 'categ prision domi'
    AND @se_puede;
 
 -- 5. La hoja.
-DELETE h FROM `runac_c1_hoja` h
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+DELETE h FROM `mir_c1_hoja` h
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  WHERE a.`codigo` = 'DISP_PENAL' AND h.`nombre_esperado` = 'categ prision domi'
    AND @se_puede;
 
@@ -105,13 +105,13 @@ DELETE h FROM `runac_c1_hoja` h
 --    convención y no se puede reconstruir en SQL, igual que en los guiones 06
 --    y 11. `sincronizar_receptoras.py` confirma después que no quedó ninguna
 --    tabla sin su hoja.
-DROP TABLE IF EXISTS `runac_c2_disp_penal_v1_categprision`;
+DROP TABLE IF EXISTS `mir_c2_disp_penal_v1_categprision`;
 
 -- 7. Cómo quedó.
 SELECT h.`nombre_esperado` AS hoja, h.`orden_procesamiento` AS orden,
-       (SELECT COUNT(*) FROM `runac_c1_campo` c WHERE c.hoja_id = h.id) AS campos
-  FROM `runac_c1_hoja` h
-  JOIN `runac_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
-  JOIN `runac_c1_archivo` a ON a.id = av.archivo_id
+       (SELECT COUNT(*) FROM `mir_c1_campo` c WHERE c.hoja_id = h.id) AS campos
+  FROM `mir_c1_hoja` h
+  JOIN `mir_c1_archivo_version` av ON av.id = h.archivo_version_id AND av.estado = 'VIGENTE'
+  JOIN `mir_c1_archivo` a ON a.id = av.archivo_id
  WHERE a.`codigo` = 'DISP_PENAL'
  ORDER BY h.`orden_procesamiento`;

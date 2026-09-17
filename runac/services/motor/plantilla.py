@@ -56,8 +56,8 @@ def leer_definicion(cur, codigo: str) -> dict:
         SELECT a.id, a.codigo, a.descripcion,
                av.id AS version_id, av.numero AS version,
                av.nombre_esperado, av.titulo, av.subtitulo
-        FROM runac_c1_archivo a
-        JOIN runac_c1_archivo_version av ON av.archivo_id = a.id AND av.estado = 'VIGENTE'
+        FROM mir_c1_archivo a
+        JOIN mir_c1_archivo_version av ON av.archivo_id = a.id AND av.estado = 'VIGENTE'
         WHERE a.codigo = %s
     """,
         (codigo,),
@@ -71,7 +71,7 @@ def leer_definicion(cur, codigo: str) -> dict:
     cur.execute(
         """
         SELECT id, nombre_esperado, descripcion, orden_procesamiento, fila_encabezados
-        FROM runac_c1_hoja WHERE archivo_version_id = %s ORDER BY orden_procesamiento
+        FROM mir_c1_hoja WHERE archivo_version_id = %s ORDER BY orden_procesamiento
     """,
         (archivo["version_id"],),
     )
@@ -80,7 +80,7 @@ def leer_definicion(cur, codigo: str) -> dict:
     for h in hojas:
         cur.execute(
             """
-            SELECT id, nombre_esperado, orden FROM runac_c1_dimension
+            SELECT id, nombre_esperado, orden FROM mir_c1_dimension
             WHERE hoja_id = %s ORDER BY orden
         """,
             (h["id"],),
@@ -92,9 +92,9 @@ def leer_definicion(cur, codigo: str) -> dict:
             SELECT c.id, c.nombre, c.titulo_esperado, c.orden, c.tipo_dato,
                    c.longitud_maxima, c.obligatorio, c.ayuda,
                    d.nombre_esperado AS dimension, cat.codigo AS catalogo, cat.nombre AS catalogo_nombre
-            FROM runac_c1_campo c
-            LEFT JOIN runac_c1_dimension d ON d.id = c.dimension_id
-            LEFT JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
+            FROM mir_c1_campo c
+            LEFT JOIN mir_c1_dimension d ON d.id = c.dimension_id
+            LEFT JOIN mir_c1_catalogo cat ON cat.id = c.catalogo_id
             WHERE c.hoja_id = %s ORDER BY c.orden
         """,
             (h["id"],),
@@ -105,9 +105,9 @@ def leer_definicion(cur, codigo: str) -> dict:
     cur.execute(
         """
         SELECT DISTINCT cat.codigo, cat.nombre
-        FROM runac_c1_campo c
-        JOIN runac_c1_hoja h ON h.id = c.hoja_id
-        JOIN runac_c1_catalogo cat ON cat.id = c.catalogo_id
+        FROM mir_c1_campo c
+        JOIN mir_c1_hoja h ON h.id = c.hoja_id
+        JOIN mir_c1_catalogo cat ON cat.id = c.catalogo_id
         WHERE h.archivo_version_id = %s ORDER BY cat.codigo
     """,
         (archivo["version_id"],),
@@ -116,8 +116,8 @@ def leer_definicion(cur, codigo: str) -> dict:
     for cat in catalogos:
         cur.execute(
             """
-            SELECT o.valor_esperado FROM runac_c1_catalogo_opcion o
-            JOIN runac_c1_catalogo c ON c.id = o.catalogo_id
+            SELECT o.valor_esperado FROM mir_c1_catalogo_opcion o
+            JOIN mir_c1_catalogo c ON c.id = o.catalogo_id
             WHERE c.codigo = %s AND o.activo = 1 ORDER BY o.orden
         """,
             (cat["codigo"],),
@@ -455,8 +455,8 @@ def main():
 
     if args.todos:
         cur.execute(
-            """SELECT a.codigo FROM runac_c1_archivo a
-                       JOIN runac_c1_archivo_version av ON av.archivo_id = a.id AND av.estado='VIGENTE'
+            """SELECT a.codigo FROM mir_c1_archivo a
+                       JOIN mir_c1_archivo_version av ON av.archivo_id = a.id AND av.estado='VIGENTE'
                        ORDER BY av.orden_importacion"""
         )
         codigos = [r["codigo"] for r in cur.fetchall()]

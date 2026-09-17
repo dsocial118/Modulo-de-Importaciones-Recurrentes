@@ -4,7 +4,7 @@ Generados con `inspectdb` sobre la base que arma la skill `runac-capa1`. Todos
 llevan `managed = False`: **el sistema no crea ni modifica el modelo, lo lee**.
 La estructura la define la Capa 1 y la generan los scripts de la skill.
 
-Las tablas receptoras de la Capa 2 (`runac_c2_<archivo>_v<n>[_<hoja>]`) no están
+Las tablas receptoras de la Capa 2 (`mir_c2_<archivo>_v<n>[_<hoja>]`) no están
 acá a propósito: se generan dinámicamente desde la Capa 1, hay una por versión de
 estructura y cambian con cada período, así que se acceden con SQL, no con modelos.
 
@@ -155,7 +155,7 @@ class RunacC1Archivo(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_archivo"
+        db_table = "mir_c1_archivo"
         db_table_comment = "La identidad del archivo. Todo lo que puede cambiar entre períodos vive en la versión."
 
 
@@ -213,7 +213,7 @@ class RunacC1ArchivoVersion(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_archivo_version"
+        db_table = "mir_c1_archivo_version"
         unique_together = (("archivo", "numero"),)
         db_table_comment = "Cada versión de la estructura de un archivo. Hojas, dimensiones, campos y reglas cuelgan de la versión, no del archivo."
 
@@ -267,7 +267,7 @@ class RunacC1Campo(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_campo"
+        db_table = "mir_c1_campo"
         unique_together = (
             ("hoja", "orden"),
             ("hoja", "nombre"),
@@ -297,7 +297,7 @@ class RunacC1CampoRegla(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_campo_regla"
+        db_table = "mir_c1_campo_regla"
         unique_together = (("campo", "regla"),)
         db_table_comment = "Relaciona los campos con las reglas que deben aplicarse, con su severidad y su mensaje."
 
@@ -320,7 +320,7 @@ class RunacC1Catalogo(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_catalogo"
+        db_table = "mir_c1_catalogo"
         db_table_comment = "Define un conjunto cerrado de valores admitidos para uno o más campos. Una lista que reaparece en varios archivos se define una sola vez."
 
 
@@ -363,7 +363,7 @@ class RunacC1CatalogoOpcion(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_catalogo_opcion"
+        db_table = "mir_c1_catalogo_opcion"
         unique_together = (
             ("catalogo", "orden"),
             ("catalogo", "valor_esperado"),
@@ -394,7 +394,7 @@ class RunacC1Dimension(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_dimension"
+        db_table = "mir_c1_dimension"
         unique_together = (("hoja", "orden"),)
         db_table_comment = (
             "Define los encabezados que agrupan conjuntos de campos dentro de una hoja."
@@ -429,7 +429,7 @@ class RunacC1Hoja(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_hoja"
+        db_table = "mir_c1_hoja"
         unique_together = (
             ("archivo_version", "orden_procesamiento"),
             ("archivo_version", "nombre_esperado"),
@@ -462,7 +462,7 @@ class RunacC1Regla(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_regla"
+        db_table = "mir_c1_regla"
         db_table_comment = "Una validación concreta, reutilizable en distintos campos."
 
 
@@ -481,7 +481,7 @@ class RunacC1TipoRegla(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_tipo_regla"
+        db_table = "mir_c1_tipo_regla"
         db_table_comment = "Vocabulario genérico de validaciones. Los mismos tipos sirven para cualquier relevamiento; cambian los parámetros."
 
 
@@ -509,7 +509,7 @@ class RunacC1TipoReglaParametro(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c1_tipo_regla_parametro"
+        db_table = "mir_c1_tipo_regla_parametro"
         unique_together = (
             ("tipo_regla", "orden"),
             ("tipo_regla", "nombre"),
@@ -559,7 +559,7 @@ class RunacC2ErroresDeImportacion(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c2_errores_de_importacion"
+        db_table = "mir_c2_errores_de_importacion"
         db_table_comment = "Motivos por los que un archivo no pudo importarse. Un archivo equivocado suele fallar por varias razones a la vez: se informan todas juntas para que el operador corrija una sola vez."
 
 
@@ -603,7 +603,7 @@ class RunacC2HistorialCambios(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c2_historial_cambios"
+        db_table = "mir_c2_historial_cambios"
         db_table_comment = "Correcciones sobre los datos importados, con usuario, fecha, valor anterior y valor nuevo. Responde a la pregunta: el Excel decía X y el operador puso Y. No confundir con el historial de la Capa 3, que registra la evolución del dato consolidado entre períodos."
 
 
@@ -684,7 +684,7 @@ class RunacC2Importacion(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c2_importacion"
+        db_table = "mir_c2_importacion"
         db_table_comment = "Cada intento de importación de un archivo, incluidos los que fallaron. Nunca se borra: es la trazabilidad. Permite distinguir a quien no cargó de quien intentó cargar y no pudo."
 
 
@@ -704,7 +704,7 @@ class RunacC2Jurisdiccion(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c2_jurisdiccion"
+        db_table = "mir_c2_jurisdiccion"
         db_table_comment = "Unidad que presenta. Es una entidad y no un texto, para que el mismo mecanismo sirva a provincias, municipios u organismos."
 
 
@@ -761,7 +761,7 @@ class RunacC2Observacion(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c2_observacion"
+        db_table = "mir_c2_observacion"
         db_table_comment = "Observaciones del revisor nacional. El revisor no modifica datos provinciales: observa. El ciclo de observación y subsanación no tiene límite de rondas."
 
 
@@ -805,7 +805,7 @@ class RunacC2Periodo(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c2_periodo"
+        db_table = "mir_c2_periodo"
         unique_together = (("anio", "numero"),)
         db_table_comment = "Períodos de corte. Mientras un período está ABIERTO la estructura que utiliza no puede modificarse: alguna jurisdicción ya pudo haber importado."
 
@@ -823,7 +823,7 @@ class RunacC2PeriodoArchivo(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c2_periodo_archivo"
+        db_table = "mir_c2_periodo_archivo"
         unique_together = (("periodo", "archivo_version"),)
         db_table_comment = "Qué versión de cada archivo rige en cada período. Si no hubo cambios, dos períodos apuntan a la misma versión y no se duplica ninguna definición. El nombre de la tabla receptora se deduce por convención del archivo y la versión."
 
@@ -900,7 +900,7 @@ class RunacC2Presentacion(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c2_presentacion"
+        db_table = "mir_c2_presentacion"
         unique_together = (("periodo", "jurisdiccion", "version"),)
         db_table_comment = "Presentación de una jurisdicción para un período. Agrupa las importaciones de los distintos archivos."
 
@@ -915,14 +915,14 @@ class RunacC2ReglasIncumplidas(models.Model):
     campo = models.ForeignKey(
         RunacC1Campo,
         models.DO_NOTHING,
-        db_comment="Campo de Capa 1 afectado. Siempre presente: un incumplimiento sin campo es un problema del archivo y va a runac_c2_errores_de_importacion.",
+        db_comment="Campo de Capa 1 afectado. Siempre presente: un incumplimiento sin campo es un problema del archivo y va a mir_c2_errores_de_importacion.",
     )
     regla = models.ForeignKey(
         RunacC1Regla,
         models.DO_NOTHING,
         blank=True,
         null=True,
-        db_comment="Regla de Capa 1 que no se cumplió. Queda vacío cuando el incumplimiento es de una validación intrínseca del campo —tipo de dato, obligatoriedad, valor de catálogo o longitud máxima—, que se define en runac_c1_campo y no en runac_c1_regla. El código indica de cuál se trata.",
+        db_comment="Regla de Capa 1 que no se cumplió. Queda vacío cuando el incumplimiento es de una validación intrínseca del campo —tipo de dato, obligatoriedad, valor de catálogo o longitud máxima—, que se define en mir_c1_campo y no en mir_c1_regla. El código indica de cuál se trata.",
     )
     codigo = models.CharField(
         max_length=50,
@@ -969,7 +969,7 @@ class RunacC2ReglasIncumplidas(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c2_reglas_incumplidas"
+        db_table = "mir_c2_reglas_incumplidas"
         db_table_comment = "Validaciones no superadas en un archivo que SÍ fue admitido. Una fila por incumplimiento, con su ubicación exacta."
 
 
@@ -990,7 +990,7 @@ class RunacC3Cambio(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_cambio"
+        db_table = "mir_c3_cambio"
         db_table_comment = "El historial campo a campo. No es un accesorio de auditoria: es la fuente de las series historicas, porque la base guarda una sola fila por chico con el dato vigente. Por eso registra el valor ANTERIOR y la presentacion que produjo el cambio."
 
 
@@ -1009,7 +1009,7 @@ class RunacC3Coincidencia(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_coincidencia"
+        db_table = "mir_c3_coincidencia"
         db_table_comment = "Coincidencias de identidad que no se pueden decidir solas: documento y nombre que coinciden parcialmente, o nombre y fecha de nacimiento sin documento."
 
 
@@ -1020,7 +1020,7 @@ class RunacC3DispAlcanceTerritorial(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_disp_alcance_territorial"
+        db_table = "mir_c3_disp_alcance_territorial"
         unique_together = (("dispositivo", "jurisdiccion_alcanzada"),)
         db_table_comment = "MPT, CAD y guardia informan VARIAS jurisdicciones de alcance. Por eso es una relacion y no un campo de texto: permite responder que dispositivos alcanzan a un municipio determinado."
 
@@ -1032,7 +1032,7 @@ class RunacC3DispCad(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_disp_cad"
+        db_table = "mir_c3_disp_cad"
         db_table_comment = "27 campos, 22 compartidos con CRC. Propios: resolucion de creacion, articulacion interministerial, alcance territorial y tiempo maximo de permanencia en horas."
 
 
@@ -1043,7 +1043,7 @@ class RunacC3DispCrc(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_disp_crc"
+        db_table = "mir_c3_disp_crc"
         db_table_comment = "36 campos. Grupos: capacidad por genero, proyecto institucional y normativa convivencial, personal por funcion, 6 protocolos, contacto socioafectivo, educacion obligatoria por nivel y horas, formacion profesional y talleres, espacios, condiciones de las celdas."
 
 
@@ -1054,7 +1054,7 @@ class RunacC3DispCrsc(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_disp_crsc"
+        db_table = "mir_c3_disp_crsc"
         db_table_comment = "36 campos IDENTICOS a los de CRC: mismos nombres, misma cantidad. Se mantiene como registro propio porque son regimenes distintos y sus cuestionarios pueden diferenciarse. Consulta abierta a la DNPYPI: corresponde relevar lo mismo?"
 
 
@@ -1065,7 +1065,7 @@ class RunacC3DispGuardia(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_disp_guardia"
+        db_table = "mir_c3_disp_guardia"
         db_table_comment = "9 campos, todos contenidos en CAD: es un subconjunto exacto. Consulta abierta a la DNPYPI: faltan campos propios de la guardia?"
 
 
@@ -1076,7 +1076,7 @@ class RunacC3DispMpt(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_disp_mpt"
+        db_table = "mir_c3_disp_mpt"
         db_table_comment = "10 campos, 8 de ellos tambien en CRC. Propios: espacio de grupalidad y alcance territorial. Es un programa en territorio, no un lugar de alojamiento."
 
 
@@ -1087,7 +1087,7 @@ class RunacC3DispResidencial(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_disp_residencial"
+        db_table = "mir_c3_disp_residencial"
         db_table_comment = "61 campos. Grupos: datos institucionales, gestion y convenio con el OPN, el establecimiento cuenta con..., protocolos, capacidad y cobertura, perfiles poblacionales admitidos, personal por funcion, 14 capacitaciones, proyecto de restitucion de derechos, insercion familiar y comunitaria. Comparte con los penales solo 5 de sus 61 campos, los de identificacion: son instrumentos distintos."
 
 
@@ -1109,7 +1109,7 @@ class RunacC3Dispositivo(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_dispositivo"
+        db_table = "mir_c3_dispositivo"
         unique_together = (("jurisdiccion", "denominacion", "tipo"),)
         db_table_comment = "El lugar donde se lleva a cabo la medida. Identificacion comun a los seis tipos: un identificador unico que el resto del sistema referencia sin conocer el tipo. Son los cinco campos que efectivamente aparecen en las seis hojas. Localidad y direccion faltan en la hoja Guardia Comisaria: omision senalada a la DNPYPI."
 
@@ -1123,7 +1123,7 @@ class RunacC3FamiliaAcogimiento(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_familia_acogimiento"
+        db_table = "mir_c3_familia_acogimiento"
         unique_together = (("jurisdiccion", "modalidad", "id_provincial"),)
         db_table_comment = "La planilla MPE informa dos modalidades en columnas paralelas, y hoy reune identificador y apellido de los cuidadores en un mismo campo. La separacion fue solicitada a la DNPYPI."
 
@@ -1152,7 +1152,7 @@ class RunacC3MedidaDae(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_medida_dae"
+        db_table = "mir_c3_medida_dae"
         unique_together = (("nino_adolescente", "dispositivo", "fecha_hora_ingreso"),)
         db_table_comment = "Ingreso y egreso de CAD o permanencia en dependencia policial. A diferencia de las otras tres, describe un HECHO ya ocurrido: se acumula, no se actualiza. Puede haber varios por chico. El requerimiento advierte que no debe confundirse con una medida penal prolongada."
 
@@ -1219,7 +1219,7 @@ class RunacC3MedidaMpe(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_medida_mpe"
+        db_table = "mir_c3_medida_mpe"
         unique_together = (("nino_adolescente", "jurisdiccion", "fecha_inicio"),)
         db_table_comment = "Medida de Proteccion Excepcional. La modalidad determina si se enlaza a un dispositivo residencial o a una familia."
 
@@ -1286,7 +1286,7 @@ class RunacC3MedidaMpi(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_medida_mpi"
+        db_table = "mir_c3_medida_mpi"
         unique_together = (("nino_adolescente", "jurisdiccion", "fecha_inicio"),)
         db_table_comment = (
             "Medida de Proteccion Integral. Se actualiza cuando presenta novedades."
@@ -1347,7 +1347,7 @@ class RunacC3MedidaMpj(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_medida_mpj"
+        db_table = "mir_c3_medida_mpj"
         unique_together = (("nino_adolescente", "jurisdiccion", "fecha_inicio"),)
         db_table_comment = "Medida Penal Juvenil. Referencia hasta tres dispositivos: el actual, la procedencia y el destino al egreso. DEFINICION PENDIENTE: como informan las jurisdicciones el traslado de un adolescente entre dispositivos por la misma causa penal."
 
@@ -1397,8 +1397,8 @@ class RunacC3NinoAdolescente(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_nino_adolescente"
-        db_table_comment = "Todo lo relevado sobre el chico, con independencia del archivo que lo informo y de la medida que tenga: la medida es circunstancial y el chico no. UNA fila por chico, con el dato vigente; si una presentacion informa un valor distinto se actualiza y el cambio va a runac_c3_cambio, que es la fuente de las series historicas."
+        db_table = "mir_c3_nino_adolescente"
+        db_table_comment = "Todo lo relevado sobre el chico, con independencia del archivo que lo informo y de la medida que tenga: la medida es circunstancial y el chico no. UNA fila por chico, con el dato vigente; si una presentacion informa un valor distinto se actualiza y el cambio va a mir_c3_cambio, que es la fuente de las series historicas."
 
 
 class RunacC3NyaIdProvincial(models.Model):
@@ -1409,7 +1409,7 @@ class RunacC3NyaIdProvincial(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_nya_id_provincial"
+        db_table = "mir_c3_nya_id_provincial"
         unique_together = (("jurisdiccion", "identificador"),)
         db_table_comment = "Identificador provincial del chico. Uno por jurisdiccion: un chico informado por dos provincias tiene un identificador en cada una y ambos lo designan. Debe ser obligatorio y estable en el tiempo. FALTA EN EL MPI: omision senalada a la DNPYPI."
 
@@ -1428,7 +1428,7 @@ class RunacC3Origen(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_origen"
+        db_table = "mir_c3_origen"
         db_table_comment = "Responde de donde salio cada dato: provincia, periodo, archivo, hoja, fila y version."
 
 
@@ -1449,7 +1449,7 @@ class RunacC3Persona(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_persona"
+        db_table = "mir_c3_persona"
         unique_together = (("tipo_documento", "numero_documento"),)
         db_table_comment = "El mismo ser humano, y unicamente su identidad resuelta. Todo lo relevado sobre una persona vive en su caracterizacion: nino o adolescente, o referente adulto. Una misma persona puede tener las dos."
 
@@ -1471,7 +1471,7 @@ class RunacC3Precedencia(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_precedencia"
+        db_table = "mir_c3_precedencia"
         db_table_comment = "La decision sobre que valor prevalece, conservada para las presentaciones siguientes: la misma discrepancia no se resuelve dos veces."
 
 
@@ -1497,7 +1497,7 @@ class RunacC3ReferenteAdulto(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_referente_adulto"
+        db_table = "mir_c3_referente_adulto"
         db_table_comment = "18 campos, informados unicamente en el MPI. Limitacion: la planilla no preve identificador propio del referente; sin documento, cada presentacion lo registra como un adulto distinto."
 
 
@@ -1518,9 +1518,9 @@ class RunacC3UnidadAlias(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_unidad_alias"
+        db_table = "mir_c3_unidad_alias"
         unique_together = (("jurisdiccion", "denominacion_informada"),)
-        db_table_comment = "El diccionario. Opera en la importacion (Capa 2) y se perfecciona en cada iteracion: lo ya conocido se resuelve solo, lo nuevo queda pendiente y su resolucion incorpora una entrada para la proxima vez. Su mejora se puede aplicar a lo ya consolidado; ese reproceso queda en runac_c3_cambio."
+        db_table_comment = "El diccionario. Opera en la importacion (Capa 2) y se perfecciona en cada iteracion: lo ya conocido se resuelve solo, lo nuevo queda pendiente y su resolucion incorpora una entrada para la proxima vez. Su mejora se puede aplicar a lo ya consolidado; ese reproceso queda en mir_c3_cambio."
 
 
 class RunacC3UnidadInterviniente(models.Model):
@@ -1537,6 +1537,6 @@ class RunacC3UnidadInterviniente(models.Model):
 
     class Meta:
         managed = False
-        db_table = "runac_c3_unidad_interviniente"
+        db_table = "mir_c3_unidad_interviniente"
         unique_together = (("jurisdiccion", "denominacion_normalizada"),)
         db_table_comment = "Tabla referencial de servicios, equipos y programas de proteccion integral. No es un padron que las jurisdicciones completen: se construye con lo que efectivamente se informa. El universo es abierto y por eso no admite un padron cerrado."

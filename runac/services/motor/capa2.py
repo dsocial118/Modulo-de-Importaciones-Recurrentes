@@ -15,8 +15,8 @@ Produce un único .sql con:
 Una sola tabla receptora y no dos: como la importación es restrictiva, un
 archivo con errores bloqueantes no entra, así que todo dato incorporado pudo
 convertirse a su tipo. El valor que provocó cada incumplimiento queda en
-runac_c2_reglas_incumplidas, y los valores previos a cada corrección en
-runac_c2_historial_cambios.
+mir_c2_reglas_incumplidas, y los valores previos a cada corrección en
+mir_c2_historial_cambios.
 
 Nada de esto se escribe a mano. Si cambia la Capa 1, se vuelve a correr.
 """
@@ -35,15 +35,15 @@ from comun import abrev, nombre_tabla_receptora, sql_texto as q
 
 # Tablas fijas de control, en orden inverso de dependencia (para el DROP).
 TABLAS_CONTROL = [
-    "runac_c2_historial_cambios",
-    "runac_c2_observacion",
-    "runac_c2_reglas_incumplidas",
-    "runac_c2_errores_de_importacion",
-    "runac_c2_importacion",
-    "runac_c2_presentacion",
-    "runac_c2_periodo_archivo",
-    "runac_c2_periodo",
-    "runac_c2_jurisdiccion",
+    "mir_c2_historial_cambios",
+    "mir_c2_observacion",
+    "mir_c2_reglas_incumplidas",
+    "mir_c2_errores_de_importacion",
+    "mir_c2_importacion",
+    "mir_c2_presentacion",
+    "mir_c2_periodo_archivo",
+    "mir_c2_periodo",
+    "mir_c2_jurisdiccion",
 ]
 
 
@@ -57,7 +57,7 @@ def tipo_sql(campo: dict) -> str:
         return "bigint"
     if t == "DECIMAL":
         return "decimal(18,4)"
-    # El comentario de runac_c1_campo.longitud_maxima lo dice: sin longitud,
+    # El comentario de mir_c1_campo.longitud_maxima lo dice: sin longitud,
     # la columna receptora se crea como TEXT.
     return (
         f'varchar({campo["longitud_maxima"]})'
@@ -117,7 +117,7 @@ def tablas_receptoras(
         w(f") COMMENT = {q(comentario_tabla[:1000])};")
         w("")
         w(
-            f"ALTER TABLE `{tabla}` ADD FOREIGN KEY (`importacion_id`) REFERENCES `runac_c2_importacion` (`id`);"
+            f"ALTER TABLE `{tabla}` ADD FOREIGN KEY (`importacion_id`) REFERENCES `mir_c2_importacion` (`id`);"
         )
         w("")
         generadas.append(
@@ -144,10 +144,10 @@ def registrar_periodo_archivo(
     w("-- versiones y no se duplica ninguna definición.")
     w("-- ------------------------------------------------------------------")
     for codigo in codigos:
-        w("INSERT INTO runac_c2_periodo_archivo (periodo_id, archivo_version_id)")
+        w("INSERT INTO mir_c2_periodo_archivo (periodo_id, archivo_version_id)")
         w("  SELECT p.id, av.id")
-        w("    FROM runac_c2_periodo p, runac_c1_archivo a")
-        w("    JOIN runac_c1_archivo_version av ON av.archivo_id = a.id")
+        w("    FROM mir_c2_periodo p, mir_c1_archivo a")
+        w("    JOIN mir_c1_archivo_version av ON av.archivo_id = a.id")
         w(
             f"   WHERE p.codigo = {q(periodo)} AND a.codigo = {q(codigo)} AND av.numero = {version}"
         )
@@ -205,13 +205,13 @@ def main():
     w("")
     w("-- Jurisdicción de prueba. En producción se cargan las 24 desde la")
     w("-- administración del sistema.")
-    w("INSERT INTO runac_c2_jurisdiccion (codigo, nombre, modalidad, activa)")
+    w("INSERT INTO mir_c2_jurisdiccion (codigo, nombre, modalidad, activa)")
     w("VALUES ('CHUBUT', 'Chubut', 'PRESENTACION_PERIODICA', 1)")
     w("ON DUPLICATE KEY UPDATE nombre = VALUES(nombre);")
     w("")
     w("-- El período tiene que existir antes de registrar qué versiones usa.")
     w(
-        "INSERT INTO runac_c2_periodo (codigo, anio, numero, fecha_desde, fecha_hasta, estado)"
+        "INSERT INTO mir_c2_periodo (codigo, anio, numero, fecha_desde, fecha_hasta, estado)"
     )
     w(
         f"VALUES ({q(args.periodo)}, {anio}, {numero}, '{anio}-01-01', '{anio}-03-31', 'PREPARACION')"
