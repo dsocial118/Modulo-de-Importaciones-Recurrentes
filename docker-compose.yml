@@ -1,73 +1,67 @@
-# Prototipo de RUNAC — fuera del repositorio de SISOC.
+# MIR — Módulo de Importaciones Recurrentes
+# Implementación: RUNAC
 #
-#   docker compose -p runac-proto up -d
-#   http://localhost:8100   estructura vigente  (base `runac`)
-#   http://localhost:8101   estructura nueva    (base `runac_v2`)
+#   bash entorno/preparar.sh      la primera vez: levanta y arma la base
+#   docker compose up -d          después, sólo levantar
+#   http://localhost:8100
 #
-# Usa la misma base que el modelo de datos (contenedor runac_c1_mysql), asi el
-# prototipo trabaja sobre las tres capas ya cargadas.
-#
-# Son DOS contenedores con el MISMO codigo y bases distintas. La razon de que
-# sean dos bases y no dos periodos dentro de una: los catalogos se comparten
-# entre versiones de estructura —el de provincias lo usan campos de las dos—,
-# asi que probar la estructura nueva en la base de la demo la contamina.
-#
-# `:8100` es la foto que se muestra y no se toca. `:8101` es el banco de
-# pruebas: si se rompe, se borra `runac_v2` y se vuelve a copiar de `runac`.
-#
-#   Levantar solo el de pruebas, sin tocar el otro:
-#     docker compose -p runac-proto up -d web_v2
+# Autosuficiente: levanta la base y la aplicación. No depende de ninguna red ni
+# de ninguna carpeta que esté fuera del repositorio.
 
 services:
+  mysql:
+    image: mysql:8.4
+    container_name: mir_runac_mysql
+    # No es opcional. Sin esto los acentos entran mal y «Sí» queda como «SÃ­»,
+    # y no se nota hasta mucho después.
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_0900_ai_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD:-runac_local}
+      MYSQL_DATABASE: ${DATABASE_NAME:-runac}
+      TZ: America/Argentina/Buenos_Aires
+    volumes:
+      - datos_mysql:/var/lib/mysql
+    ports:
+      # Expuesto para poder mirar la base con un cliente. Si el 3399 está
+      # ocupado, cambiarlo acá: la aplicación no lo usa, se conecta por la red
+      # interna al 3306.
+      - "3399:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DATABASE_PASSWORD:-runac_local}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
   web:
     build: .
-    container_name: runac_proto_web
+    container_name: mir_runac_web
+    depends_on:
+      mysql:
+        # El web no puede arrancar antes que la base. Es la falla más frecuente
+        # al reiniciar la máquina: el contenedor queda levantado contra una base
+        # que todavía no existe y no responde nada.
+        condition: service_healthy
     volumes:
       - .:/app
-      - ../analisis_datos/ModeloMySql/capa1:/trabajo/capa1
-      - ../Insumos:/trabajo/insumos:ro
+      # Reemplaza el montaje de la carpeta hermana que había antes. Las
+      # plantillas se sirven desde acá: `RUNAC_PLANTILLAS` resuelve a
+      # `/trabajo/capa1/plantillas`, que es `entorno/plantillas`.
+      - ./entorno:/trabajo/capa1:ro
     ports:
       - "8100:8000"
     environment:
       DJANGO_DEBUG: "1"
       DATABASE_HOST: mysql
       DATABASE_PORT: "3306"
-      DATABASE_NAME: runac
+      DATABASE_NAME: ${DATABASE_NAME:-runac}
       DATABASE_USER: root
-      DATABASE_PASSWORD: runac_local
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-runac_local}
       TZ: America/Argentina/Buenos_Aires
-    networks:
-      - runac
     restart: unless-stopped
 
-  # El banco de pruebas. Mismo codigo, base distinta: monta la misma carpeta,
-  # asi lo que se escribe se ve en los dos y no hay una copia del prototipo que
-  # se desincronice.
-  #
-  # `restart: "no"` a proposito, al reves que el de arriba: si este se cae, se
-  # queda caido y se nota. El que tiene que volver solo es el de la demo.
-  web_v2:
-    build: .
-    container_name: runac_proto_web_v2
-    volumes:
-      - .:/app
-      - ../analisis_datos/ModeloMySql/capa1:/trabajo/capa1
-      - ../Insumos:/trabajo/insumos:ro
-    ports:
-      - "8101:8000"
-    environment:
-      DJANGO_DEBUG: "1"
-      DATABASE_HOST: mysql
-      DATABASE_PORT: "3306"
-      DATABASE_NAME: runac_v2
-      DATABASE_USER: root
-      DATABASE_PASSWORD: runac_local
-      TZ: America/Argentina/Buenos_Aires
-    networks:
-      - runac
-    restart: "no"
-
-networks:
-  runac:
-    external: true
-    name: runac-c1_default
+volumes:
+  datos_mysql:
