@@ -17,8 +17,11 @@ cd "$RAIZ"
 # Todas las invocaciones de mysql llevan --default-character-set=utf8mb4. Sin
 # eso los acentos se cargan mal y el problema aparece mucho después.
 mysql_en_el_contenedor() {
+  # -h 127.0.0.1 fuerza TCP. Sin eso el cliente busca un socket que en la
+  # imagen de MySQL 8.4 no está donde él espera, y falla con un error que no
+  # dice nada del verdadero motivo.
   docker compose exec -T mysql mysql --default-character-set=utf8mb4 \
-    -uroot -p"$CLAVE" "$@"
+    -h 127.0.0.1 -uroot -p"$CLAVE" "$@"
 }
 
 echo "== 1. Levantando los contenedores =="
