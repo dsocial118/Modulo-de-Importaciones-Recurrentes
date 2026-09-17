@@ -29,7 +29,7 @@ from runac.services import importacion_service as svc
 def jurisdiccion_en_curso(request) -> str:
     """La jurisdicción sobre la que se está trabajando.
 
-    En el prototipo se puede elegir, y **la elección se recuerda**: si no, cada
+    Acá se puede elegir, y **la elección se recuerda**: si no, cada
     pantalla mostraba una jurisdicción distinta —Inicio la del usuario y Cargar
     la elegida— y eso confunde más de lo que ayuda.
 

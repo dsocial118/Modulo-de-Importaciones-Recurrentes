@@ -4,3 +4,7 @@ db.sqlite3
 media/
 staticfiles/
 .env
+
+# Compose local de la máquina del responsable funcional: apunta a la base
+# donde también vive runac_v2. No va al repositorio.
+docker-compose.local.yml

@@ -25,7 +25,7 @@ from openpyxl.comments import Comment
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-# Los mismos colores que usa el prototipo en pantalla, para que el Excel y la
+# Los mismos colores que usa el sistema en pantalla, para que el Excel y la
 # web se lean como una sola cosa.
 AZUL = "1F4E79"
 ROJO_SUAVE = "F8D7DA"

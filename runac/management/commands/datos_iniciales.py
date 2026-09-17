@@ -1,4 +1,4 @@
-"""Crea los usuarios de prueba del prototipo.
+"""Crea los usuarios de prueba.
 
     python manage.py datos_iniciales
 
@@ -26,7 +26,7 @@ USUARIOS = [
 
 
 class Command(BaseCommand):
-    help = "Crea los usuarios de prueba del prototipo."
+    help = "Crea los usuarios de prueba."
 
     def handle(self, *args, **opciones):
         asegurar_grupos()

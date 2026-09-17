@@ -1,4 +1,4 @@
-"""Roles del prototipo: qué puede hacer cada uno y qué ve.
+"""Roles: qué puede hacer cada uno y qué ve.
 
 **Esto es provisorio.** SISOC resuelve permisos con `iam/services.py` y alcance
 territorial con sus propios mecanismos. Acá se usa lo mínimo para que cada rol
@@ -99,7 +99,7 @@ def nombre_del_rol(usuario) -> str:
 def jurisdiccion_de(usuario) -> str | None:
     """La jurisdicción se guarda en el nombre del grupo, con prefijo.
 
-    Provisorio: alcanza para el prototipo. En SISOC esto sale del alcance
+    Provisorio: alcanza por ahora. En SISOC esto sale del alcance
     territorial del usuario.
     """
     if not usuario or not usuario.is_authenticated:

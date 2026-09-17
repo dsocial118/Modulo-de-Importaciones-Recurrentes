@@ -1,73 +1,63 @@
-# Prototipo de RUNAC
+# MIR — Módulo de Importaciones Recurrentes
 
-**Esto es un prototipo.** No es el módulo de SISOC y no está listo para
-producción: no tiene auditoría de accesos, ni control de alcance territorial, ni
-las validaciones de seguridad que exige el repositorio.
+**Implementación: RUNAC** — Registro Único Nacional de Medidas de Protección y
+Medidas Penales Juveniles.
 
-Sirve para que el equipo técnico de RUNAC pruebe el circuito con **datos de
-prueba** y decida cómo tiene que funcionar. Recién después se integra a SISOC.
+MIR recibe planillas que las jurisdicciones mandan cada período, las valida
+contra una definición declarada, permite corregirlas dentro del sistema y las
+consolida en una base única.
 
-### Si llegaste acá para revisar el código, leé esto primero
+**Lo que hace distinto:** la definición de cada archivo —hojas, columnas, tipos,
+listas de valores y reglas de validación— vive en la base de datos, no en el
+código. El motor la lee y la ejecuta: **no sabe qué es una MPI**. Cuando llega
+una planilla nueva se cambian datos, no programas.
 
-**Este repositorio no se levanta solo.** No incluye la base de datos, el esquema
-SQL de las tres capas ni los Excel de prueba: eso vive en otras carpetas de la
-máquina del responsable funcional, y el prototipo se conecta a esa base por red
-de Docker.
+## Las tres cosas y cómo se llaman
 
-Es deliberado. El repositorio está publicado **para auditar el código**; las
-pruebas funcionales se hacen en un solo lugar, con los datos de prueba
-controlados. Si querés ver el sistema andando, pedile una demostración al
-responsable funcional.
+```
+MIR        el módulo. Define, recibe, valida, corrige y consolida.
+RUNAC      una implementación: su definición, su base, sus usuarios.
+           Mañana puede haber otras, cada una con su base.
+```
 
-Por dónde empezar a leer, en este orden:
+Para los usuarios finales cada implementación lleva su propio nombre; «MIR» es
+cómo le decimos al módulo entre nosotros.
+
+> **Todavía no está en producción.** Trabaja con datos de prueba y le falta lo
+> que exige el repositorio de SISOC: auditoría de accesos, control de alcance
+> territorial y las validaciones de seguridad. Ver «Qué falta» más abajo.
+
+## Levantarlo
+
+Hace falta **Docker Desktop y nada más**. En Windows, Git Bash.
+
+```bash
+git clone https://github.com/danielc76/runac-prototipo.git
+```
+
+```bash
+cd runac-prototipo && bash entorno/preparar.sh
+```
+
+Y se abre en **http://localhost:8100**. Después, para levantarlo alcanza con
+`docker compose up -d`.
+
+Los detalles —usuarios, cómo probar que anda, qué hacer si no arranca— están en
+**[docs/INSTALAR.md](docs/INSTALAR.md)**.
+
+El repositorio trae todo lo necesario: la definición en el estado verificado,
+las plantillas, los archivos de prueba y los guiones que explican cada
+corrección. Ver **[entorno/LEEME.md](entorno/LEEME.md)**.
+
+## Por dónde empezar a leer el código
 
 | Archivo | Qué responde |
 |---|---|
+| `runac/services/motor/importar.py` | El motor: lee la definición de la Capa 1 y la ejecuta |
+| `runac/services/importacion_service.py` | Cómo se importa y por qué una importación se rechaza entera |
 | `runac/services/circuito_service.py` | Las transiciones: quién puede hacer qué y desde qué estado |
 | `runac/permissions.py` | Los roles, y la diferencia entre menú y acceso |
-| `runac/services/importacion_service.py` | Cómo se importa y por qué una importación se rechaza entera |
-| `runac/services/motor/importar.py` | El motor, que lee la definición de la Capa 1 y la ejecuta |
-| `runac/tests/` | Las reglas escritas como casos: 86 tests |
-
-**La clave del diseño:** el motor no sabe qué es una MPI. Lee la definición de
-cada archivo desde la Capa 1 —hojas, columnas, tipos, catálogos, reglas— y la
-ejecuta. Cuando cambia una planilla se cambian datos, no código.
-
----
-
-## Cómo se levanta
-
-Esto es para la máquina donde está el modelo de datos completo.
-
-**El orden importa.** El prototipo **lee** el modelo de tres capas, no lo crea:
-si arranca antes que la base, Django no la encuentra y el contenedor queda
-muerto. Primero la base, después el prototipo:
-
-```
-cd ../analisis_datos/ModeloMySql
-docker compose -p runac-c1 up -d
-
-cd ../../prototipo
-docker compose -p runac-proto up -d
-```
-
-Y se abre en **http://localhost:8100**
-
-### Después de reiniciar la máquina
-
-El contenedor del prototipo se enciende solo —está marcado
-`restart: unless-stopped`— pero lo hace **antes** que la base, así que queda sin
-poder conectarse. Hay que levantar la base y reiniciarlo:
-
-```
-cd ../analisis_datos/ModeloMySql
-docker compose -p runac-c1 up -d
-docker restart runac_proto_web
-```
-
-Si `http://localhost:8100` no responde, es casi siempre esto. Para confirmarlo:
-`docker logs --tail 20 runac_proto_web` — si dice
-`Unknown server host 'mysql'`, es exactamente este caso.
+| `runac/tests/` | Las reglas escritas como casos: 121 tests |
 
 ## Usuarios de prueba
 
@@ -95,7 +85,7 @@ ngrok http 8100 --basic-auth "runac:LA_CLAVE_QUE_ELIJAS"
 
 Dos reglas, y no son negociables:
 
-1. **El prototipo nunca recibe datos reales.** Sólo los mock, que tienen nombres
+1. **MIR nunca recibe datos reales.** Sólo los mock, que tienen nombres
    inventados y documentos en un rango que no corresponde a personas. Si alguien
    quiere probar con un archivo real de una provincia, se hace en la máquina
    local, no por el túnel.
@@ -137,7 +127,7 @@ punta, incluida la corrección de datos dentro del sistema.
 arma según el rol, y el acceso se verifica también al entrar por dirección
 directa: ocultar un enlace no es un permiso.
 
-Lo que **todavía no** se verifica es la pertenencia territorial: el prototipo
+Lo que **todavía no** se verifica es la pertenencia territorial: el sistema
 comprueba qué puede hacer un rol, no sobre qué jurisdicción puede hacerlo. La
 jurisdicción llega como parámetro y se puede cambiar a mano. Es deliberado
 —permite mostrar el circuito de cualquier provincia sin crear un usuario por
@@ -170,9 +160,9 @@ migraciones, trazabilidad y clasificación modular—.
 
 ```
 runac/
-├── models.py                       Generado con inspectdb. El prototipo LEE el
+├── models.py                       Generado con inspectdb. El sistema LEE el
 │                                   modelo, no lo crea.
-├── permissions.py                  Roles del prototipo. Provisorio: SISOC
+├── permissions.py                  Roles provisorios. Provisorio: SISOC
 │                                   resuelve esto con iam/services.py.
 ├── views/                          Delgadas: piden al servicio y arman contexto.
 │   ├── carga.py                    Cargar de a uno, resultado y detalle.
@@ -195,7 +185,7 @@ runac/
 └── management/commands/
 ```
 
-**El motor está duplicado** entre este prototipo y la skill `runac-capa1`. Es
+**El motor está duplicado** entre este repositorio y la skill `runac-capa1`. Es
 deuda conocida: al integrar el módulo a SISOC tiene que quedar en un solo lugar.
 
 Versiones: **Django 5.2.16, Python 3.11.15, openpyxl 3.1.5, crispy-forms con
@@ -220,7 +210,7 @@ Todos llevan `managed = False`, que en Django significa que **las migraciones
 no crean ni modifican esas tablas**: la estructura la produce la skill
 `runac-capa1`, que es la que sabe leer los Excel y generar las tres capas.
 
-No significa que los datos sean de sólo lectura: el prototipo escribe en la
+No significa que los datos sean de sólo lectura: el sistema escribe en la
 Capa 2 —importaciones, filas, correcciones— con SQL directo. Lo que no toca es
 la definición de las tablas.
 
@@ -248,7 +238,7 @@ docker exec runac_proto_web python manage.py inspectdb <tablas> > runac/models.p
 3. **La clasificación de RUNAC** según `docs/ia/MODULAR_BOUNDARIES.md` de SISOC.
    Es el paso 0 obligatorio de la norma del repositorio y todavía no se hizo.
 4. **Si las personas de RUNAC son las de `ciudadanos`** o un registro propio
-   vinculado. Hoy el prototipo asume registro propio.
+   vinculado. Hoy el sistema asume registro propio.
 5. **Las dependencias entre archivos deberían declararse en la Capa 1**, no
    derivarse del orden de importación. Hoy `DISP_SCP` queda bloqueado por
    `DISP_PENAL` aunque sean independientes; las dependencias reales son
@@ -259,7 +249,7 @@ docker exec runac_proto_web python manage.py inspectdb <tablas> > runac/models.p
 
 ## Validación
 
-El prototipo usa **las mismas herramientas y versiones que SISOC**, con su misma
+El sistema usa **las mismas herramientas y versiones que SISOC**, con su misma
 configuración (`.pylintrc`, `.djlintrc` y `pyproject.toml` son copia del
 repositorio). Es lo que pide `AGENTS.md` en su sección *Validación*.
 

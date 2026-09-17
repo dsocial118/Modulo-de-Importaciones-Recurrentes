@@ -1,11 +1,11 @@
-"""Deja el prototipo con una presentación completa, lista para mostrar.
+"""Deja el sistema con una presentación completa, lista para mostrar.
 
     docker exec runac_proto_web python manage.py armar_demo
 
 Lo mismo que hace el botón «Armar demostración» del inicio. La lógica vive en
 `services/demo_service.py` porque la usan los dos.
 
-Es una herramienta de prueba y se va con el prototipo, igual que el botón de
+Es una herramienta de prueba y se va al integrar a SISOC, igual que el botón de
 borrar importaciones.
 """
 

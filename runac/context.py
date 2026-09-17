@@ -23,8 +23,8 @@ def datos_de_sesion(request):
     usuario = getattr(request, "user", None)
     autenticado = bool(usuario and usuario.is_authenticated)
     return {
-        "es_prototipo": settings.RUNAC_ES_PROTOTIPO,
-        "aviso_prototipo": settings.RUNAC_AVISO_PROTOTIPO,
+        "mostrar_aviso": settings.MIR_MOSTRAR_AVISO,
+        "aviso": settings.MIR_AVISO,
         # El rol define qué puede hacer; la jurisdicción, sobre qué datos.
         "rol": nombre_del_rol(usuario) if autenticado else None,
         # Sólo la de quien pertenece a una: el nivel nacional no es de ninguna,

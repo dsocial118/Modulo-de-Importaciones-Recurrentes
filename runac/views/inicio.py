@@ -1,4 +1,4 @@
-"""Entrada al prototipo y pantalla de inicio."""
+"""Entrada al sistema y pantalla de inicio."""
 
 from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin

@@ -1,12 +1,12 @@
 """Arma la presentación de demostración. Herramienta de prueba, no es el sistema.
 
-Es la contraparte de `borrar_todas_las_importaciones`: una deja el prototipo
+Es la contraparte de `borrar_todas_las_importaciones`: una deja el sistema
 vacío para volver a probar, la otra lo deja con una presentación completa para
 mostrar. Sin las dos, limpiar antes de una demostración es un viaje de ida.
 
 Vive en un servicio y no en el comando de consola porque lo usan los dos: el
 comando `manage.py armar_demo` y el botón del inicio. Al integrar a SISOC se va
-con el resto del prototipo.
+con el resto de las herramientas de prueba.
 """
 
 from pathlib import Path

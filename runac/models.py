@@ -1,7 +1,7 @@
-"""Modelos del prototipo de RUNAC.
+"""Modelos de MIR — implementación RUNAC.
 
 Generados con `inspectdb` sobre la base que arma la skill `runac-capa1`. Todos
-llevan `managed = False`: **el prototipo no crea ni modifica el modelo, lo lee**.
+llevan `managed = False`: **el sistema no crea ni modifica el modelo, lo lee**.
 La estructura la define la Capa 1 y la generan los scripts de la skill.
 
 Las tablas receptoras de la Capa 2 (`runac_c2_<archivo>_v<n>[_<hoja>]`) no están

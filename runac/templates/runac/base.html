@@ -259,7 +259,7 @@
     body, .container-xxl { overflow-x: hidden; }
 
     /* El encabezado entero queda arriba al desplazarse: la franja del
-       prototipo, la barra con el menú y la línea del usuario. Van envueltos en
+       aviso del entorno, la barra con el menú y la línea del usuario. Van envueltos en
        un solo contenedor porque `sticky` fija UN elemento: si se le pone a la
        franja sola, la barra se va igual. */
     .encabezado-fijo {
@@ -269,7 +269,7 @@
       max-height: 100vh; overflow-y: auto;
     }
 
-    .aviso-prototipo {
+    .aviso-entorno {
       /* Ya no usa ambar: el ambar paso a ser el acento de marca, y un color
          que significa «marca» arriba y «atencion» aca no significa nada. */
       background: var(--atencion-fondo); border-bottom: 2px solid var(--atencion-borde);
@@ -279,7 +279,7 @@
 
     /* --- Funciones que existen sólo para probar ----------------------
        Se marcan siempre igual, para que se lea que son deliberadas y no un
-       descuido: alguien que ve el prototipo tiene que poder distinguir una
+       descuido: quien mira la pantalla tiene que poder distinguir una
        herramienta de prueba de un error de diseño. */
     .modo-prueba {
       border: 1px dashed var(--atencion-borde); border-radius: .4rem;
@@ -445,7 +445,7 @@
 
     /* Impresión: el comprobante se imprime, y no con la barra de navegación. */
     @media print {
-      .encabezado-fijo, .navbar, .aviso-prototipo, .d-print-none { display: none !important; }
+      .encabezado-fijo, .navbar, .aviso-entorno, .d-print-none { display: none !important; }
       /* El comprobante se imprime en claro aunque la pantalla este en oscuro:
          es un documento, y una hoja con el fondo negro se lee peor. */
       :root[data-tema="oscuro"] { --lienzo: #fff; --papel: #fff; --tinta: #000;
@@ -457,7 +457,7 @@
     </head>
     <body>
         <div class="encabezado-fijo">
-            {% if es_prototipo %}<div class="aviso-prototipo">{{ aviso_prototipo }}</div>{% endif %}
+            {% if mostrar_aviso %}<div class="aviso-entorno">{{ aviso }}</div>{% endif %}
             <nav class="navbar navbar-expand-lg">
                 <div class="container-xxl">
                     {% comment %} El módulo se nombra dentro del sistema al que pertenece: RUNAC no es un sistema aparte, es una sección de SISOC. {% endcomment %}

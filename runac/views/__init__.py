@@ -1,4 +1,4 @@
-"""Vistas del prototipo.
+"""Vistas de la aplicación.
 
 Son delgadas a propósito: reciben el pedido, llaman al servicio y arman el
 contexto. **No deciden nada.** Es la forma que pide SISOC y la que permite que

@@ -1,4 +1,29 @@
-# Hacer que el prototipo corra en otra máquina
+# La portación — HECHA el 2026-09-17
+
+> **Este documento ya se ejecutó.** Queda como registro de qué se hizo y por
+> qué. Para instalar, ver **[INSTALAR.md](INSTALAR.md)**.
+>
+> Lo que decía que faltaba está hecho y verificado clonando en una carpeta
+> limpia: el repositorio trae `entorno/` con la definición, las plantillas y los
+> archivos de prueba; el `docker-compose.yml` levanta base y aplicación sin
+> depender de nada externo; y `entorno/preparar.sh` arma todo con un comando.
+>
+> **Tres cosas aparecieron sólo al clonar en limpio**, y por eso están anotadas
+> acá aunque el documento no las previera:
+>
+> 1. El volcado no puede excluir ninguna tabla. Al sacar `django_session`, como
+>    el registro de migraciones venía en el mismo volcado diciendo que ya estaba
+>    aplicada, `migrate` no la recreaba y la aplicación se caía al primer login.
+> 2. La imagen de MySQL arranca dos veces —un servidor temporal para
+>    inicializarse y después el definitivo— y entre los dos hay una ventana en la
+>    que la base contesta y no está. El chequeo exige tres consultas seguidas por
+>    TCP.
+> 3. Los informes de importación son salida y estaban escribiéndose dentro de la
+>    carpeta que se monta de sólo lectura. Van a `media/informes`.
+
+---
+
+# Hacer que el sistema corra en otra máquina
 
 Encargo para quien lo implemente. Está escrito para que se pueda ejecutar sin
 conocer el proyecto: lo que hay que saber está acá.
@@ -204,7 +229,7 @@ proyecto nunca estuvo:
   ninguna fila** del archivo. Un archivo que queda en cero filas con errores
   bloqueantes no es una falla de la instalación.
 - **El web arrancando antes que MySQL** es la causa habitual de que el
-  prototipo «deje de andar» después de reiniciar la máquina. Por eso el
+  sistema «deje de andar» después de reiniciar la máquina. Por eso el
   `depends_on` con `service_healthy`. Si igual pasa:
   `docker restart runac_proto_web`.
 - **Docker Desktop no arranca solo** en la máquina actual. Conviene revisarlo en
@@ -226,7 +251,7 @@ proyecto nunca estuvo:
 - **No agregar dependencias nuevas** sin decirlo. El objetivo es que la máquina
   nueva no necesite instalar nada más que Docker.
 - **No subir la carpeta `Insumos`** ni ningún archivo con datos de personas. El
-  prototipo trabaja exclusivamente con datos inventados, y eso no se negocia.
+  sistema trabaja exclusivamente con datos inventados, y eso no se negocia.
 
 ---
 
@@ -241,6 +266,6 @@ Para que las decisiones de empaquetado no contradigan el diseño:
 - **Tres capas.** Capa 1: qué archivos se esperan y qué reglas cumplen. Capa 2:
   lo que cada jurisdicción importó en cada período, con sus errores y sus
   correcciones. Capa 3: la base consolidada.
-- **Es un prototipo.** Trabaja sólo con datos inventados, muestra un cartel
+- **Es una implementación de MIR.** Trabaja sólo con datos inventados, muestra un cartel
   permanente que lo dice, y no está pensado para recibir datos reales. Lo que
   falta antes de integrarlo a SISOC está en el anexo técnico, no es un olvido.

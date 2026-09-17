@@ -930,7 +930,7 @@ def procesar_carpeta(
     conexion=None,
     silencioso=True,
 ):
-    """Importa una carpeta y devuelve el resumen. Es lo que usa el prototipo."""
+    """Importa una carpeta y devuelve el resumen. Es lo que usa la aplicación."""
     args = _Opciones(
         carpeta, jurisdiccion, periodo, usuario, informe, asignacion, silencioso
     )

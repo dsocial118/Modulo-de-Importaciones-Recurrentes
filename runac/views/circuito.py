@@ -298,7 +298,7 @@ class ArmarDemoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
 
 
 class BorrarImportacionesView(SeccionPermitidaMixin, LoginRequiredMixin, View):
-    """Deja el prototipo sin ninguna importación.
+    """Deja el sistema sin ninguna importación.
 
     **Herramienta de prueba, no parte del sistema.** Existe porque durante las
     pruebas hay que repetir el mismo circuito muchas veces: importar un archivo

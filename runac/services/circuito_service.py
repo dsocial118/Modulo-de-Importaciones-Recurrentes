@@ -359,14 +359,14 @@ def cambiar_estado_del_periodo(codigo: str, estado: str, usuario) -> str:
 
 
 def borrar_todas_las_importaciones() -> dict:
-    """Deja el prototipo sin ninguna importación, en todas las jurisdicciones.
+    """Deja el sistema sin ninguna importación, en todas las jurisdicciones.
 
     **Es una herramienta de prueba y no forma parte del sistema.** Está porque
     durante las pruebas hace falta repetir el mismo circuito muchas veces:
     importar un archivo que anduvo, cambiarle algo, ver si pincha. Sin esto hay
     que ir a la base a mano.
 
-    Al integrar el módulo a SISOC, esto se va con todo el resto del prototipo.
+    Al integrar el módulo a SISOC, esto se va con el resto de las herramientas de prueba.
     """
     borrados = {"filas": 0, "importaciones": 0, "presentaciones": 0, "periodos": 0}
     with connection.cursor() as cur:
@@ -409,7 +409,7 @@ def borrar_todas_las_importaciones() -> dict:
         cur.execute("DELETE FROM runac_c2_presentacion")
         borrados["presentaciones"] = cur.rowcount
 
-        # Y se reabre el período. Sin esto la herramienta dejaba el prototipo a
+        # Y se reabre el período. Sin esto la herramienta dejaba el sistema a
         # medio camino: borraba todo pero, si el período había quedado cerrado
         # —probando el circuito, por ejemplo—, no se podía volver a importar
         # nada y no quedaba forma obvia de salir. «Volver a empezar» incluye

@@ -1,6 +1,6 @@
-"""Configuración del prototipo de RUNAC.
+"""Configuración de MIR — implementación RUNAC.
 
-**Esto es un prototipo.** No es el módulo de SISOC y no está preparado para
+**Todavía no está en producción.** No es el módulo de SISOC y no está preparado para
 producción: no tiene auditoría de accesos, ni control de alcance territorial, ni
 las validaciones de seguridad que exige el repositorio.
 
@@ -16,9 +16,9 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# El prototipo no maneja datos reales, así que la clave no es un secreto.
+# MIR no maneja datos reales, así que la clave no es un secreto.
 # Al integrarlo a SISOC, esto se descarta.
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "prototipo-runac-no-usar-en-produccion")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "mir-runac-no-usar-en-produccion")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 
 # Se expone por un túnel, así que se aceptan hosts externos.
@@ -77,7 +77,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# La misma base donde viven las tres capas. El prototipo no crea el modelo:
+# La misma base donde viven las tres capas. La aplicación no crea el modelo:
 # lo lee. La estructura la produce la skill runac-capa1.
 DATABASES = {
     "default": {
@@ -100,7 +100,7 @@ _BASE = DATABASES["default"]["NAME"]
 SESSION_COOKIE_NAME = "sesion_" + _BASE
 CSRF_COOKIE_NAME = "csrf_" + _BASE
 
-AUTH_PASSWORD_VALIDATORS = []  # prototipo: no molestar al equipo con esto
+AUTH_PASSWORD_VALIDATORS = []  # entorno de prueba: no molestar al equipo con esto
 
 LANGUAGE_CODE = "es-ar"
 TIME_ZONE = "America/Argentina/Buenos_Aires"
@@ -140,6 +140,6 @@ RUNAC_INFORMES = BASE_DIR / "media" / "informes"
 # aportar nada a la advertencia. «Version funcional» dice que anda sin prometer
 # que esta en uso, que es lo que todavia no es cierto.
 #
-# La mitad que protege no se saca mientras el prototipo se muestre por ngrok.
-RUNAC_ES_PROTOTIPO = True
-RUNAC_AVISO_PROTOTIPO = "RUNAC · versión funcional · datos de prueba"
+# La mitad que protege no se saca mientras el sistema se muestre por ngrok.
+MIR_MOSTRAR_AVISO = True
+MIR_AVISO = "RUNAC · versión funcional · datos de prueba"
