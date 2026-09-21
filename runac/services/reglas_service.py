@@ -48,6 +48,42 @@ class NoSePuede(Exception):
 
 
 # ---------------------------------------------------------------------------
+# Cuándo se puede cambiar la definición
+# ---------------------------------------------------------------------------
+
+
+def periodo_abierto():
+    """El período en curso, si hay alguno abierto.
+
+    **La definición se cambia antes de que arranque el operativo, y no
+    después.** Con un período abierto hay provincias cargando contra las reglas
+    que se les comunicaron: moverlas a mitad de camino significa que dos
+    provincias presentaron lo mismo y a una le fue bien y a la otra mal.
+
+    Que quede fuera del sistema es deliberado: si aparece algo que de verdad no
+    puede esperar, se hace de manera controlada y con constancia, no con un
+    casillero. La regla es del responsable funcional, del 21-09-2026.
+    """
+    with connection.cursor() as cur:
+        cur.execute(
+            "SELECT codigo FROM mir_c2_periodo WHERE estado = 'ABIERTO' ORDER BY codigo LIMIT 1"
+        )
+        fila = cur.fetchone()
+    return fila[0] if fila else None
+
+
+def exigir_periodo_en_preparacion():
+    """Freno común a todo lo que cambia la definición."""
+    abierto = periodo_abierto()
+    if abierto:
+        raise NoSePuede(
+            f"El período {abierto} ya está abierto: con el operativo en curso la "
+            "definición no se cambia. Si hace falta corregir algo, se hace de "
+            "manera controlada y fuera del sistema."
+        )
+
+
+# ---------------------------------------------------------------------------
 # Consulta
 # ---------------------------------------------------------------------------
 
@@ -89,8 +125,11 @@ def aplicacion(aplicacion_id: int) -> dict:
 
 def cambiar_severidad(aplicacion_id: int, severidad: str) -> dict:
     """Si el control avisa o frena. Es propio del campo: no afecta a nadie más."""
+    # Primero lo que no necesita la base: un valor inválido se rechaza sin ir a
+    # preguntar en qué estado está el período.
     if severidad not in SEVERIDADES:
         raise NoSePuede(f"«{severidad}» no es una severidad válida.")
+    exigir_periodo_en_preparacion()
 
     actual = aplicacion(aplicacion_id)
     if actual["severidad"] == severidad:
@@ -186,6 +225,7 @@ def guardar_rangos(campo_id: int, avisa: tuple, frena: tuple) -> dict:
     Que quitar sea vaciar un casillero es deliberado: deja a la vista qué
     campos no tienen control, que es la pregunta que nadie se estaba haciendo.
     """
+    exigir_periodo_en_preparacion()
     cambios = {"creadas": 0, "cambiadas": 0, "quitadas": 0, "desprendidas": 0}
 
     for severidad, crudos in (("ADVERTENCIA", avisa), ("BLOQUEANTE", frena)):
@@ -223,6 +263,27 @@ def guardar_rangos(campo_id: int, avisa: tuple, frena: tuple) -> dict:
 
     cambios["hubo"] = any(cambios[k] for k in ("creadas", "cambiadas", "quitadas"))
     return cambios
+
+
+def cambiar_obligatorio(campo_id: int, obligatorio: bool) -> dict:
+    """Si la columna hay que completarla sí o sí.
+
+    Vive en el campo, no en una regla: es parte de qué se espera del archivo, y
+    por eso la plantilla que se le entrega a la provincia también cambia.
+    """
+    exigir_periodo_en_preparacion()
+    with connection.cursor() as cur:
+        cur.execute("SELECT obligatorio FROM mir_c1_campo WHERE id = %s", [campo_id])
+        fila = cur.fetchone()
+        if not fila:
+            raise NoSePuede("Ese campo no existe.")
+        if bool(fila[0]) == bool(obligatorio):
+            return {"cambio": False}
+        cur.execute(
+            "UPDATE mir_c1_campo SET obligatorio = %s WHERE id = %s",
+            [1 if obligatorio else 0, campo_id],
+        )
+    return {"cambio": True, "obligatorio": bool(obligatorio)}
 
 
 # ---------------------------------------------------------------------------

@@ -165,8 +165,11 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
             return redirect(volver)
 
         try:
-            if request.POST.get("accion") == "rangos":
+            accion = request.POST.get("accion")
+            if accion == "rangos":
                 self._guardar_rangos(request)
+            elif accion == "obligatorio":
+                self._guardar_obligatorio(request)
             else:
                 self._guardar_severidad(request)
         except (ValueError, reglas_service.NoSePuede) as error:
@@ -203,6 +206,24 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
                 " el cambio vale sólo para éste."
             )
         messages.success(request, aviso)
+
+    def _guardar_obligatorio(self, request):
+        """Si la columna hay que completarla sí o sí. Cambia también la plantilla."""
+        resultado = reglas_service.cambiar_obligatorio(
+            int(request.POST.get("campo", "")),
+            request.POST.get("obligatorio") == "1",
+        )
+        if not resultado["cambio"]:
+            messages.info(request, "No había nada que cambiar.")
+            return
+        messages.success(
+            request,
+            (
+                "Listo: la columna pasa a ser obligatoria."
+                if resultado["obligatorio"]
+                else "Listo: la columna deja de ser obligatoria."
+            ),
+        )
 
     def _guardar_severidad(self, request):
         """Si el control avisa o frena, para las condiciones que no son rangos."""
@@ -262,7 +283,14 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
                 # El nombre técnico sólo le sirve a quien va a programar contra
                 # esto; al que carga la planilla lo distrae.
                 "ver_tecnico": puede_administrar(self.request.user),
-                "puede_editar": puede_administrar(self.request.user),
+                # La definición se cambia antes de abrir el período, no con el
+                # operativo en curso: con provincias cargando, mover una regla
+                # significa que a dos que presentaron lo mismo les fue distinto.
+                "periodo_abierto": reglas_service.periodo_abierto(),
+                "puede_editar": (
+                    puede_administrar(self.request.user)
+                    and not reglas_service.periodo_abierto()
+                ),
             }
         )
         return ctx

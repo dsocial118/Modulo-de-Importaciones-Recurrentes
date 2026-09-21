@@ -57,7 +57,22 @@
                                 </td>
                                 {% if ver_tecnico %}<td class="ayuda mono" data-etiqueta="Nombre técnico">{{ c.nombre }}</td>{% endif %}
                                 <td class="text-center" data-etiqueta="Oblig.">
-                                    {% if c.obligatorio %}
+                                    {% if puede_editar %}
+                                        <form method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="accion" value="obligatorio" />
+                                            <input type="hidden" name="campo" value="{{ c.id }}" />
+                                            <input type="hidden" name="hoja" value="{{ hoja_elegida }}" />
+                                            <input type="hidden"
+                                                   name="obligatorio"
+                                                   value="{% if c.obligatorio %}0{% else %}1{% endif %}" />
+                                            <input type="checkbox"
+                                                   class="form-check-input"
+                                                   {% if c.obligatorio %}checked{% endif %}
+                                                   onchange="this.form.submit()"
+                                                   aria-label="Obligatoria" />
+                                        </form>
+                                    {% elif c.obligatorio %}
                                         <i class="bi bi-check-lg text-success"></i>
                                     {% else %}
                                         <span class="ayuda">—</span>
@@ -165,13 +180,20 @@
             {% if puede_editar %}
                 <br />
                 <i class="bi bi-pencil"></i>
-                <strong>Se pueden cambiar acá mismo:</strong> si el control avisa o frena, y los
-                límites de un rango. El cambio rige para las importaciones que vengan; las ya
-                cerradas conservan lo que se les controló en su momento.
-            {% endif %}
-        </div>
-    {% else %}
-        <p class="ayuda">No hay columnas definidas para esta hoja.</p>
-    {% endif %}
+                <strong>Se pueden cambiar acá mismo:</strong> si la columna es obligatoria, si el
+                control avisa o frena, y los límites de un rango. Un casillero vacío que se
+                completa crea la condición; uno que se vacía la quita.
+            {% elif periodo_abierto and ver_tecnico %}
+                <br />
+                <i class="bi bi-lock"></i>
+                <strong>El período {{ periodo_abierto }} está abierto, así que la definición no se
+                    toca.</strong> Con provincias cargando, mover una regla haría que a dos que
+                    presentaron lo mismo les fuera distinto. Se cambia antes de abrir el período; si
+                    aparece algo que no puede esperar, se hace de manera controlada y con constancia.
+                {% endif %}
+            </div>
+        {% else %}
+            <p class="ayuda">No hay columnas definidas para esta hoja.</p>
+        {% endif %}
 
-{% endblock %}
+    {% endblock %}
