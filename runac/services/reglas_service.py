@@ -37,6 +37,7 @@ propia de cada campo.
 """
 
 import json
+import re
 
 from django.db import connection, transaction
 
@@ -449,6 +450,21 @@ def _resumen(hecho: dict) -> str:
     return ", ".join(partes)
 
 
+def _sin_separadores(crudo) -> str:
+    """«5.000» y «1,5» escritos como los escribe cualquiera, leídos bien.
+
+    El punto es ambiguo: en «5.000» separa miles y en «5.5» separa decimales.
+    Se resuelve por la forma —grupos de exactamente tres cifras— y no por
+    adivinanza, así que «5.000» son cinco mil y «5.5» son cinco y medio.
+    """
+    texto = str(crudo).strip().replace(" ", "")
+    if re.fullmatch(r"-?\d{1,3}(\.\d{3})+", texto):
+        return texto.replace(".", "")
+    if re.fullmatch(r"-?\d{1,3}(\.\d{3})+,\d+", texto):
+        return texto.replace(".", "").replace(",", ".")
+    return texto.replace(",", ".")
+
+
 def _limites(minimo, maximo, entero: bool = False) -> dict:
     """Los dos extremos, ya validados. Vacío significa «sin ese extremo».
 
@@ -461,7 +477,7 @@ def _limites(minimo, maximo, entero: bool = False) -> dict:
         if crudo is None or str(crudo).strip() == "":
             continue
         try:
-            numero = float(str(crudo).replace(",", "."))
+            numero = float(_sin_separadores(crudo))
         except ValueError as error:
             raise NoSePuede(f"«{crudo}» no es un número.") from error
         if entero and numero != int(numero):

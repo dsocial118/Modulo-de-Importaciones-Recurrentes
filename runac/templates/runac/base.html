@@ -323,14 +323,13 @@
 
     /* Editar una regla: los controles van en una línea y envuelven en pantalla
        chica, donde la columna «Condiciones» es una ficha y no una celda. */
-    .dos-techos {
-        display: flex; flex-wrap: wrap; gap: .3rem; align-items: center;
-        margin-top: .35rem;
-    }
-    .dos-techos input[type="text"] { width: 4.5rem; }
-    /* «advierte» y «bloquea» etiquetan cada par de casilleros: sin ancho fijo,
-       la fila se desarma cuando una dice más letras que la otra. */
-    .dos-techos > span { min-width: 4.6rem; font-size: .8rem; }
+    /* Cada techo es un bloque: la etiqueta y sus dos casilleros no se separan
+       nunca. Si no hay lugar baja «bloquea» entero, y no un casillero suelto
+       que queda colgando debajo sin que se sepa de cuál de los dos es. */
+    .dos-techos { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin-top: .35rem; }
+    .techo { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: .25rem; }
+    .techo input[type="text"] { width: 4.5rem; min-width: 4.5rem; text-align: right; }
+    .techo > span { font-size: .8rem; margin-right: .1rem; }
     /* El texto guía de un casillero vacío no es un dato: tiene que leerse como
        una indicación y no como un valor cargado. */
     .dos-techos input::placeholder { color: var(--tinta-suave); opacity: .45; }
@@ -342,7 +341,11 @@
     /* Lo que se tocó y todavía no se guardó. Vuelve al color normal solo si se
        lo devuelve a su valor original: el color dice «esto cambió», no «esto
        se editó alguna vez». */
-    .control.cambiado { border-color: var(--atencion-borde); background: var(--atencion-fondo); font-weight: 600; }
+    input[type="text"].control.cambiado,
+    select.control.cambiado { border-color: var(--atencion-borde); background: var(--atencion-fondo); font-weight: 600; }
+    /* En una casilla el fondo taparía el tilde, que es lo que hay que ver: se
+       marca con un aro alrededor y el tilde queda intacto. */
+    input[type="checkbox"].control.cambiado { outline: 2px solid var(--atencion-borde); outline-offset: 2px; }
     td.celda-cambiada { box-shadow: inset 3px 0 0 var(--atencion-tinta); }
 
     .barra-guardar {

@@ -230,6 +230,12 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
                         # casilleros; el resto, uno por condición.
                         "rangos": _dos_techos(reglas),
                         "otras": _las_demas(reglas, _dos_techos(reglas)),
+                        # Un campo con obligatoriedad condicionada no puede ser
+                        # además obligatorio siempre: son dos reglas que se
+                        # contradicen, así que la casilla queda trabada.
+                        "condicionado": any(
+                            r["tipo_regla"] == "OBLIGATORIO_SI" for r in reglas
+                        ),
                         # Sobre una lista cerrada un rango no significa nada,
                         # así que ahí no se ofrecen los casilleros.
                         "numerico": c.get("tipo_dato") in ("ENTERO", "DECIMAL")
@@ -308,6 +314,31 @@ def _leer_cambios(datos):
     return cambios, severidades
 
 
+def como_se_escribe(valor) -> str:
+    """El número como se lee en castellano: 5.000, y 1,5 si tiene decimales.
+
+    Sin separador de miles, 200000 y 20000 se distinguen contando dígitos con
+    el dedo, que es exactamente lo que no hay que hacer cuando se está
+    decidiendo un tope.
+    """
+    if valor is None or valor == "":
+        return ""
+    if isinstance(valor, float) and valor != int(valor):
+        entera, _, decimal = f"{valor:,.10g}".partition(".")
+        return f'{entera.replace(",", ".")},{decimal}'
+    return f"{int(valor):,}".replace(",", ".")
+
+
+def _casillero(valor) -> dict:
+    """Un casillero: lo que muestra y, si el número es largo, cuánto ocupa.
+
+    Todos miden igual salvo los que no entran: un tope de siete dígitos que se
+    ve cortado es peor que una fila despareja.
+    """
+    texto = como_se_escribe(valor)
+    return {"texto": texto, "ancho": f"{len(texto) + 2}ch" if len(texto) > 5 else ""}
+
+
 def _dos_techos(reglas: list) -> dict:
     """Los rangos del campo, uno por severidad, para el renglón de cuatro casilleros.
 
@@ -319,10 +350,16 @@ def _dos_techos(reglas: list) -> dict:
     for regla in reglas:
         if regla["es_rango"]:
             techos.setdefault(regla["severidad"], regla)
+
+    avisa, frena = techos.get("ADVERTENCIA"), techos.get("BLOQUEANTE")
     return {
-        "avisa": techos.get("ADVERTENCIA"),
-        "frena": techos.get("BLOQUEANTE"),
+        "avisa": avisa,
+        "frena": frena,
         "hay": bool(techos),
+        "amin": _casillero(avisa["minimo"] if avisa else None),
+        "amax": _casillero(avisa["maximo"] if avisa else None),
+        "bmin": _casillero(frena["minimo"] if frena else None),
+        "bmax": _casillero(frena["maximo"] if frena else None),
     }
 
 

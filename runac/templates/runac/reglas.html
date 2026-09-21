@@ -65,7 +65,12 @@
                                         {% if c.ayuda %}<div class="ayuda">{{ c.ayuda }}</div>{% endif %}
                                     </td>
                                     <td class="text-center" data-etiqueta="Oblig.">
-                                        {% if puede_editar %}
+                                        {% if c.condicionado %}
+                                            <span class="ayuda"
+                                                  title="Este campo se completa sólo en ciertos casos, así que no puede ser obligatorio siempre.">
+                                                <i class="bi bi-slash-circle"></i> según el caso
+                                            </span>
+                                        {% elif puede_editar %}
                                             <input type="hidden"
                                                    name="oblig_{{ c.id }}"
                                                    value="{% if c.obligatorio %}1{% else %}0{% endif %}" />
@@ -97,44 +102,52 @@
                                         {% if c.numerico %}
                                             {% if puede_editar %}
                                                 <div class="dos-techos">
-                                                    <span class="sev-ADVERTENCIA">advierte</span>
-                                                    <input type="text"
-                                                           inputmode="decimal"
-                                                           class="form-control form-control-sm control"
-                                                           name="amin_{{ c.id }}"
-                                                           data-campo="{{ c.id }}"
-                                                           data-original="{{ c.rangos.avisa.minimo|default_if_none:'' }}"
-                                                           data-que="{{ c.titulo }} — advierte desde"
-                                                           value="{{ c.rangos.avisa.minimo|default_if_none:'' }}"
-                                                           placeholder="mín" />
-                                                    <input type="text"
-                                                           inputmode="decimal"
-                                                           class="form-control form-control-sm control"
-                                                           name="amax_{{ c.id }}"
-                                                           data-campo="{{ c.id }}"
-                                                           data-original="{{ c.rangos.avisa.maximo|default_if_none:'' }}"
-                                                           data-que="{{ c.titulo }} — advierte hasta"
-                                                           value="{{ c.rangos.avisa.maximo|default_if_none:'' }}"
-                                                           placeholder="máx" />
-                                                    <span class="sev-BLOQUEANTE">bloquea</span>
-                                                    <input type="text"
-                                                           inputmode="decimal"
-                                                           class="form-control form-control-sm control"
-                                                           name="bmin_{{ c.id }}"
-                                                           data-campo="{{ c.id }}"
-                                                           data-original="{{ c.rangos.frena.minimo|default_if_none:'' }}"
-                                                           data-que="{{ c.titulo }} — bloquea desde"
-                                                           value="{{ c.rangos.frena.minimo|default_if_none:'' }}"
-                                                           placeholder="mín" />
-                                                    <input type="text"
-                                                           inputmode="decimal"
-                                                           class="form-control form-control-sm control"
-                                                           name="bmax_{{ c.id }}"
-                                                           data-campo="{{ c.id }}"
-                                                           data-original="{{ c.rangos.frena.maximo|default_if_none:'' }}"
-                                                           data-que="{{ c.titulo }} — bloquea hasta"
-                                                           value="{{ c.rangos.frena.maximo|default_if_none:'' }}"
-                                                           placeholder="máx" />
+                                                    <span class="techo">
+                                                        <span class="sev-ADVERTENCIA">advierte</span>
+                                                        <input type="text"
+                                                               inputmode="decimal"
+                                                               class="form-control form-control-sm control"
+                                                               name="amin_{{ c.id }}"
+                                                               data-campo="{{ c.id }}"
+                                                               data-original="{{ c.rangos.amin.texto }}"
+                                                               data-que="{{ c.titulo }} — advierte desde"
+                                                               value="{{ c.rangos.amin.texto }}"
+                                                               style="{% if c.rangos.amin.ancho %}width:{{ c.rangos.amin.ancho }}{% endif %}"
+                                                               placeholder="mín" />
+                                                        <input type="text"
+                                                               inputmode="decimal"
+                                                               class="form-control form-control-sm control"
+                                                               name="amax_{{ c.id }}"
+                                                               data-campo="{{ c.id }}"
+                                                               data-original="{{ c.rangos.amax.texto }}"
+                                                               data-que="{{ c.titulo }} — advierte hasta"
+                                                               value="{{ c.rangos.amax.texto }}"
+                                                               style="{% if c.rangos.amax.ancho %}width:{{ c.rangos.amax.ancho }}{% endif %}"
+                                                               placeholder="máx" />
+                                                    </span>
+                                                    <span class="techo">
+                                                        <span class="sev-BLOQUEANTE">bloquea</span>
+                                                        <input type="text"
+                                                               inputmode="decimal"
+                                                               class="form-control form-control-sm control"
+                                                               name="bmin_{{ c.id }}"
+                                                               data-campo="{{ c.id }}"
+                                                               data-original="{{ c.rangos.bmin.texto }}"
+                                                               data-que="{{ c.titulo }} — bloquea desde"
+                                                               value="{{ c.rangos.bmin.texto }}"
+                                                               style="{% if c.rangos.bmin.ancho %}width:{{ c.rangos.bmin.ancho }}{% endif %}"
+                                                               placeholder="mín" />
+                                                        <input type="text"
+                                                               inputmode="decimal"
+                                                               class="form-control form-control-sm control"
+                                                               name="bmax_{{ c.id }}"
+                                                               data-campo="{{ c.id }}"
+                                                               data-original="{{ c.rangos.bmax.texto }}"
+                                                               data-que="{{ c.titulo }} — bloquea hasta"
+                                                               value="{{ c.rangos.bmax.texto }}"
+                                                               style="{% if c.rangos.bmax.ancho %}width:{{ c.rangos.bmax.ancho }}{% endif %}"
+                                                               placeholder="máx" />
+                                                    </span>
                                                 </div>
                                             {% else %}
                                                 {% if c.rangos.avisa %}<div class="sev-ADVERTENCIA">{{ c.rangos.avisa.texto }}</div>{% endif %}
