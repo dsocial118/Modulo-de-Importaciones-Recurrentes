@@ -321,6 +321,15 @@
     .sev-BLOQUEANTE { color: var(--error-tinta); font-weight: 600; }
     .sev-ADVERTENCIA { color: var(--atencion-tinta); font-weight: 600; }
 
+    /* Editar una regla: los controles van en una línea y envuelven en pantalla
+       chica, donde la columna «Condiciones» es una ficha y no una celda. */
+    .editar-regla {
+        display: flex; flex-wrap: wrap; gap: .35rem; align-items: center;
+        margin: .35rem 0 .9rem;
+    }
+    .editar-regla select { width: auto; }
+    .editar-regla input[type="text"] { width: 5.5rem; }
+
     .estado {
       font-size: .72rem; padding: .2rem .55rem; border-radius: 1rem;
       font-weight: 600; display: inline-block; white-space: nowrap;

@@ -234,6 +234,9 @@ def reglas_de_hoja(codigo_archivo: str, nombre_hoja: str):
             """
             SELECT cr.campo_id, cr.severidad, tr.nombre AS tipo_regla,
                    r.parametros,
+                   cr.id AS aplicacion_id, r.id AS regla_id,
+                   (SELECT COUNT(*) FROM mir_c1_campo_regla x
+                     WHERE x.regla_id = r.id) AS usos,
                    COALESCE(NULLIF(cr.mensaje, ''), r.descripcion, r.nombre) AS texto
             FROM mir_c1_campo_regla cr
             JOIN mir_c1_regla r ON r.id = cr.regla_id
@@ -286,9 +289,7 @@ def presentacion_de(jurisdiccion: str, codigo_periodo: str, crear: bool = False)
             return filas[0]
         if not crear:
             return None
-        cur.execute(
-            "SELECT id FROM mir_c2_periodo WHERE codigo = %s", [codigo_periodo]
-        )
+        cur.execute("SELECT id FROM mir_c2_periodo WHERE codigo = %s", [codigo_periodo])
         fila = cur.fetchone()
         if not fila:
             return None

@@ -14,13 +14,18 @@ Se arma para consultarla, no para auditar el modelo. De ahí las decisiones:
     y no `TEXTO(120)`.
 """
 
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import TemplateView
-
 import json
+from urllib.parse import quote
+
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.views.generic import TemplateView
 
 from runac.permissions import SeccionPermitidaMixin, puede_administrar
 from runac.services import importacion_service as svc
+from runac.services import reglas_service
 
 # Listas demasiado largas para enumerar: se nombra el conjunto. Son doce sobre
 # ochenta y una, así que se escriben a mano; pluralizar en castellano por
@@ -132,10 +137,64 @@ def valores_admitidos(campo) -> dict:
 
 
 class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
-    """Una hoja por vez, con lo que se espera de cada columna."""
+    """Una hoja por vez, con lo que se espera de cada columna.
+
+    De sólo lectura para todos, **menos para el administrador nacional**: él
+    puede cambiar la severidad de un control y los límites de un rango. Es lo
+    que vuelve cierta, para quien usa el sistema, la promesa de que cambiar una
+    regla es cambiar un dato.
+    """
 
     seccion = "estructura"
     template_name = "runac/reglas.html"
+
+    def post(self, request, *_args, **_kwargs):
+        """Guardar un cambio de regla y volver a la misma hoja."""
+        volver = (
+            f'{reverse("runac:estructura")}?hoja={quote(request.POST.get("hoja", ""))}'
+        )
+
+        if not puede_administrar(request.user):
+            messages.error(request, "Sólo el administrador puede cambiar las reglas.")
+            return redirect(volver)
+
+        try:
+            aplicacion_id = int(request.POST.get("aplicacion", ""))
+        except ValueError:
+            messages.error(request, "No se indicó qué regla cambiar.")
+            return redirect(volver)
+
+        try:
+            resultado = reglas_service.cambiar_severidad(
+                aplicacion_id, request.POST.get("severidad", "")
+            )
+            cambios = ["la severidad"] if resultado["cambio"] else []
+
+            if request.POST.get("tipo") == "RANGO":
+                limites = reglas_service.cambiar_limites(
+                    aplicacion_id,
+                    request.POST.get("minimo"),
+                    request.POST.get("maximo"),
+                )
+                if limites["cambio"]:
+                    cambios.append("los límites")
+                    resultado = {**limites, "cambio": True}
+        except reglas_service.NoSePuede as error:
+            messages.error(request, str(error))
+            return redirect(volver)
+
+        if not cambios:
+            messages.info(request, "No había nada que cambiar: la regla quedó igual.")
+        else:
+            aviso = f'Se cambió {" y ".join(cambios)}.'
+            if resultado.get("desprendida"):
+                otros = resultado["otros_campos"]
+                aviso += (
+                    f" Esta regla la compartían {otros + 1} campos:"
+                    f" el cambio vale sólo para éste y los otros {otros} quedaron como estaban."
+                )
+            messages.success(request, aviso)
+        return redirect(volver)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -161,6 +220,7 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
                         "espera": que_se_espera(c),
                         "valores": valores_admitidos(c),
                         "letra": _letra(c["orden"]),
+                        "reglas": [_para_editar(r) for r in c["reglas"]],
                     }
                 )
 
@@ -176,9 +236,23 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
                 # El nombre técnico sólo le sirve a quien va a programar contra
                 # esto; al que carga la planilla lo distrae.
                 "ver_tecnico": puede_administrar(self.request.user),
+                "puede_editar": puede_administrar(self.request.user),
             }
         )
         return ctx
+
+
+def _para_editar(regla: dict) -> dict:
+    """Los límites a la vista, para que la pantalla pueda ofrecerlos en dos casilleros."""
+    crudos = regla.get("parametros")
+    par = json.loads(crudos) if isinstance(crudos, str) else (crudos or {})
+    return {
+        **regla,
+        "minimo": par.get("minimo"),
+        "maximo": par.get("maximo"),
+        "es_rango": regla.get("tipo_regla") == "RANGO",
+        "compartida": (regla.get("usos") or 1) > 1,
+    }
 
 
 def _letra(orden: int) -> str:

@@ -80,6 +80,49 @@
                                 <td data-etiqueta="Condiciones">
                                     {% for r in c.reglas %}
                                         <div class="sev-{{ r.severidad }}">{{ r.texto }}</div>
+                                        {% if puede_editar %}
+                                            <form method="post" class="editar-regla">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="aplicacion" value="{{ r.aplicacion_id }}" />
+                                                <input type="hidden" name="hoja" value="{{ hoja_elegida }}" />
+                                                <input type="hidden" name="tipo" value="{{ r.tipo_regla }}" />
+                                                <select name="severidad"
+                                                        class="form-select form-select-sm"
+                                                        aria-label="Severidad">
+                                                    <option value="ADVERTENCIA"
+                                                            {% if r.severidad == "ADVERTENCIA" %}selected{% endif %}>
+                                                        Avisa
+                                                    </option>
+                                                    <option value="BLOQUEANTE"
+                                                            {% if r.severidad == "BLOQUEANTE" %}selected{% endif %}>
+                                                        Frena
+                                                    </option>
+                                                </select>
+                                                {% if r.es_rango %}
+                                                    <input type="text"
+                                                           inputmode="decimal"
+                                                           name="minimo"
+                                                           value="{{ r.minimo|default_if_none:'' }}"
+                                                           class="form-control form-control-sm"
+                                                           placeholder="mín"
+                                                           aria-label="Mínimo" />
+                                                    <input type="text"
+                                                           inputmode="decimal"
+                                                           name="maximo"
+                                                           value="{{ r.maximo|default_if_none:'' }}"
+                                                           class="form-control form-control-sm"
+                                                           placeholder="máx"
+                                                           aria-label="Máximo" />
+                                                {% endif %}
+                                                <button class="btn btn-sm btn-primary">Guardar</button>
+                                                {% if r.compartida %}
+                                                    <span class="ayuda d-block w-100">
+                                                        <i class="bi bi-diagram-2"></i>
+                                                        Esta regla la comparten {{ r.usos }} campos. Al guardar, el cambio vale sólo para éste.
+                                                    </span>
+                                                {% endif %}
+                                            </form>
+                                        {% endif %}
                                     {% empty %}
                                         <span class="ayuda">—</span>
                                     {% endfor %}
@@ -96,6 +139,13 @@
             La columna <strong>Condiciones</strong> se completa con lo que la DNPYPI defina para cada
             campo: obligatoriedad condicionada, relaciones entre columnas o verificaciones del dato.
             Cada condición que se declare, el sistema la controla al importar y la avisa.
+            {% if puede_editar %}
+                <br />
+                <i class="bi bi-pencil"></i>
+                <strong>Se pueden cambiar acá mismo:</strong> si el control avisa o frena, y los
+                límites de un rango. El cambio rige para las importaciones que vengan; las ya
+                cerradas conservan lo que se les controló en su momento.
+            {% endif %}
         </div>
     {% else %}
         <p class="ayuda">No hay columnas definidas para esta hoja.</p>
