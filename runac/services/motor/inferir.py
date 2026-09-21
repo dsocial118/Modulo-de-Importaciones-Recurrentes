@@ -256,7 +256,12 @@ def inferir_campo(
     # «media» hace que aparezca como INFERIDO en el Excel de supuestos, que es
     # donde una persona lo mira. Fue lo que faltó con «Familia» y «Familia
     # Ampliada», que no tienen nada en el nombre para apoyarse.
-    if confianza == "alta" and origen and origen.startswith("formato") and not por_nombre:
+    if (
+        confianza == "alta"
+        and origen
+        and origen.startswith("formato")
+        and not por_nombre
+    ):
         confianza = "media"
 
     # El formato y el nombre se contradicen: pasa cuando la planilla quedó mal

@@ -358,6 +358,28 @@ def cambiar_estado_del_periodo(codigo: str, estado: str, usuario) -> str:
     return estado
 
 
+def volver_atras_es_provisorio(codigo: str) -> int:
+    """Cuántas importaciones ya entraron en ese período.
+
+    Volver a preparación con archivos ya cargados **no debería poder hacerse**:
+    habilita a cambiar la definición contra la que esas provincias ya
+    presentaron. Hoy se permite porque hace falta para probar y para mostrar el
+    circuito, y por eso se avisa cada vez. Queda pendiente prohibirlo cuando el
+    módulo deje de ser una demostración.
+    """
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM mir_c2_importacion i
+              JOIN mir_c2_presentacion s ON s.id = i.presentacion_id
+              JOIN mir_c2_periodo p ON p.id = s.periodo_id
+             WHERE p.codigo = %s
+            """,
+            [codigo],
+        )
+        return cur.fetchone()[0]
+
+
 def borrar_todas_las_importaciones() -> dict:
     """Deja el sistema sin ninguna importación, en todas las jurisdicciones.
 

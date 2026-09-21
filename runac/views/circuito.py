@@ -261,6 +261,18 @@ class EstadoDelPeriodoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
             messages.error(request, str(error))
         else:
             messages.success(request, f"El período {codigo} quedó en «{estado}».")
+            if estado == "PREPARACION":
+                cargadas = circuito.volver_atras_es_provisorio(codigo)
+                aviso = (
+                    "Volver a preparación es una herramienta de prueba: en el "
+                    "sistema real, con el período abierto la definición no se toca."
+                )
+                if cargadas:
+                    aviso += (
+                        f" Y este período ya tiene {cargadas} importaciones: lo que "
+                        "cambies ahora no es contra lo que esas provincias presentaron."
+                    )
+                messages.warning(request, aviso)
         return redirect(f'{reverse("runac:inicio")}?periodo={codigo}')
 
 

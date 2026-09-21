@@ -66,10 +66,21 @@
             {% endif %}
         </div>
     {% elif puede_administrar %}
-        <div class="d-flex mb-3">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            {# Volver atrás es herramienta de prueba: con provincias cargando, la definición no se toca. #}
             <form method="post"
                   action="{% url 'runac:estado_del_periodo' %}"
                   class="ms-auto"
+                  onsubmit="return confirm('Volver a preparación habilita a cambiar la definición. Es una herramienta de prueba: en el sistema real, con el período abierto, la definición no se toca. ¿Continuar?')">
+                {% csrf_token %}
+                <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
+                <input type="hidden" name="estado" value="PREPARACION" />
+                <button class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-arrow-counterclockwise"></i> Volver a preparación (prueba)
+                </button>
+            </form>
+            <form method="post"
+                  action="{% url 'runac:estado_del_periodo' %}"
                   onsubmit="return confirm('Con el período cerrado ninguna jurisdicción puede importar. ¿Continuar?')">
                 {% csrf_token %}
                 <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />

@@ -220,9 +220,7 @@ def main():
     w(f"                  WHERE archivo_id = @archivo AND numero = {args.version});")
     w("DELETE cr FROM mir_c1_campo_regla cr")
     w("  JOIN mir_c1_campo c ON c.id = cr.campo_id")
-    w(
-        "  JOIN mir_c1_hoja h ON h.id = c.hoja_id WHERE h.archivo_version_id = @version;"
-    )
+    w("  JOIN mir_c1_hoja h ON h.id = c.hoja_id WHERE h.archivo_version_id = @version;")
     w(
         "DELETE c FROM mir_c1_campo c JOIN mir_c1_hoja h ON h.id = c.hoja_id WHERE h.archivo_version_id = @version;"
     )

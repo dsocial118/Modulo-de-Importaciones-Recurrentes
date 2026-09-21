@@ -228,7 +228,9 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
     # Y sale sin «MODELO PARA COMPLETAR Y ADJUNTAR»: eso no es titulo, es una
     # consigna, y en una planilla que el sistema entrega para completar no dice
     # nada que no se sepa.
-    titulo = titulo_sin_instrucciones(hoja.get("descripcion") or archivo["titulo"] or "")
+    titulo = titulo_sin_instrucciones(
+        hoja.get("descripcion") or archivo["titulo"] or ""
+    )
     if titulo and fila_titulo and fila_titulo >= 1:
         ws.cell(row=fila_titulo, column=1, value=titulo)
         ws.merge_cells(
