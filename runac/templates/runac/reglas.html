@@ -10,7 +10,6 @@
                 Qué va en cada columna: si es obligatoria, qué tipo de dato admite y qué
                 condiciones debe cumplir.
             </div>
-
         </div>
         <form method="get" class="d-flex gap-2 align-items-center">
             <label class="ayuda mb-0" for="sel-hoja">Archivo y hoja</label>
@@ -34,166 +33,238 @@
             {% if con_regla %}· <strong>{{ con_regla }}</strong> con condiciones propias{% endif %}
         </div>
 
-        <div class="card">
-            <div class="card-body p-0 tabla-scroll">
-                <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width:3rem" class="text-center">Col.</th>
-                            <th>Campo</th>
-                            {% if ver_tecnico %}<th style="width:15rem">Nombre técnico</th>{% endif %}
-                            <th style="width:6rem" class="text-center">Oblig.</th>
-                            <th style="width:26%">Qué admite</th>
-                            <th>Condiciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for c in campos %}
+        <form method="post" id="hoja">
+            {% csrf_token %}
+            <input type="hidden" name="hoja" value="{{ hoja_elegida }}" />
+
+            {% if puede_editar %}
+                <div class="barra-guardar" id="barra">
+                    <span class="ayuda" id="cuenta">Sin cambios</span>
+                    <button class="btn btn-sm btn-primary" id="guardar" disabled>Guardar cambios</button>
+                </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-body p-0 tabla-scroll">
+                    <table class="table table-sm tabla-compacta align-middle mb-0 tabla-ficha">
+                        <thead class="table-light">
                             <tr>
-                                <td class="text-center ayuda mono">{{ c.letra }}</td>
-                                <td data-etiqueta="Campo">
-                                    {{ c.titulo }}
-                                    {% if c.ayuda %}<div class="ayuda">{{ c.ayuda }}</div>{% endif %}
-                                </td>
-                                {% if ver_tecnico %}<td class="ayuda mono" data-etiqueta="Nombre técnico">{{ c.nombre }}</td>{% endif %}
-                                <td class="text-center" data-etiqueta="Oblig.">
-                                    {% if puede_editar %}
-                                        <form method="post" class="d-inline">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="accion" value="obligatorio" />
-                                            <input type="hidden" name="campo" value="{{ c.id }}" />
-                                            <input type="hidden" name="hoja" value="{{ hoja_elegida }}" />
-                                            <input type="hidden"
-                                                   name="obligatorio"
-                                                   value="{% if c.obligatorio %}0{% else %}1{% endif %}" />
-                                            <input type="checkbox"
-                                                   class="form-check-input"
-                                                   {% if c.obligatorio %}checked{% endif %}
-                                                   onchange="this.form.submit()"
-                                                   aria-label="Obligatoria" />
-                                        </form>
-                                    {% elif c.obligatorio %}
-                                        <i class="bi bi-check-lg text-success"></i>
-                                    {% else %}
-                                        <span class="ayuda">—</span>
-                                    {% endif %}
-                                </td>
-                                <td data-etiqueta="Qué admite">
-                                    {% if c.valores.detalle %}
-                                        <details>
-                                            <summary class="text-primary" style="cursor: pointer">{{ c.valores.texto }}</summary>
-                                            <div class="ayuda mt-1">{{ c.valores.detalle }}</div>
-                                        </details>
-                                    {% elif c.valores.texto %}
-                                        <span class="ayuda">{{ c.valores.texto }}</span>
-                                    {% else %}
-                                        <span class="ayuda">—</span>
-                                    {% endif %}
-                                </td>
-                                <td data-etiqueta="Condiciones">
-                                    {# Los dos techos, en un renglón: es una definición, no dos reglas. #}
-                                    {% if c.numerico and puede_editar %}
-                                        <form method="post" class="dos-techos">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="accion" value="rangos" />
-                                            <input type="hidden" name="campo" value="{{ c.id }}" />
-                                            <input type="hidden" name="hoja" value="{{ hoja_elegida }}" />
-                                            <span class="sev-ADVERTENCIA">Avisa</span>
-                                            <input type="text"
-                                                   inputmode="decimal"
-                                                   name="avisa_min"
-                                                   value="{{ c.rangos.avisa.minimo|default_if_none:'' }}"
-                                                   class="form-control form-control-sm"
-                                                   placeholder="mín"
-                                                   aria-label="Mínimo que avisa" />
-                                            <input type="text"
-                                                   inputmode="decimal"
-                                                   name="avisa_max"
-                                                   value="{{ c.rangos.avisa.maximo|default_if_none:'' }}"
-                                                   class="form-control form-control-sm"
-                                                   placeholder="máx"
-                                                   aria-label="Máximo que avisa" />
-                                            <span class="sev-BLOQUEANTE">Frena</span>
-                                            <input type="text"
-                                                   inputmode="decimal"
-                                                   name="frena_min"
-                                                   value="{{ c.rangos.frena.minimo|default_if_none:'' }}"
-                                                   class="form-control form-control-sm"
-                                                   placeholder="mín"
-                                                   aria-label="Mínimo que frena" />
-                                            <input type="text"
-                                                   inputmode="decimal"
-                                                   name="frena_max"
-                                                   value="{{ c.rangos.frena.maximo|default_if_none:'' }}"
-                                                   class="form-control form-control-sm"
-                                                   placeholder="máx"
-                                                   aria-label="Máximo que frena" />
-                                            <button class="btn btn-sm btn-primary">Guardar</button>
-                                        </form>
-                                    {% elif c.rangos.hay %}
-                                        {% if c.rangos.avisa %}<div class="sev-ADVERTENCIA">{{ c.rangos.avisa.texto }}</div>{% endif %}
-                                        {% if c.rangos.frena %}<div class="sev-BLOQUEANTE">{{ c.rangos.frena.texto }}</div>{% endif %}
-                                    {% endif %}
-                                    {# Las demás condiciones: una por renglón, con el interruptor. #}
-                                    {% for r in c.otras %}
-                                        <div class="sev-{{ r.severidad }}">{{ r.texto }}</div>
-                                        {% if puede_editar %}
-                                            <form method="post" class="editar-regla">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="aplicacion" value="{{ r.aplicacion_id }}" />
-                                                <input type="hidden" name="hoja" value="{{ hoja_elegida }}" />
-                                                <select name="severidad"
-                                                        class="form-select form-select-sm"
-                                                        aria-label="Severidad">
-                                                    <option value="ADVERTENCIA"
-                                                            {% if r.severidad == "ADVERTENCIA" %}selected{% endif %}>
-                                                        Avisa
-                                                    </option>
-                                                    <option value="BLOQUEANTE"
-                                                            {% if r.severidad == "BLOQUEANTE" %}selected{% endif %}>
-                                                        Frena
-                                                    </option>
-                                                </select>
-                                                <button class="btn btn-sm btn-outline-primary">Guardar</button>
-                                                {% if r.compartida %}
-                                                    <span class="ayuda">
-                                                        <i class="bi bi-diagram-2"></i> la comparten {{ r.usos }} campos
-                                                    </span>
-                                                {% endif %}
-                                            </form>
-                                        {% endif %}
-                                    {% endfor %}
-                                    {% if not c.reglas and not c.numerico %}<span class="ayuda">—</span>{% endif %}
-                                </td>
+                                <th style="width:3rem" class="text-center">Col.</th>
+                                <th>Campo</th>
+                                <th style="width:5rem" class="text-center">Oblig.</th>
+                                <th style="width:34%">Qué admite</th>
+                                <th>Condiciones</th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {% for c in campos %}
+                                <tr>
+                                    <td class="text-center ayuda mono">{{ c.letra }}</td>
+                                    <td data-etiqueta="Campo">
+                                        {{ c.titulo }}
+                                        {% if c.ayuda %}<div class="ayuda">{{ c.ayuda }}</div>{% endif %}
+                                    </td>
+                                    <td class="text-center" data-etiqueta="Oblig.">
+                                        {% if puede_editar %}
+                                            <input type="hidden"
+                                                   name="oblig_{{ c.id }}"
+                                                   value="{% if c.obligatorio %}1{% else %}0{% endif %}" />
+                                            <input type="checkbox"
+                                                   class="form-check-input control"
+                                                   data-campo="{{ c.id }}"
+                                                   data-original="{% if c.obligatorio %}1{% else %}0{% endif %}"
+                                                   data-que="{{ c.titulo }} — obligatoria"
+                                                   {% if c.obligatorio %}checked{% endif %}
+                                                   aria-label="Obligatoria" />
+                                        {% elif c.obligatorio %}
+                                            <i class="bi bi-check-lg text-success"></i>
+                                        {% else %}
+                                            <span class="ayuda">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td data-etiqueta="Qué admite">
+                                        <div>{{ c.valores.texto }}</div>
+                                        {% if c.valores.opciones %}
+                                            <ul class="lista-opciones">
+                                                {% for o in c.valores.opciones %}<li>{{ o }}</li>{% endfor %}
+                                            </ul>
+                                        {% elif c.valores.detalle %}
+                                            <details>
+                                                <summary class="text-primary" style="cursor: pointer">ver las opciones</summary>
+                                                <div class="ayuda mt-1">{{ c.valores.detalle }}</div>
+                                            </details>
+                                        {% endif %}
+                                        {% if c.numerico %}
+                                            {% if puede_editar %}
+                                                <div class="dos-techos">
+                                                    <span class="sev-ADVERTENCIA">advierte</span>
+                                                    <input type="text"
+                                                           inputmode="decimal"
+                                                           class="form-control form-control-sm control"
+                                                           name="amin_{{ c.id }}"
+                                                           data-campo="{{ c.id }}"
+                                                           data-original="{{ c.rangos.avisa.minimo|default_if_none:'' }}"
+                                                           data-que="{{ c.titulo }} — advierte desde"
+                                                           value="{{ c.rangos.avisa.minimo|default_if_none:'' }}"
+                                                           placeholder="mín" />
+                                                    <input type="text"
+                                                           inputmode="decimal"
+                                                           class="form-control form-control-sm control"
+                                                           name="amax_{{ c.id }}"
+                                                           data-campo="{{ c.id }}"
+                                                           data-original="{{ c.rangos.avisa.maximo|default_if_none:'' }}"
+                                                           data-que="{{ c.titulo }} — advierte hasta"
+                                                           value="{{ c.rangos.avisa.maximo|default_if_none:'' }}"
+                                                           placeholder="máx" />
+                                                    <span class="sev-BLOQUEANTE">bloquea</span>
+                                                    <input type="text"
+                                                           inputmode="decimal"
+                                                           class="form-control form-control-sm control"
+                                                           name="bmin_{{ c.id }}"
+                                                           data-campo="{{ c.id }}"
+                                                           data-original="{{ c.rangos.frena.minimo|default_if_none:'' }}"
+                                                           data-que="{{ c.titulo }} — bloquea desde"
+                                                           value="{{ c.rangos.frena.minimo|default_if_none:'' }}"
+                                                           placeholder="mín" />
+                                                    <input type="text"
+                                                           inputmode="decimal"
+                                                           class="form-control form-control-sm control"
+                                                           name="bmax_{{ c.id }}"
+                                                           data-campo="{{ c.id }}"
+                                                           data-original="{{ c.rangos.frena.maximo|default_if_none:'' }}"
+                                                           data-que="{{ c.titulo }} — bloquea hasta"
+                                                           value="{{ c.rangos.frena.maximo|default_if_none:'' }}"
+                                                           placeholder="máx" />
+                                                </div>
+                                            {% else %}
+                                                {% if c.rangos.avisa %}<div class="sev-ADVERTENCIA">{{ c.rangos.avisa.texto }}</div>{% endif %}
+                                                {% if c.rangos.frena %}<div class="sev-BLOQUEANTE">{{ c.rangos.frena.texto }}</div>{% endif %}
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td data-etiqueta="Condiciones">
+                                        {% for r in c.otras %}
+                                            <div class="condicion">
+                                                <span class="sev-{{ r.severidad }}">{{ r.texto }}</span>
+                                                {% if puede_editar %}
+                                                    <select name="sev_{{ r.aplicacion_id }}"
+                                                            class="form-select form-select-sm control"
+                                                            data-original="{{ r.severidad }}"
+                                                            data-que="{{ c.titulo }} — la condición"
+                                                            aria-label="Severidad">
+                                                        <option value="ADVERTENCIA"
+                                                                {% if r.severidad == "ADVERTENCIA" %}selected{% endif %}>
+                                                            advierte
+                                                        </option>
+                                                        <option value="BLOQUEANTE"
+                                                                {% if r.severidad == "BLOQUEANTE" %}selected{% endif %}>
+                                                            bloquea
+                                                        </option>
+                                                    </select>
+                                                {% endif %}
+                                            </div>
+                                        {% empty %}
+                                            <span class="ayuda">—</span>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+        </form>
 
         <div class="ayuda mt-3">
             <i class="bi bi-info-circle"></i>
-            La columna <strong>Condiciones</strong> se completa con lo que la DNPYPI defina para cada
-            campo: obligatoriedad condicionada, relaciones entre columnas o verificaciones del dato.
-            Cada condición que se declare, el sistema la controla al importar y la avisa.
+            En <strong>Condiciones</strong> va lo que un rango no puede decir: obligatoriedad
+            condicionada, relaciones entre columnas, o que un valor exista en otro archivo. Que la
+            mayoría de las filas diga «—» es lo esperable.
             {% if puede_editar %}
                 <br />
                 <i class="bi bi-pencil"></i>
-                <strong>Se pueden cambiar acá mismo:</strong> si la columna es obligatoria, si el
-                control avisa o frena, y los límites de un rango. Un casillero vacío que se
-                completa crea la condición; uno que se vacía la quita.
+                <strong>Se cambia acá mismo</strong> y se guarda todo junto con el botón de arriba.
+                Un casillero vacío que se completa crea la condición; uno que se vacía la quita.
             {% elif periodo_abierto and ver_tecnico %}
                 <br />
                 <i class="bi bi-lock"></i>
                 <strong>El período {{ periodo_abierto }} está abierto, así que la definición no se
                     toca.</strong> Con provincias cargando, mover una regla haría que a dos que
-                    presentaron lo mismo les fuera distinto. Se cambia antes de abrir el período; si
-                    aparece algo que no puede esperar, se hace de manera controlada y con constancia.
+                    presentaron lo mismo les fuera distinto.
                 {% endif %}
             </div>
         {% else %}
             <p class="ayuda">No hay columnas definidas para esta hoja.</p>
+        {% endif %}
+
+        {% if puede_editar %}
+            <script>
+      (function () {
+        const form = document.getElementById("hoja");
+        const boton = document.getElementById("guardar");
+        const cuenta = document.getElementById("cuenta");
+        const controles = Array.from(form.querySelectorAll(".control"));
+
+        const valorDe = (c) => (c.type === "checkbox" ? (c.checked ? "1" : "0") : c.value.trim());
+
+        // Se compara SIEMPRE contra el valor con el que vino la pantalla: si se
+        // cambia 20 por 30 y después se vuelve a 20, deja de contar como cambio.
+        function repasar() {
+          let cambiados = 0;
+          for (const c of controles) {
+            const distinto = valorDe(c) !== c.dataset.original;
+            c.classList.toggle("cambiado", distinto);
+            const celda = c.closest("td");
+            if (celda) celda.classList.toggle("celda-cambiada", !!celda.querySelector(".cambiado"));
+            if (distinto) cambiados++;
+          }
+          boton.disabled = cambiados === 0;
+          cuenta.textContent =
+            cambiados === 0 ? "Sin cambios" : cambiados === 1 ? "1 cambio sin guardar" : cambiados + " cambios sin guardar";
+          return cambiados;
+        }
+
+        for (const c of controles) {
+          c.addEventListener("input", repasar);
+          c.addEventListener("change", function () {
+            if (c.type === "checkbox") {
+              form.querySelector('input[name="oblig_' + c.dataset.campo + '"]').value = c.checked ? "1" : "0";
+            }
+            repasar();
+          });
+        }
+
+        form.addEventListener("submit", function (e) {
+          const lista = controles.filter((c) => c.classList.contains("cambiado")).map((c) => "· " + c.dataset.que);
+          if (!lista.length) {
+            e.preventDefault();
+            return;
+          }
+          if (!confirm("Se van a guardar estos cambios:\n\n" + lista.join("\n"))) {
+            e.preventDefault();
+            return;
+          }
+          // Viaja sólo lo que se tocó, pero los cuatro límites de una fila van
+          // juntos: si faltara uno, el que no llega se leería como vaciado.
+          const filas = new Set(controles.filter((c) => c.classList.contains("cambiado")).map((c) => c.dataset.campo));
+          for (const c of controles) {
+            const suya = c.dataset.campo && filas.has(c.dataset.campo);
+            if (!c.classList.contains("cambiado") && !suya) c.disabled = true;
+          }
+          for (const oculto of form.querySelectorAll('input[name^="oblig_"]')) {
+            if (!filas.has(oculto.name.slice(7))) oculto.disabled = true;
+          }
+          sinAvisar = true;
+        });
+
+        let sinAvisar = false;
+        window.addEventListener("beforeunload", function (e) {
+          if (!sinAvisar && repasar() > 0) e.preventDefault();
+        });
+
+        repasar();
+      })();
+            </script>
         {% endif %}
 
     {% endblock %}

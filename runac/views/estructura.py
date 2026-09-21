@@ -50,6 +50,9 @@ NOMBRE_DE_LISTA_LARGA = {
 # A partir de acá se nombra la lista en vez de enumerarla.
 TOPE_PARA_ENUMERAR = 8
 
+# Una opción más larga que esto ya no entra cómoda en una línea compartida.
+LARGO_PARA_UNA_LINEA = 25
+
 TIPO_EN_CASTELLANO = {
     "FECHA": "Fecha",
     "HORA": "Hora",
@@ -75,50 +78,18 @@ def titulo_completo(campo) -> str:
     return f"{grupo.rstrip('. ')}… {resto}"
 
 
-def limite_numerico(campo) -> str:
-    """El rango admitido, dicho con números y no con un mensaje de error.
+def tipo_solo(campo) -> str:
+    """El tipo de dato, sin los límites: ahora se editan aparte, en casilleros.
 
-    La pantalla mostraba «Es una cantidad inusualmente alta» y «Ese número no
-    puede ser», que son lo que el sistema dirá si te equivocás — pero no dicen
-    cuál es el número. Quien viene acá viene a saber qué puede poner.
-
-    Cuando hay dos rangos —uno que avisa y otro que bloquea— manda el que
-    bloquea para el tope, porque es el que decide si el archivo entra.
+    Se conserva aunque estén los casilleros al lado, porque **el tipo es parte
+    de lo que la columna admite**: no es lo mismo un entero que un número con
+    decimales, y el día que un campo sea un porcentaje o un monto la diferencia
+    importa.
     """
-    topes = [
-        (
-            json.loads(r["parametros"] or "{}")
-            if isinstance(r["parametros"], str)
-            else (r["parametros"] or {})
-        )
-        for r in campo.get("reglas") or []
-        if r.get("tipo_regla") == "RANGO"
-    ]
-    if not topes:
-        return ""
-    minimos = [t["minimo"] for t in topes if t.get("minimo") is not None]
-    # El tope que se muestra es el más exigente: es el primero que se va a
-    # quejar, y por lo tanto el que hay que respetar.
-    maximos = [t["maximo"] for t in topes if t.get("maximo") is not None]
-    if minimos and maximos:
-        return f", entre {max(minimos):g} y {min(maximos):g}"
-    if maximos:
-        return f", hasta {min(maximos):g}"
-    if minimos:
-        return f", desde {max(minimos):g}"
-    return ""
-
-
-def que_se_espera(campo) -> str:
-    """El tipo de dato dicho en castellano, con su límite si lo tiene."""
-    if campo.get("catalogo"):
-        return "Una opción de la lista"
     tipo = TIPO_EN_CASTELLANO.get(campo.get("tipo_dato"), campo.get("tipo_dato") or "")
     largo = campo.get("longitud_maxima")
     if tipo == "Texto" and largo:
         return f"Texto, hasta {largo} caracteres"
-    if campo.get("tipo_dato") in ("ENTERO", "DECIMAL"):
-        return f"{tipo}{limite_numerico(campo)}"
     return tipo
 
 
@@ -130,7 +101,7 @@ def valores_admitidos(campo) -> dict:
     lista. Ahora es una sola: o el tipo, o la lista.
     """
     if not campo.get("catalogo"):
-        return {"texto": que_se_espera(campo), "detalle": ""}
+        return {"texto": tipo_solo(campo), "detalle": "", "opciones": []}
 
     cuantos = campo.get("opciones") or 0
     valores = campo.get("valores") or ""
@@ -138,8 +109,24 @@ def valores_admitidos(campo) -> dict:
         nombre = NOMBRE_DE_LISTA_LARGA.get(
             campo["catalogo"], campo.get("lista") or campo["catalogo"]
         )
-        return {"texto": f"{nombre} ({cuantos})", "detalle": valores}
-    return {"texto": f"Lista: {valores}" if valores else "Lista", "detalle": ""}
+        return {"texto": f"{nombre} ({cuantos})", "detalle": valores, "opciones": []}
+
+    opciones = [v.strip() for v in valores.split("·") if v.strip()]
+    # En una línea sólo si se leen en una línea. Con opciones largas o con comas
+    # adentro —«Sí, está actualizada pero no se aplica»— la fila se vuelve una
+    # sopa y no se distingue dónde termina una y empieza la otra.
+    apretadas = all(len(o) <= LARGO_PARA_UNA_LINEA and "," not in o for o in opciones)
+    if opciones and apretadas:
+        return {
+            "texto": "Lista: " + " / ".join(opciones),
+            "detalle": "",
+            "opciones": [],
+        }
+    return {
+        "texto": f"Lista de {cuantos} opciones:" if opciones else "Lista",
+        "detalle": "",
+        "opciones": opciones,
+    }
 
 
 class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
@@ -165,64 +152,40 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
             return redirect(volver)
 
         try:
-            accion = request.POST.get("accion")
-            if accion == "rangos":
-                self._guardar_rangos(request)
-            elif accion == "obligatorio":
-                self._guardar_obligatorio(request)
-            else:
+            if request.POST.get("accion") == "severidad":
                 self._guardar_severidad(request)
+            else:
+                self._guardar_hoja(request)
+        except reglas_service.ErroresDeValidacion as problema:
+            for error in problema.errores:
+                messages.error(request, error)
+            messages.warning(
+                request, "No se guardó ningún cambio: corregí eso y volvé a guardar."
+            )
         except (ValueError, reglas_service.NoSePuede) as error:
-            messages.error(request, str(error) or "No se indicó qué regla cambiar.")
+            messages.error(request, str(error) or "No se indicó qué cambiar.")
         return redirect(volver)
 
-    def _guardar_rangos(self, request):
-        """Los dos techos de un campo: crea, cambia o quita, según qué se completó."""
-        campo_id = int(request.POST.get("campo", ""))
-        cambios = reglas_service.guardar_rangos(
-            campo_id,
-            (request.POST.get("avisa_min"), request.POST.get("avisa_max")),
-            (request.POST.get("frena_min"), request.POST.get("frena_max")),
-        )
-        if not cambios["hubo"]:
-            messages.info(
-                request, "No había nada que cambiar: los límites quedaron igual."
-            )
+    def _guardar_hoja(self, request):
+        """Todo lo que se tocó en la hoja, de una sola vez.
+
+        Llegan sólo los campos modificados: la pantalla deja fuera los que
+        quedaron como estaban, así el guardado no repasa sesenta columnas para
+        cambiar dos.
+        """
+        cambios, severidades = _leer_cambios(request.POST)
+        if not cambios and not severidades:
+            messages.info(request, "No había nada que guardar.")
             return
 
-        dicho = [
-            f"{cambios[clave]} {palabra}"
-            for clave, palabra in (
-                ("creadas", "condición nueva"),
-                ("cambiadas", "cambiada"),
-                ("quitadas", "quitada"),
-            )
-            if cambios[clave]
-        ]
-        aviso = f'Listo: {", ".join(dicho)}.'
-        if cambios["desprendidas"]:
-            aviso += (
-                " La condición que se cambió la compartían varios campos:"
-                " el cambio vale sólo para éste."
-            )
-        messages.success(request, aviso)
-
-    def _guardar_obligatorio(self, request):
-        """Si la columna hay que completarla sí o sí. Cambia también la plantilla."""
-        resultado = reglas_service.cambiar_obligatorio(
-            int(request.POST.get("campo", "")),
-            request.POST.get("obligatorio") == "1",
-        )
-        if not resultado["cambio"]:
-            messages.info(request, "No había nada que cambiar.")
+        hecho = reglas_service.guardar_hoja(cambios, severidades)
+        if not hecho["detalle"]:
+            messages.info(request, "Los valores eran los mismos: no se cambió nada.")
             return
         messages.success(
             request,
-            (
-                "Listo: la columna pasa a ser obligatoria."
-                if resultado["obligatorio"]
-                else "Listo: la columna deja de ser obligatoria."
-            ),
+            f'Guardado. {len(hecho["detalle"])} cambios: '
+            + " · ".join(hecho["detalle"]),
         )
 
     def _guardar_severidad(self, request):
@@ -267,7 +230,10 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
                         # casilleros; el resto, uno por condición.
                         "rangos": _dos_techos(reglas),
                         "otras": _las_demas(reglas, _dos_techos(reglas)),
-                        "numerico": c.get("tipo_dato") in ("ENTERO", "DECIMAL"),
+                        # Sobre una lista cerrada un rango no significa nada,
+                        # así que ahí no se ofrecen los casilleros.
+                        "numerico": c.get("tipo_dato") in ("ENTERO", "DECIMAL")
+                        and not c.get("catalogo"),
                     }
                 )
 
@@ -307,6 +273,39 @@ def _para_editar(regla: dict) -> dict:
         "es_rango": regla.get("tipo_regla") == "RANGO",
         "compartida": (regla.get("usos") or 1) > 1,
     }
+
+
+def _leer_cambios(datos):
+    """Arma lo que la pantalla mandó: por campo, y las severidades sueltas.
+
+    Los controles se llaman `oblig_12`, `amin_12`, `amax_12`, `bmin_12`,
+    `bmax_12` y `sev_45` —este último por aplicación de regla, no por campo—.
+    La pantalla manda **los cuatro límites de una fila o ninguno**: si sólo
+    llegara el mínimo, el máximo ausente se leería como «vaciado» y borraría
+    una condición que nadie tocó.
+    """
+    cambios: dict = {}
+    severidades: dict = {}
+    for clave in datos:
+        pedazo, _, crudo = clave.partition("_")
+        if not crudo.isdigit():
+            continue
+        numero = int(crudo)
+        if pedazo == "sev":
+            severidades[numero] = datos.get(clave)
+        elif pedazo == "oblig":
+            cambios.setdefault(numero, {})["obligatorio"] = datos.get(clave) == "1"
+        elif pedazo == "amin":
+            cambios.setdefault(numero, {})["advierte"] = (
+                datos.get(f"amin_{numero}"),
+                datos.get(f"amax_{numero}"),
+            )
+        elif pedazo == "bmin":
+            cambios.setdefault(numero, {})["bloquea"] = (
+                datos.get(f"bmin_{numero}"),
+                datos.get(f"bmax_{numero}"),
+            )
+    return cambios, severidades
 
 
 def _dos_techos(reglas: list) -> dict:

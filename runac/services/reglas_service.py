@@ -47,6 +47,14 @@ class NoSePuede(Exception):
     """Lo pedido no se puede hacer, con un motivo que se le muestra a la persona."""
 
 
+class ErroresDeValidacion(NoSePuede):
+    """Varios problemas a la vez, para corregirlos de una pasada y no de a uno."""
+
+    def __init__(self, errores: list):
+        self.errores = errores
+        super().__init__(" · ".join(errores))
+
+
 # ---------------------------------------------------------------------------
 # Cuándo se puede cambiar la definición
 # ---------------------------------------------------------------------------
@@ -144,7 +152,7 @@ def cambiar_severidad(aplicacion_id: int, severidad: str) -> dict:
 
 
 @transaction.atomic
-def cambiar_limites(aplicacion_id: int, minimo, maximo) -> dict:
+def cambiar_limites(aplicacion_id: int, minimo, maximo, entero: bool = False) -> dict:
     """Los límites de un rango. Desprende la regla si estaba compartida.
 
     `minimo` y `maximo` pueden venir vacíos: un rango con un solo extremo es
@@ -157,7 +165,7 @@ def cambiar_limites(aplicacion_id: int, minimo, maximo) -> dict:
             f'Los límites sólo se cambian en reglas de rango, y ésta es «{actual["tipo"]}».'
         )
 
-    nuevos = _limites(minimo, maximo)
+    nuevos = _limites(minimo, maximo, entero=entero)
     if nuevos == {
         k: v for k, v in actual["parametros"].items() if k in ("minimo", "maximo")
     }:
@@ -227,9 +235,10 @@ def guardar_rangos(campo_id: int, avisa: tuple, frena: tuple) -> dict:
     """
     exigir_periodo_en_preparacion()
     cambios = {"creadas": 0, "cambiadas": 0, "quitadas": 0, "desprendidas": 0}
+    entero = _datos_de_campos([campo_id]).get(campo_id, {}).get("tipo") == "ENTERO"
 
     for severidad, crudos in (("ADVERTENCIA", avisa), ("BLOQUEANTE", frena)):
-        limites = _limites(*crudos)
+        limites = _limites(*crudos, entero=entero)
         with connection.cursor() as cur:
             existente = _rango_del_campo(cur, campo_id, severidad)
 
@@ -242,7 +251,7 @@ def guardar_rangos(campo_id: int, avisa: tuple, frena: tuple) -> dict:
                 continue
 
             if existente:
-                resultado = cambiar_limites(existente, *crudos)
+                resultado = cambiar_limites(existente, *crudos, entero=entero)
                 if resultado["cambio"]:
                     cambios["cambiadas"] += 1
                     cambios["desprendidas"] += 1 if resultado["desprendida"] else 0
@@ -263,6 +272,53 @@ def guardar_rangos(campo_id: int, avisa: tuple, frena: tuple) -> dict:
 
     cambios["hubo"] = any(cambios[k] for k in ("creadas", "cambiadas", "quitadas"))
     return cambios
+
+
+def guardar_hoja(cambios: dict, severidades: dict = None) -> dict:
+    """Guarda de una sola vez todo lo que se tocó en la hoja.
+
+    La pantalla no tiene un botón por fila sino uno solo arriba: quien revisa
+    una hoja de sesenta columnas ajusta varias y guarda una vez, y un botón por
+    fila es un botón que alguien no va a apretar.
+
+    **O entra todo o no entra nada.** Primero se valida la hoja entera; si algo
+    falla no se escribe una sola fila y se devuelven todos los problemas juntos,
+    para que se corrijan de una pasada. Guardar la mitad y callarse la otra
+    mitad es peor que no guardar.
+
+    `cambios` es, por campo: `obligatorio`, `advierte` y `bloquea`, y cada uno
+    puede faltar —sólo llega lo que se tocó—.
+    """
+    exigir_periodo_en_preparacion()
+    severidades = severidades or {}
+    if not cambios and not severidades:
+        return {"campos": 0, "detalle": []}
+
+    preparados, errores = _revisar_todo(cambios, severidades)
+    if errores:
+        raise ErroresDeValidacion(errores)
+
+    detalle = []
+    with transaction.atomic():
+        detalle.extend(_aplicar_severidades(severidades))
+        for campo, pedido, rangos in preparados:
+            if "obligatorio" in pedido:
+                hecho = cambiar_obligatorio(campo["id"], pedido["obligatorio"])
+                if hecho["cambio"]:
+                    detalle.append(
+                        f'«{campo["titulo"]}»: '
+                        + (
+                            "ahora es obligatoria"
+                            if hecho["obligatorio"]
+                            else "deja de ser obligatoria"
+                        )
+                    )
+            if rangos is not None:
+                hecho = guardar_rangos(campo["id"], *rangos)
+                if hecho["hubo"]:
+                    detalle.append(f'«{campo["titulo"]}»: {_resumen(hecho)}')
+
+    return {"campos": len(preparados), "detalle": detalle}
 
 
 def cambiar_obligatorio(campo_id: int, obligatorio: bool) -> dict:
@@ -291,8 +347,115 @@ def cambiar_obligatorio(campo_id: int, obligatorio: bool) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _limites(minimo, maximo) -> dict:
-    """Los dos extremos, ya validados. Vacío significa «sin ese extremo»."""
+def _revisar_todo(cambios: dict, severidades: dict):
+    """Valida la hoja entera antes de escribir nada, y junta todos los problemas."""
+    campos = _datos_de_campos(list(cambios))
+    preparados, errores = [], []
+
+    for campo_id, pedido in cambios.items():
+        campo = campos.get(campo_id)
+        if campo is None:
+            errores.append(f"El campo {campo_id} no existe.")
+            continue
+        try:
+            preparados.append((campo, pedido, _validar_campo(campo, pedido)))
+        except NoSePuede as error:
+            errores.append(f'«{campo["titulo"]}»: {error}')
+
+    for severidad in severidades.values():
+        if severidad not in SEVERIDADES:
+            errores.append(f"«{severidad}» no es una severidad válida.")
+
+    return preparados, errores
+
+
+def _aplicar_severidades(severidades: dict) -> list:
+    """Cambia si cada condición advierte o bloquea, y cuenta lo que cambió."""
+    hechos = []
+    for aplicacion_id, severidad in severidades.items():
+        datos = aplicacion(aplicacion_id)
+        if cambiar_severidad(aplicacion_id, severidad)["cambio"]:
+            hechos.append(
+                f'«{datos["campo"]}»: la condición ahora '
+                + ("bloquea" if severidad == "BLOQUEANTE" else "advierte")
+            )
+    return hechos
+
+
+def _datos_de_campos(ids: list) -> dict:
+    """Título y tipo de cada campo, que es lo que hace falta para validar."""
+    if not ids:
+        return {}
+    marcas = ", ".join(["%s"] * len(ids))
+    with connection.cursor() as cur:
+        cur.execute(
+            f"SELECT id, titulo_esperado, tipo_dato FROM mir_c1_campo WHERE id IN ({marcas})",
+            ids,
+        )
+        return {
+            fila[0]: {"id": fila[0], "titulo": fila[1], "tipo": fila[2]}
+            for fila in cur.fetchall()
+        }
+
+
+def _validar_campo(campo: dict, pedido: dict):
+    """Revisa los límites de un campo. Devuelve los crudos si hay que guardarlos."""
+    if "advierte" not in pedido and "bloquea" not in pedido:
+        return None
+
+    entero = campo["tipo"] == "ENTERO"
+    advierte = _limites(*pedido.get("advierte", ("", "")), entero=entero)
+    bloquea = _limites(*pedido.get("bloquea", ("", "")), entero=entero)
+    _exigir_que_bloquea_contenga_a_advierte(advierte, bloquea)
+    return (pedido.get("advierte", ("", "")), pedido.get("bloquea", ("", "")))
+
+
+def _exigir_que_bloquea_contenga_a_advierte(advierte: dict, bloquea: dict):
+    """El rango que bloquea tiene que ser el más amplio de los dos.
+
+    Si no, hay valores que frenan el archivo **sin haber advertido nunca**: con
+    advierte 20-50 y bloquea 30-40, un 45 bloquea y jamás hubo un aviso. El que
+    advierte marca lo normal; el que bloquea, lo posible.
+    """
+    if not advierte or not bloquea:
+        return
+
+    piso_a, piso_b = advierte.get("minimo"), bloquea.get("minimo")
+    if piso_a is not None and piso_b is not None and piso_b > piso_a:
+        raise NoSePuede(
+            f"el rango que bloquea tiene que empezar en {piso_a} o menos: con un mínimo "
+            f"de {piso_b} habría valores que frenan sin haber advertido."
+        )
+
+    techo_a, techo_b = advierte.get("maximo"), bloquea.get("maximo")
+    if techo_a is not None and techo_b is not None and techo_b < techo_a:
+        raise NoSePuede(
+            f"el rango que bloquea tiene que terminar en {techo_a} o más: con un máximo "
+            f"de {techo_b} habría valores que frenan sin haber advertido."
+        )
+
+
+def _resumen(hecho: dict) -> str:
+    """Lo que pasó con los rangos de un campo, en una línea."""
+    partes = [
+        f"{hecho[clave]} {palabra}"
+        for clave, palabra in (
+            ("creadas", "condición nueva"),
+            ("cambiadas", "cambiada"),
+            ("quitadas", "quitada"),
+        )
+        if hecho[clave]
+    ]
+    return ", ".join(partes)
+
+
+def _limites(minimo, maximo, entero: bool = False) -> dict:
+    """Los dos extremos, ya validados. Vacío significa «sin ese extremo».
+
+    `entero` viene del tipo del campo: en una columna que cuenta cosas, un
+    límite con decimales no es un límite, es un error de tipeo que después
+    rechaza datos buenos.
+    """
     salida = {}
     for clave, crudo in (("minimo", minimo), ("maximo", maximo)):
         if crudo is None or str(crudo).strip() == "":
@@ -301,6 +464,10 @@ def _limites(minimo, maximo) -> dict:
             numero = float(str(crudo).replace(",", "."))
         except ValueError as error:
             raise NoSePuede(f"«{crudo}» no es un número.") from error
+        if entero and numero != int(numero):
+            raise NoSePuede(
+                f"El campo es un número entero: el límite «{crudo}» no puede tener decimales."
+            )
         salida[clave] = int(numero) if numero == int(numero) else numero
 
     if (
