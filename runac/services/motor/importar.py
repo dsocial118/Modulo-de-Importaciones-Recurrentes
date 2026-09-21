@@ -1075,12 +1075,25 @@ def _ejecutar_con(args, cn):
                     ON DUPLICATE KEY UPDATE id = id""",
         (periodo_id, jurisdiccion_id),
     )
-    cur2.execute(
-        """SELECT id FROM mir_c2_presentacion
-                    WHERE periodo_id=%s AND jurisdiccion_id=%s AND version=1""",
-        (periodo_id, jurisdiccion_id),
-    )
-    fila = cur2.fetchone()
+    def buscar_presentacion():
+        cur2.execute(
+            """SELECT id FROM mir_c2_presentacion
+                        WHERE periodo_id=%s AND jurisdiccion_id=%s AND version=1""",
+            (periodo_id, jurisdiccion_id),
+        )
+        return cur2.fetchone()
+
+    # Si no aparece, se confirma y se vuelve a mirar. No es terquedad: la
+    # transaccion viene leyendo la Capa 1 desde antes, y en MySQL una lectura
+    # sigue viendo la foto del momento en que empezo. Si otra conexion creo la
+    # presentacion despues de esa foto --el boton de borrar importaciones, o
+    # armar la demostracion--, el INSERT de arriba no hizo nada porque la fila
+    # ya existia, y este SELECT tampoco la ve. Confirmar cierra la transaccion
+    # y la siguiente lectura saca una foto nueva.
+    fila = buscar_presentacion()
+    if not fila:
+        cn.commit()
+        fila = buscar_presentacion()
     if not fila:
         raise RuntimeError(
             f"No se pudo obtener la presentacion de {args.jurisdiccion} para "
