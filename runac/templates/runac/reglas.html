@@ -43,8 +43,7 @@
                             <th>Campo</th>
                             {% if ver_tecnico %}<th style="width:15rem">Nombre técnico</th>{% endif %}
                             <th style="width:6rem" class="text-center">Oblig.</th>
-                            <th style="width:12rem">Qué se espera</th>
-                            <th style="width:26%">Valores admitidos</th>
+                            <th style="width:26%">Qué admite</th>
                             <th>Condiciones</th>
                         </tr>
                     </thead>
@@ -64,8 +63,7 @@
                                         <span class="ayuda">—</span>
                                     {% endif %}
                                 </td>
-                                <td data-etiqueta="Qué se espera">{{ c.espera }}</td>
-                                <td data-etiqueta="Valores admitidos">
+                                <td data-etiqueta="Qué admite">
                                     {% if c.valores.detalle %}
                                         <details>
                                             <summary class="text-primary" style="cursor: pointer">{{ c.valores.texto }}</summary>
@@ -78,14 +76,57 @@
                                     {% endif %}
                                 </td>
                                 <td data-etiqueta="Condiciones">
-                                    {% for r in c.reglas %}
+                                    {# Los dos techos, en un renglón: es una definición, no dos reglas. #}
+                                    {% if c.numerico and puede_editar %}
+                                        <form method="post" class="dos-techos">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="accion" value="rangos" />
+                                            <input type="hidden" name="campo" value="{{ c.id }}" />
+                                            <input type="hidden" name="hoja" value="{{ hoja_elegida }}" />
+                                            <span class="sev-ADVERTENCIA">Avisa</span>
+                                            <input type="text"
+                                                   inputmode="decimal"
+                                                   name="avisa_min"
+                                                   value="{{ c.rangos.avisa.minimo|default_if_none:'' }}"
+                                                   class="form-control form-control-sm"
+                                                   placeholder="mín"
+                                                   aria-label="Mínimo que avisa" />
+                                            <input type="text"
+                                                   inputmode="decimal"
+                                                   name="avisa_max"
+                                                   value="{{ c.rangos.avisa.maximo|default_if_none:'' }}"
+                                                   class="form-control form-control-sm"
+                                                   placeholder="máx"
+                                                   aria-label="Máximo que avisa" />
+                                            <span class="sev-BLOQUEANTE">Frena</span>
+                                            <input type="text"
+                                                   inputmode="decimal"
+                                                   name="frena_min"
+                                                   value="{{ c.rangos.frena.minimo|default_if_none:'' }}"
+                                                   class="form-control form-control-sm"
+                                                   placeholder="mín"
+                                                   aria-label="Mínimo que frena" />
+                                            <input type="text"
+                                                   inputmode="decimal"
+                                                   name="frena_max"
+                                                   value="{{ c.rangos.frena.maximo|default_if_none:'' }}"
+                                                   class="form-control form-control-sm"
+                                                   placeholder="máx"
+                                                   aria-label="Máximo que frena" />
+                                            <button class="btn btn-sm btn-primary">Guardar</button>
+                                        </form>
+                                    {% elif c.rangos.hay %}
+                                        {% if c.rangos.avisa %}<div class="sev-ADVERTENCIA">{{ c.rangos.avisa.texto }}</div>{% endif %}
+                                        {% if c.rangos.frena %}<div class="sev-BLOQUEANTE">{{ c.rangos.frena.texto }}</div>{% endif %}
+                                    {% endif %}
+                                    {# Las demás condiciones: una por renglón, con el interruptor. #}
+                                    {% for r in c.otras %}
                                         <div class="sev-{{ r.severidad }}">{{ r.texto }}</div>
                                         {% if puede_editar %}
                                             <form method="post" class="editar-regla">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="aplicacion" value="{{ r.aplicacion_id }}" />
                                                 <input type="hidden" name="hoja" value="{{ hoja_elegida }}" />
-                                                <input type="hidden" name="tipo" value="{{ r.tipo_regla }}" />
                                                 <select name="severidad"
                                                         class="form-select form-select-sm"
                                                         aria-label="Severidad">
@@ -98,34 +139,16 @@
                                                         Frena
                                                     </option>
                                                 </select>
-                                                {% if r.es_rango %}
-                                                    <input type="text"
-                                                           inputmode="decimal"
-                                                           name="minimo"
-                                                           value="{{ r.minimo|default_if_none:'' }}"
-                                                           class="form-control form-control-sm"
-                                                           placeholder="mín"
-                                                           aria-label="Mínimo" />
-                                                    <input type="text"
-                                                           inputmode="decimal"
-                                                           name="maximo"
-                                                           value="{{ r.maximo|default_if_none:'' }}"
-                                                           class="form-control form-control-sm"
-                                                           placeholder="máx"
-                                                           aria-label="Máximo" />
-                                                {% endif %}
-                                                <button class="btn btn-sm btn-primary">Guardar</button>
+                                                <button class="btn btn-sm btn-outline-primary">Guardar</button>
                                                 {% if r.compartida %}
-                                                    <span class="ayuda d-block w-100">
-                                                        <i class="bi bi-diagram-2"></i>
-                                                        Esta regla la comparten {{ r.usos }} campos. Al guardar, el cambio vale sólo para éste.
+                                                    <span class="ayuda">
+                                                        <i class="bi bi-diagram-2"></i> la comparten {{ r.usos }} campos
                                                     </span>
                                                 {% endif %}
                                             </form>
                                         {% endif %}
-                                    {% empty %}
-                                        <span class="ayuda">—</span>
                                     {% endfor %}
+                                    {% if not c.reglas and not c.numerico %}<span class="ayuda">—</span>{% endif %}
                                 </td>
                             </tr>
                         {% endfor %}

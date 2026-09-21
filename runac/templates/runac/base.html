@@ -323,12 +323,15 @@
 
     /* Editar una regla: los controles van en una línea y envuelven en pantalla
        chica, donde la columna «Condiciones» es una ficha y no una celda. */
-    .editar-regla {
+    .editar-regla, .dos-techos {
         display: flex; flex-wrap: wrap; gap: .35rem; align-items: center;
         margin: .35rem 0 .9rem;
     }
     .editar-regla select { width: auto; }
-    .editar-regla input[type="text"] { width: 5.5rem; }
+    .editar-regla input[type="text"], .dos-techos input[type="text"] { width: 5rem; }
+    /* «Avisa» y «Frena» etiquetan cada par de casilleros: sin ancho fijo, la
+       fila se desarma cuando una dice más letras que la otra. */
+    .dos-techos > span { min-width: 3.4rem; font-size: .85rem; }
 
     .estado {
       font-size: .72rem; padding: .2rem .55rem; border-radius: 1rem;
@@ -436,7 +439,10 @@
 
       /* Encabezado fijo: el scroll es del contenedor, que es lo que hace
          que `sticky` funcione. Sin altura máxima, no hay nada que fijar. */
-      .tabla-scroll { max-height: 70vh; overflow-y: auto; }
+      /* Se desplaza en los dos sentidos: la pantalla de reglas se pone ancha
+         cuando se editan los límites, y cortar una columna es peor que
+         desplazarse. */
+      .tabla-scroll { max-height: 70vh; overflow: auto; }
       .tabla-scroll thead th {
         position: sticky; top: 0; z-index: 2;
         background: var(--lienzo); box-shadow: inset 0 -2px 0 var(--borde);

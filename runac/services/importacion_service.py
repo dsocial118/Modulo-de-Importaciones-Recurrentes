@@ -207,7 +207,7 @@ def reglas_de_hoja(codigo_archivo: str, nombre_hoja: str):
     with connection.cursor() as cur:
         cur.execute(
             """
-            SELECT c.id, c.orden, c.titulo_esperado, c.tipo_dato,
+            SELECT c.id, c.orden, c.nombre, c.titulo_esperado, c.tipo_dato,
                    c.longitud_maxima, c.obligatorio,
                    c.ayuda, d.nombre_esperado AS grupo,
                    cat.codigo AS catalogo, cat.nombre AS lista,

@@ -123,9 +123,15 @@ def que_se_espera(campo) -> str:
 
 
 def valores_admitidos(campo) -> dict:
-    """Qué valores acepta la columna: la lista, o el nombre de la lista."""
+    """Qué acepta la columna: el tipo de dato, o la lista si la tiene.
+
+    Era dos columnas —«Qué se espera» y «Valores admitidos»— y para un campo con
+    lista decían lo mismo dos veces: «Una opción de la lista» al lado de la
+    lista. Ahora es una sola: o el tipo, o la lista.
+    """
     if not campo.get("catalogo"):
-        return {"texto": "", "detalle": ""}
+        return {"texto": que_se_espera(campo), "detalle": ""}
+
     cuantos = campo.get("opciones") or 0
     valores = campo.get("valores") or ""
     if cuantos > TOPE_PARA_ENUMERAR:
@@ -133,7 +139,7 @@ def valores_admitidos(campo) -> dict:
             campo["catalogo"], campo.get("lista") or campo["catalogo"]
         )
         return {"texto": f"{nombre} ({cuantos})", "detalle": valores}
-    return {"texto": valores, "detalle": ""}
+    return {"texto": f"Lista: {valores}" if valores else "Lista", "detalle": ""}
 
 
 class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
@@ -159,42 +165,57 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
             return redirect(volver)
 
         try:
-            aplicacion_id = int(request.POST.get("aplicacion", ""))
-        except ValueError:
-            messages.error(request, "No se indicó qué regla cambiar.")
-            return redirect(volver)
-
-        try:
-            resultado = reglas_service.cambiar_severidad(
-                aplicacion_id, request.POST.get("severidad", "")
-            )
-            cambios = ["la severidad"] if resultado["cambio"] else []
-
-            if request.POST.get("tipo") == "RANGO":
-                limites = reglas_service.cambiar_limites(
-                    aplicacion_id,
-                    request.POST.get("minimo"),
-                    request.POST.get("maximo"),
-                )
-                if limites["cambio"]:
-                    cambios.append("los límites")
-                    resultado = {**limites, "cambio": True}
-        except reglas_service.NoSePuede as error:
-            messages.error(request, str(error))
-            return redirect(volver)
-
-        if not cambios:
-            messages.info(request, "No había nada que cambiar: la regla quedó igual.")
-        else:
-            aviso = f'Se cambió {" y ".join(cambios)}.'
-            if resultado.get("desprendida"):
-                otros = resultado["otros_campos"]
-                aviso += (
-                    f" Esta regla la compartían {otros + 1} campos:"
-                    f" el cambio vale sólo para éste y los otros {otros} quedaron como estaban."
-                )
-            messages.success(request, aviso)
+            if request.POST.get("accion") == "rangos":
+                self._guardar_rangos(request)
+            else:
+                self._guardar_severidad(request)
+        except (ValueError, reglas_service.NoSePuede) as error:
+            messages.error(request, str(error) or "No se indicó qué regla cambiar.")
         return redirect(volver)
+
+    def _guardar_rangos(self, request):
+        """Los dos techos de un campo: crea, cambia o quita, según qué se completó."""
+        campo_id = int(request.POST.get("campo", ""))
+        cambios = reglas_service.guardar_rangos(
+            campo_id,
+            (request.POST.get("avisa_min"), request.POST.get("avisa_max")),
+            (request.POST.get("frena_min"), request.POST.get("frena_max")),
+        )
+        if not cambios["hubo"]:
+            messages.info(
+                request, "No había nada que cambiar: los límites quedaron igual."
+            )
+            return
+
+        dicho = [
+            f"{cambios[clave]} {palabra}"
+            for clave, palabra in (
+                ("creadas", "condición nueva"),
+                ("cambiadas", "cambiada"),
+                ("quitadas", "quitada"),
+            )
+            if cambios[clave]
+        ]
+        aviso = f'Listo: {", ".join(dicho)}.'
+        if cambios["desprendidas"]:
+            aviso += (
+                " La condición que se cambió la compartían varios campos:"
+                " el cambio vale sólo para éste."
+            )
+        messages.success(request, aviso)
+
+    def _guardar_severidad(self, request):
+        """Si el control avisa o frena, para las condiciones que no son rangos."""
+        aplicacion_id = int(request.POST.get("aplicacion", ""))
+        resultado = reglas_service.cambiar_severidad(
+            aplicacion_id, request.POST.get("severidad", "")
+        )
+        if not resultado["cambio"]:
+            messages.info(
+                request, "No había nada que cambiar: la condición quedó igual."
+            )
+        else:
+            messages.success(request, "Listo: se cambió si la condición avisa o frena.")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -213,14 +234,19 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
         campos = []
         if archivo and nombre_hoja:
             for c in svc.reglas_de_hoja(archivo, nombre_hoja):
+                reglas = [_para_editar(r) for r in c["reglas"]]
                 campos.append(
                     {
                         **c,
                         "titulo": titulo_completo(c),
-                        "espera": que_se_espera(c),
                         "valores": valores_admitidos(c),
                         "letra": _letra(c["orden"]),
-                        "reglas": [_para_editar(r) for r in c["reglas"]],
+                        "reglas": reglas,
+                        # Los rangos van juntos en un renglón de cuatro
+                        # casilleros; el resto, uno por condición.
+                        "rangos": _dos_techos(reglas),
+                        "otras": _las_demas(reglas, _dos_techos(reglas)),
+                        "numerico": c.get("tipo_dato") in ("ENTERO", "DECIMAL"),
                     }
                 )
 
@@ -253,6 +279,32 @@ def _para_editar(regla: dict) -> dict:
         "es_rango": regla.get("tipo_regla") == "RANGO",
         "compartida": (regla.get("usos") or 1) > 1,
     }
+
+
+def _dos_techos(reglas: list) -> dict:
+    """Los rangos del campo, uno por severidad, para el renglón de cuatro casilleros.
+
+    Si un campo tuviera dos rangos con la misma severidad —no pasa hoy, pero la
+    base lo permite— se toma el primero y el otro queda listado aparte, sin
+    editar. Antes perderlo en silencio que mostrarlo mal.
+    """
+    techos = {}
+    for regla in reglas:
+        if regla["es_rango"]:
+            techos.setdefault(regla["severidad"], regla)
+    return {
+        "avisa": techos.get("ADVERTENCIA"),
+        "frena": techos.get("BLOQUEANTE"),
+        "hay": bool(techos),
+    }
+
+
+def _las_demas(reglas: list, techos: dict) -> list:
+    """Todo lo que no entró en los cuatro casilleros, para no perder nada."""
+    tomadas = {
+        t["aplicacion_id"] for t in (techos["avisa"], techos["frena"]) if t is not None
+    }
+    return [r for r in reglas if r["aplicacion_id"] not in tomadas]
 
 
 def _letra(orden: int) -> str:
