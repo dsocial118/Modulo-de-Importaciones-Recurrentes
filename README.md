@@ -88,11 +88,11 @@ de construirse tres veces.
 Hace falta **Docker Desktop y nada más**. En Windows, Git Bash.
 
 ```bash
-git clone https://github.com/danielc76/mir-runac.git
+git clone https://github.com/dsocial118/Modulo-de-Importaciones-Recurrentes.git
 ```
 
 ```bash
-cd mir-runac && bash entorno/preparar.sh
+cd Modulo-de-Importaciones-Recurrentes && bash entorno/preparar.sh
 ```
 
 Y se abre en **http://localhost:8100**. Después, para levantarlo alcanza con
@@ -100,6 +100,9 @@ Y se abre en **http://localhost:8100**. Después, para levantarlo alcanza con
 
 Los detalles —usuarios, cómo probar que anda, qué hacer si no arranca— están en
 **[docs/INSTALAR.md](docs/INSTALAR.md)**.
+
+La presentación del módulo, con el circuito y las pantallas, está en
+**[docs/MIR - Implementacion RUNAC.pdf](<docs/MIR - Implementacion RUNAC.pdf>)**.
 
 El repositorio trae todo lo necesario: la definición en el estado verificado,
 las plantillas, los archivos de prueba y los guiones que explican cada
