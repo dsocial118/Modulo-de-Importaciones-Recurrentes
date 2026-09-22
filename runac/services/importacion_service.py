@@ -560,33 +560,27 @@ def archivos_referenciados(codigo_archivo: str, codigo_periodo: str) -> list[str
         return [f[0] for f in cur.fetchall() if f[0]]
 
 
-# Los archivos que describen la oferta —dónde puede estar un chico— van antes
-# que los que describen a las personas. No es una referencia campo a campo: es
-# el orden en que la presentación tiene sentido, y vale aunque todavía no esté
-# declarada la regla de integridad que lo verifica dato por dato.
-ARCHIVOS_DE_DISPOSITIVOS = ("DISP_PENAL", "DISP_SCP")
-
-
 def dependencias_faltantes(codigo_archivo: str, jurisdiccion: str, codigo_periodo: str):
     """Archivos que deben estar importados antes que este.
 
-    Son dos cosas distintas y las dos traban:
+    **Lo único que traba es la referencia declarada en la Capa 1**: un archivo
+    espera a los que nombra campo a campo, y nada más. El MPJ espera a los
+    dispositivos penales porque nombra uno; el MPE espera al legajo y al archivo
+    de hogares por lo mismo.
 
-    1. **La política:** las nóminas van después de los dispositivos. Una nómina
-       dice dónde está alojado un chico; si el dispositivo todavía no se declaró,
-       la nómina habla de algo que para el sistema no existe.
-    2. **La referencia declarada en la Capa 1:** además, un archivo espera a los
-       que nombra campo a campo —la nómina penal al archivo de dispositivos
-       penales— y eso verifica que cada valor exista.
+    Hasta el 22-09-2026 había además una política escrita acá: «las nóminas van
+    después de TODOS los dispositivos». Sobre-trababa. Con ella, el MPJ no se
+    podía importar hasta que estuviera también el archivo de hogares, que no
+    nombra. Y el planteo del responsable funcional ese día fue justamente ése:
+    pueden cargar varios equipos a la vez y el sistema no tiene por qué imponer
+    una fila donde no hay dependencia.
 
-    Un tiempo sólo estuvo la segunda, y quedó floja: como la referencia del MPE
-    no estaba declarada, se podía importar antes que los dispositivos. La
-    política no depende de que esa declaración exista.
+    La política existía porque las referencias estaban incompletas —el MPE no
+    declaraba ninguna—, así que tapaba el agujero desde el código. Ahora están
+    declaradas las cinco, que es donde tienen que estar: el día que el
+    administrador nacional agregue o saque una, esto lo acompaña solo.
     """
-    esperados = {a["codigo"] for a in archivos_esperados(codigo_periodo)}
     requeridos = set(archivos_referenciados(codigo_archivo, codigo_periodo))
-    if codigo_archivo not in ARCHIVOS_DE_DISPOSITIVOS:
-        requeridos |= {c for c in ARCHIVOS_DE_DISPOSITIVOS if c in esperados}
     if not requeridos:
         return []
     estado = estado_de_la_presentacion(jurisdiccion, codigo_periodo)

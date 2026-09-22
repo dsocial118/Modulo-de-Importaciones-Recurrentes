@@ -34,8 +34,8 @@
                 {% comment %} Los anchos se declaran para que ninguna columna se coma el resto: sin esto, «Archivo» se estiraba y el botón de importar quedaba apretado contra el borde. {% endcomment %}
                 <thead class="table-light">
                     <tr>
-                        <th style="width:2.5rem" class="text-center">#</th>
-                        <th style="width:26%">Archivo</th>
+                        {% comment %} Habia una columna «#» con el orden de importacion. Se leia como una fila obligatoria y no lo es: lo unico que espera un archivo son los que nombra. Se saco, y en su lugar cada archivo dice que necesita. {% endcomment %}
+                        <th style="width:28%">Archivo</th>
                         <th style="width:11rem">Estado</th>
                         <th style="width:5rem" class="text-end">Filas</th>
                         <th>Importar</th>
@@ -44,7 +44,6 @@
                 <tbody>
                     {% for a in archivos %}
                         <tr>
-                            <td class="text-center ayuda">{{ a.orden_importacion }}</td>
                             <td data-etiqueta="Archivo">
                                 <strong>{{ a.codigo }}</strong>
                                 {% if a.obligatorio %}<span class="ayuda">· obligatorio</span>{% endif %}
@@ -53,6 +52,12 @@
                                 <div class="ayuda">
                                     Nombre requerido: <span class="mono">{{ a.nombre_sugerido }}</span>
                                 </div>
+                                {% comment %} Se dice SIEMPRE, no solo cuando traba: asi se sabe antes de intentar, y se entiende que lo unico que hay que respetar es esto. {% endcomment %}
+                                {% if a.necesita %}
+                                    <div class="ayuda">
+                                        Necesita: <strong>{{ a.necesita|join:", " }}</strong>
+                                    </div>
+                                {% endif %}
                             </td>
                             {% comment %} La versión de estructura no se muestra: es interna y no cambia nada de lo que el operador puede hacer. {% endcomment %}
                             <td data-etiqueta="Estado">

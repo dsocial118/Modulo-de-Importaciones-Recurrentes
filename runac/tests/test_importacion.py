@@ -35,7 +35,13 @@ ARCHIVOS = [
         "obligatorio": 1,
         "importada": False,
     },
-    {"codigo": "MPI", "orden_importacion": 3, "obligatorio": 1, "importada": False},
+    {
+        "codigo": "LEGAJO_NYA",
+        "orden_importacion": 3,
+        "obligatorio": 1,
+        "importada": False,
+    },
+    {"codigo": "MPI", "orden_importacion": 4, "obligatorio": 1, "importada": False},
     {"codigo": "MPE", "orden_importacion": 4, "obligatorio": 1, "importada": False},
     {"codigo": "MPJ_DAE", "orden_importacion": 5, "obligatorio": 1, "importada": False},
 ]
@@ -75,46 +81,43 @@ def _sin_base(monkeypatch):
 # ---------------------------------------------------------------------------
 # Dependencias entre archivos
 #
-# Traban dos cosas distintas y las dos hacen falta:
+# Traba UNA sola cosa: la referencia declarada en la Capa 1. Un archivo espera
+# a los que nombra campo a campo, y a nadie más.
 #
-#   La POLÍTICA: las nóminas van después de los dispositivos. Una nómina dice
-#   dónde está alojado un chico; si el dispositivo no se declaró, habla de algo
-#   que para el sistema no existe.
-#
-#   La REFERENCIA declarada en la Capa 1: además, un archivo espera a los que
-#   nombra campo a campo, y eso verifica que cada valor exista.
-#
-# Un tiempo estuvo sólo la segunda y quedó floja: como la referencia del MPE no
-# estaba declarada, se podía importar antes que los dispositivos.
+# Hasta el 22-09-2026 había además una política escrita en el código —«las
+# nóminas van después de TODOS los dispositivos»— que sobre-trababa: con ella,
+# el MPJ no se podía importar hasta que estuviera también el archivo de
+# hogares, que no nombra. Estos tests son los que dejan eso clavado.
 # ---------------------------------------------------------------------------
 
 DISPOSITIVOS = ["DISP_PENAL", "DISP_SCP"]
-REFERENCIAS = {"MPJ_DAE": ["DISP_PENAL"], "MPE": ["DISP_SCP"]}
+REFERENCIAS = {
+    "MPJ_DAE": ["DISP_PENAL", "LEGAJO_NYA"],
+    "MPE": ["DISP_SCP", "LEGAJO_NYA"],
+    "MPI": ["LEGAJO_NYA"],
+}
 
 
-def test_un_archivo_de_dispositivos_no_espera_a_nadie(sin_base):
+def test_un_archivo_que_no_nombra_a_nadie_no_espera_a_nadie(sin_base):
     sin_base(referencias=REFERENCIAS)
     assert svc.dependencias_faltantes("DISP_PENAL", "Salta", "2026_T1") == []
     assert svc.dependencias_faltantes("DISP_SCP", "Salta", "2026_T1") == []
+    assert svc.dependencias_faltantes("LEGAJO_NYA", "Salta", "2026_T1") == []
 
 
-def test_ninguna_nomina_entra_antes_que_los_dispositivos(sin_base):
-    """Vale incluso para la que no tiene ninguna referencia declarada."""
-    sin_base(referencias=REFERENCIAS)
-    faltan = [
-        f["codigo"] for f in svc.dependencias_faltantes("MPI", "Salta", "2026_T1")
-    ]
-    assert sorted(faltan) == sorted(DISPOSITIVOS)
+def test_la_nomina_penal_no_espera_al_archivo_de_hogares(sin_base):
+    """El caso que planteó el responsable funcional el 22-09-2026.
+
+    El MPJ nombra dispositivos penales y el legajo. Con los dos importados
+    tiene que poder entrar, aunque el archivo de hogares no esté: no lo nombra
+    en ningún campo, así que no hay nada que verificar contra él.
+    """
+    sin_base(importados=("DISP_PENAL", "LEGAJO_NYA"), referencias=REFERENCIAS)
+    assert svc.dependencias_faltantes("MPJ_DAE", "Salta", "2026_T1") == []
 
 
-def test_con_los_dispositivos_cargados_la_nomina_se_habilita(sin_base):
-    sin_base(importados=tuple(DISPOSITIVOS), referencias=REFERENCIAS)
-    assert svc.dependencias_faltantes("MPI", "Salta", "2026_T1") == []
-
-
-def test_la_referencia_declarada_se_suma_a_la_politica(sin_base):
-    """MPJ_DAE nombra a DISP_PENAL, y además espera a los dos por política."""
-    sin_base(importados=("DISP_SCP",), referencias=REFERENCIAS)
+def test_espera_solo_a_los_que_nombra(sin_base):
+    sin_base(importados=("DISP_SCP", "LEGAJO_NYA"), referencias=REFERENCIAS)
     faltan = [
         f["codigo"] for f in svc.dependencias_faltantes("MPJ_DAE", "Salta", "2026_T1")
     ]
@@ -122,16 +125,25 @@ def test_la_referencia_declarada_se_suma_a_la_politica(sin_base):
 
 
 def test_una_nomina_no_espera_a_otra_nomina(sin_base):
-    """MPI y MPE van antes que la penal en el orden, y no tienen nada que ver."""
-    sin_base(importados=tuple(DISPOSITIVOS), referencias=REFERENCIAS)
+    sin_base(importados=tuple(DISPOSITIVOS) + ("LEGAJO_NYA",), referencias=REFERENCIAS)
     faltan = [
         f["codigo"] for f in svc.dependencias_faltantes("MPJ_DAE", "Salta", "2026_T1")
     ]
     assert "MPI" not in faltan and "MPE" not in faltan
 
 
-def test_un_archivo_que_no_existe_espera_igual_a_los_dispositivos(sin_base):
-    """No se conoce, así que no se lo exime: la política se aplica por descarte."""
+def test_las_tres_nominas_esperan_al_legajo(sin_base):
+    """El legajo manda sobre los datos del chico: las tres lo nombran."""
+    sin_base(importados=tuple(DISPOSITIVOS), referencias=REFERENCIAS)
+    for codigo in ("MPI", "MPE", "MPJ_DAE"):
+        faltan = [
+            f["codigo"] for f in svc.dependencias_faltantes(codigo, "Salta", "2026_T1")
+        ]
+        assert faltan == ["LEGAJO_NYA"], codigo
+
+
+def test_un_archivo_que_no_existe_no_espera_a_nadie(sin_base):
+    """Sin referencias declaradas no hay nada que esperar, y no se inventa."""
     sin_base(importados=tuple(DISPOSITIVOS), referencias=REFERENCIAS)
     assert svc.dependencias_faltantes("INVENTADO", "Salta", "2026_T1") == []
 

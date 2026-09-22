@@ -102,6 +102,9 @@ class CargarView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
             filas.append(
                 {
                     **a,
+                    # Lo que nombra, esté importado o no: se muestra siempre,
+                    # para que se sepa antes de intentar.
+                    "necesita": svc.archivos_referenciados(a["codigo"], periodo),
                     "bloqueado_por": [f["codigo"] for f in faltan],
                     "nombre_sugerido": f'{a["codigo"]}_{periodo}_{jurisdiccion}.xlsx',
                 }
