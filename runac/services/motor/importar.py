@@ -317,6 +317,35 @@ def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str
             )
         return None
 
+    if tipo == "COINCIDE_CON_ARCHIVO":
+        # No alcanza con que el registro exista: el dato que se repite en los
+        # dos archivos tiene que decir lo mismo. Si el legajo y la nómina
+        # nombran al mismo chico con el mismo ID, el CUIL tiene que coincidir;
+        # si no coincide, uno de los dos está mal y no hay forma de saber cuál.
+        if vacio:
+            return None
+        esperados = (contexto.get("coincidencias") or {}).get(regla["id"])
+        if esperados is None:
+            raise ReglaInvalida(
+                "no se pudieron leer los valores del archivo referenciado "
+                f'({par.get("archivo")}).'
+            )
+        llave = clave(fila_valores.get(par.get("clave")))
+        if not llave or llave not in esperados:
+            # Que la clave exista es trabajo de EXISTE_EN_ARCHIVO. Acá se
+            # controla la coincidencia, y nada más: dos mensajes por el mismo
+            # problema confunden a quien corrige.
+            return None
+        esperado = esperados[llave]
+        if clave(valor) != esperado:
+            return (
+                f'No coincide con {par.get("archivo")}: ahí dice «{esperado}» '
+                f"y acá dice «{norm(valor)}». Los dos hablan del mismo registro "
+                f'({titulo(par.get("clave"))} «{norm(fila_valores.get(par.get("clave")))}»), '
+                "así que uno de los dos está mal."
+            )
+        return None
+
     if tipo == "FORMATO":
         if vacio:
             return None
@@ -614,6 +643,54 @@ def valores_referenciados(cur, archivos, archivo, presentacion_id) -> dict:
     return referencias
 
 
+def valores_a_coincidir(cur, archivos, archivo, presentacion_id) -> dict:
+    """Para cada regla de coincidencia, el valor que el otro archivo declara.
+
+    A diferencia de `valores_referenciados`, que junta un conjunto de valores
+    válidos, acá hace falta un diccionario: la clave del registro y el valor
+    que tiene que coincidir. Se lee una sola vez, igual que el otro.
+    """
+    coincidencias: dict[int, dict] = {}
+    for hoja in archivo["hojas"]:
+        for campo in hoja["campos"]:
+            for regla in campo["reglas"]:
+                if regla["tipo_regla"] != "COINCIDE_CON_ARCHIVO":
+                    continue
+                par = regla["parametros"] or {}
+                destino = next(
+                    (a for a in archivos if a["codigo"] == par.get("archivo")), None
+                )
+                if destino is None:
+                    continue
+                col_clave = identificador_seguro(par.get("clave"))
+                col_valor = identificador_seguro(par.get("campo"))
+                encontrados: dict = {}
+                for hoja_destino in destino["hojas"]:
+                    if not hoja_destino.get("tabla"):
+                        continue
+                    if (
+                        par.get("hoja")
+                        and hoja_destino["nombre_esperado"] != par["hoja"]
+                    ):
+                        continue
+                    nombres = {c["nombre"] for c in hoja_destino["campos"]}
+                    if col_clave not in nombres or col_valor not in nombres:
+                        continue
+                    tabla = identificador_seguro(hoja_destino["tabla"])
+                    cur.execute(
+                        f"""SELECT t.`{col_clave}`, t.`{col_valor}` FROM `{tabla}` t
+                            JOIN mir_c2_importacion i ON i.id = t.importacion_id
+                            WHERE i.presentacion_id = %s AND i.archivo_id = %s
+                              AND i.estado = 'VALIDA'""",
+                        (presentacion_id, destino["archivo_id"]),
+                    )
+                    for k, v in cur.fetchall():
+                        if k is not None:
+                            encontrados[clave(k)] = clave(v)
+                coincidencias[regla["id"]] = encontrados
+    return coincidencias
+
+
 def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
     """Lee una hoja, la valida y la deja en staging. Devuelve el resumen."""
     wb = load_workbook(ruta, data_only=True, read_only=True)
@@ -634,6 +711,8 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
         "reglas_rotas": set(),
         # Los identificadores que existen en los archivos ya importados.
         "referencias": (contexto_global or {}).get("referencias") or {},
+        # Y el valor que esos archivos declaran, para las reglas de coincidencia.
+        "coincidencias": (contexto_global or {}).get("coincidencias") or {},
     }
     total = 0
     con_error = 0
@@ -1075,6 +1154,7 @@ def _ejecutar_con(args, cn):
                     ON DUPLICATE KEY UPDATE id = id""",
         (periodo_id, jurisdiccion_id),
     )
+
     def buscar_presentacion():
         cur2.execute(
             """SELECT id FROM mir_c2_presentacion
@@ -1163,7 +1243,8 @@ def _ejecutar_con(args, cn):
         # Los identificadores que este archivo puede referenciar se leen una vez
         # —no fila por fila— de la importación vigente del archivo referenciado.
         contexto_global = {
-            "referencias": valores_referenciados(cur2, archivos, a, presentacion_id)
+            "referencias": valores_referenciados(cur2, archivos, a, presentacion_id),
+            "coincidencias": valores_a_coincidir(cur2, archivos, a, presentacion_id),
         }
         hojas_resumen = []
         for hoja in a["hojas"]:
