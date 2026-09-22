@@ -488,7 +488,7 @@ def hallazgos_de(
     # del archivo entero viven en mir_c2_errores_de_importacion.
     sql = """
         SELECT h.numero_fila, h.nombre_hoja, h.columna, h.nombre_campo, h.severidad,
-               h.codigo, h.valor_encontrado, h.descripcion
+               h.codigo, h.valor_encontrado, h.descripcion, h.identificador_registro
         FROM mir_c2_reglas_incumplidas h WHERE h.importacion_id = %s
     """
     params: list = [importacion_id]

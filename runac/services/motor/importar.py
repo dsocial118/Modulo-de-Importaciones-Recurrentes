@@ -40,7 +40,9 @@ CONEXION = dict(
     port=3306,
     user="root",
     password="runac_local",
-    database="runac",
+    # Sólo para la línea de comandos: Django usa su propia conexión. En esta
+    # máquina conviven varias implementaciones en el mismo motor.
+    database=os.environ.get("RUNAC_DB_NAME", "runac"),
 )
 
 PLACEHOLDERS = {"seleccionar", "elegir", "elija una opcion", "seleccione", "-", "--"}
@@ -457,7 +459,8 @@ def leer_configuracion(cur, periodo: str) -> list[dict]:
             cur.execute(
                 """
                 SELECT c.id, c.nombre, c.titulo_esperado, c.orden, c.tipo_dato,
-                       c.longitud_maxima, c.obligatorio, cat.codigo AS catalogo
+                       c.longitud_maxima, c.obligatorio, c.identifica,
+                       cat.codigo AS catalogo
                 FROM mir_c1_campo c LEFT JOIN mir_c1_catalogo cat ON cat.id = c.catalogo_id
                 WHERE c.hoja_id = %s ORDER BY c.orden
             """,
@@ -691,6 +694,24 @@ def valores_a_coincidir(cur, archivos, archivo, presentacion_id) -> dict:
     return coincidencias
 
 
+def identificar_fila(campos, valores_crudos) -> str | None:
+    """De quién es esta fila, en las palabras de la planilla.
+
+    Devuelve los valores de los campos que la Capa 1 marcó como identificatorios,
+    en el orden en que están en la planilla: «12 · Gómez · Martina · 90000137».
+    Si la fila no trae ninguno —porque están todos vacíos— devuelve None, y el
+    informe muestra sólo el número de fila, que es lo único que hay.
+    """
+    partes = []
+    for campo in campos:
+        if not campo.get("identifica"):
+            continue
+        valor = norm(valores_crudos.get(campo["nombre"]))
+        if valor:
+            partes.append(valor)
+    return " · ".join(partes)[:255] or None
+
+
 def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
     """Lee una hoja, la valida y la deja en staging. Devuelve el resumen."""
     wb = load_workbook(ruta, data_only=True, read_only=True)
@@ -743,6 +764,9 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
         ultima_con_datos = nro
         total += 1
         contexto["fila_actual"] = nro
+        # Dónde empiezan los hallazgos de ESTA fila: al terminarla se les
+        # estampa a todos de quién hablan.
+        desde = len(hallazgos)
 
         # --- conversión y validaciones por campo ---
         valores_tipados = {}
@@ -885,6 +909,14 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
                     )
                     if regla["severidad"] == "BLOQUEANTE":
                         errores_fila += 1
+
+        # «Fila 5» no le dice nada a quien corrige: tiene que ir a contar filas
+        # en su Excel para saber de quién le están hablando. Los campos que
+        # identifican la fila los declara la Capa 1 —campo.identifica—, así que
+        # esto vale para cualquier planilla y no sólo para las de RUNAC.
+        identificacion = identificar_fila(campos, valores_crudos)
+        for hg in hallazgos[desde:]:
+            hg["identificador"] = identificacion
 
         if errores_fila:
             con_error += 1
@@ -1290,8 +1322,9 @@ def _ejecutar_con(args, cn):
                 cur2.execute(
                     """INSERT INTO mir_c2_reglas_incumplidas
                     (importacion_id, campo_id, regla_id, codigo, severidad, nombre_hoja,
-                     numero_fila, columna, nombre_campo, valor_encontrado, descripcion)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                     numero_fila, columna, nombre_campo, identificador_registro,
+                     valor_encontrado, descripcion)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                     (
                         importacion_id,
                         hg["campo_id"],
@@ -1302,6 +1335,7 @@ def _ejecutar_con(args, cn):
                         hg["fila"],
                         hg.get("columna"),
                         hg["campo"],
+                        hg.get("identificador"),
                         (hg["valor"] or "")[:1000],
                         hg["detalle"],
                     ),

@@ -188,14 +188,17 @@ def planilla_de_errores(importacion_id: int) -> bytes:
     for regla in datos["reglas"]:
         por_hoja.setdefault(regla["nombre_hoja"] or "SIN HOJA", []).append(regla)
 
+    # La identificación va SEGUNDA, pegada al número de fila: «Fila 5» obliga a
+    # ir a contar filas en el Excel para saber de quién se habla. Estaba
+    # séptima, después de la descripción del error, y además nunca se llenaba.
     titulos = [
         "Fila",
+        "De quién es la fila",
         "Columna",
         "Campo",
         "Severidad",
         "Valor encontrado",
         "Qué hay que corregir",
-        "Identificador",
         "Código",
     ]
     for nombre_hoja, errores in por_hoja.items():
@@ -204,12 +207,12 @@ def planilla_de_errores(importacion_id: int) -> bytes:
         for i, e in enumerate(errores, start=2):
             valores = [
                 e["numero_fila"],
+                e["identificador_registro"] or "—",
                 e["columna"],
                 e["nombre_campo"],
                 e["severidad"],
                 (e["valor_encontrado"] or "")[:200],
                 e["descripcion"],
-                e["identificador_registro"],
                 e["codigo"],
             ]
             for j, valor in enumerate(valores, start=1):
@@ -217,7 +220,7 @@ def planilla_de_errores(importacion_id: int) -> bytes:
                 celda.fill = PatternFill(
                     "solid", fgColor=COLOR_POR_SEVERIDAD.get(e["severidad"], GRIS)
                 )
-        for letra, ancho in zip("ABCDEFGH", (8, 10, 34, 14, 32, 62, 16, 22)):
+        for letra, ancho in zip("ABCDEFGH", (8, 40, 10, 34, 14, 32, 62, 22)):
             hoja.column_dimensions[letra].width = ancho
 
     # Los problemas del archivo entero van en su propia hoja: no tienen campo.
