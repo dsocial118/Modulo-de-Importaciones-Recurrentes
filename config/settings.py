@@ -121,7 +121,12 @@ LOGOUT_REDIRECT_URL = "/entrar/"
 
 # Carpetas de trabajo, montadas desde el compose.
 RUNAC_CAPA1 = Path(os.getenv("RUNAC_CAPA1", "/trabajo/capa1"))
-RUNAC_PLANTILLAS = RUNAC_CAPA1 / "plantillas"
+# Cada implementación tiene su propia carpeta de plantillas: una sola carpeta
+# compartida hacía que 8100 y 8101 entregaran el mismo archivo aunque sus
+# definiciones fueran distintas.
+RUNAC_PLANTILLAS = Path(
+    os.getenv("RUNAC_PLANTILLAS", RUNAC_CAPA1 / "mir-v1" / "plantillas")
+)
 RUNAC_CARGAS = BASE_DIR / "media" / "cargas"
 # Los informes de cada importación son SALIDA, así que van a `media/` y no a
 # `entorno/`, que se monta de sólo lectura porque es entrada: la definición, las
