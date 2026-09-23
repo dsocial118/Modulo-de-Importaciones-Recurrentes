@@ -1,21 +1,22 @@
-"""Descarga de las plantillas del período."""
+"""Descarga de las plantillas del período.
+
+Se generan al pedirlas. Ver `runac/services/plantillas_service.py`: antes eran
+archivos en disco y la provincia podía bajar una que ya no correspondía.
+"""
 
 import io
+import shutil
 import zipfile
 from pathlib import Path
 
-from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import FileResponse, HttpResponse
 from django.views.generic import TemplateView
 
 from runac.permissions import SeccionPermitidaMixin
 
 from runac.services import importacion_service as svc
-
-
-def _ruta_de_plantilla(codigo: str, periodo: str) -> Path:
-    return Path(settings.RUNAC_PLANTILLAS) / f"{codigo}_{periodo}_MODELO.xlsx"
+from runac.services import plantillas_service as plantillas
 
 
 class PlantillasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
@@ -27,9 +28,7 @@ class PlantillasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
         periodo = self.request.GET.get("periodo") or "2026_T1"
         archivos = svc.archivos_esperados(periodo)
         for a in archivos:
-            ruta = _ruta_de_plantilla(a["codigo"], periodo)
-            a["existe"] = ruta.exists()
-            a["kb"] = int(ruta.stat().st_size / 1024) if ruta.exists() else None
+            a["nombre_plantilla"] = plantillas.nombre_de_archivo(a["codigo"], periodo)
         ctx["periodo_elegido"] = periodo
         ctx["periodos"] = svc.periodos()
         ctx["archivos"] = archivos
@@ -37,21 +36,27 @@ class PlantillasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
 
 
 def descargar_plantilla(request, codigo, periodo):
-    ruta = _ruta_de_plantilla(codigo, periodo)
-    if not ruta.exists():
-        raise Http404("Todavía no se generó la plantilla de ese archivo.")
-    return FileResponse(open(ruta, "rb"), as_attachment=True, filename=ruta.name)
+    ruta = Path(plantillas.generar(codigo, periodo))
+    # `FileResponse` cierra el archivo al terminar de mandarlo; la carpeta
+    # temporal se borra acá porque ya está leído en memoria por el handler.
+    respuesta = FileResponse(
+        io.BytesIO(ruta.read_bytes()),
+        as_attachment=True,
+        filename=ruta.name,
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    shutil.rmtree(ruta.parent, ignore_errors=True)
+    return respuesta
 
 
 def descargar_todas(request, periodo):
     """Todas las plantillas del período en un solo zip."""
-    archivos = svc.archivos_esperados(periodo)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as z:
-        for a in archivos:
-            ruta = _ruta_de_plantilla(a["codigo"], periodo)
-            if ruta.exists():
-                z.write(ruta, ruta.name)
+        for a in svc.archivos_esperados(periodo):
+            ruta = Path(plantillas.generar(a["codigo"], periodo))
+            z.write(ruta, ruta.name)
+            shutil.rmtree(ruta.parent, ignore_errors=True)
     buffer.seek(0)
     respuesta = HttpResponse(buffer.read(), content_type="application/zip")
     respuesta["Content-Disposition"] = (
