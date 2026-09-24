@@ -35,7 +35,9 @@ docker ps --format '{{.Names}}\t{{.Ports}}' 2>/dev/null | grep -v mysql | grep -
     vig=$(sql "SELECT GROUP_CONCAT(CONCAT(a.codigo,' v',av.numero) ORDER BY a.codigo SEPARATOR ' · ')
                FROM ${base}.mir_c1_archivo a
                JOIN ${base}.mir_c1_archivo_version av ON av.archivo_id=a.id AND av.estado='VIGENTE';")
-    printf "  %-6s %-12s %s\n" "${puerto:-—}" "$base" "${vig:-sin Capa 1}"
+    # Un contenedor sin Capa 1 no es del MIR (por ejemplo, el SISOC local).
+    [ -z "$vig" ] && continue
+    printf "  %-6s %-12s %s\n" "${puerto:-—}" "$base" "$vig"
 done
 echo
 
