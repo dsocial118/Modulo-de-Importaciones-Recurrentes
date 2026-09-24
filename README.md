@@ -108,6 +108,13 @@ El repositorio trae todo lo necesario: la definición en el estado verificado,
 las plantillas, los archivos de prueba y los guiones que explican cada
 corrección. Ver **[entorno/LEEME.md](entorno/LEEME.md)**.
 
+## Si venís a auditar esto
+
+Empezá por **[docs/LIMITACIONES_CONOCIDAS.md](docs/LIMITACIONES_CONOCIDAS.md)**:
+lista lo que sabemos que está mal, por qué está así y qué se hace con cada cosa,
+más una sección para infraestructura. Si encontrás algo que no figura ahí, es un
+hallazgo genuino y queremos saberlo.
+
 ## Por dónde empezar a leer el código
 
 | Archivo | Qué responde |
