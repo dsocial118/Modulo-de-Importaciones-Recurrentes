@@ -140,26 +140,32 @@ Para recrearlos: `docker compose exec web python manage.py datos_iniciales`
 
 ---
 
-## Primeras pruebas - se publicará con ngrok
+## Exponerlo para pruebas — a definir con infraestructura
 
-**Siempre con contraseña.** La URL de ngrok es pública y se filtra sola: queda
-en un mail reenviado, en un chat, en el historial de alguien.
+**El mecanismo todavía no está definido**, y la decisión no es de este
+repositorio: ver `docs/PENDIENTES_ARQUITECTURA.md` §7.
+
+Lo que se evaluó mientras tanto, para pruebas acotadas, es un túnel con
+autenticación básica:
 
 ```
-ngrok http 8100 --basic-auth "runac:LA_CLAVE_QUE_ELIJAS"
+ngrok http 8100 --basic-auth "usuario:LA_CLAVE_QUE_ELIJAS"
 ```
 
-Dos reglas, y no son negociables:
+Se usa **siempre con contraseña**: una URL de túnel es pública y se filtra sola
+—queda en un mail reenviado, en un chat, en el historial de alguien—.
 
-1. **MIR nunca recibe datos reales.** Sólo los mock, que tienen nombres
-   inventados y documentos en un rango que no corresponde a personas. Si alguien
-   quiere probar con un archivo real de una provincia, se hace en la máquina
-   local, no por el túnel.
-2. **El túnel va con `--basic-auth`.** Sin eso, cualquiera con la URL entra.
+Dos reglas que valen sea cual sea el mecanismo:
 
-Los datos son inventados, pero lo que sí queda expuesto es **la estructura del
-registro**: qué se le pregunta a una provincia sobre un chico con medida de
-protección. No es secreto, pero tampoco es para que ande suelto.
+1. **El módulo nunca recibe datos reales mientras no esté resuelta la seguridad
+   de infraestructura.** Sólo datos de prueba, con nombres inventados y
+   documentos en un rango que no corresponde a personas. Un archivo real se
+   procesa en la máquina local, nunca por una URL expuesta.
+2. **Nada se expone sin autenticación.**
+
+Los datos de prueba son inventados, pero lo que sí queda expuesto es **la
+estructura del registro**: qué se le pregunta a cada entidad que presenta. No es
+secreto, pero tampoco es para que ande suelto.
 
 ---
 
