@@ -51,6 +51,7 @@ propia base, y SISOC es una sola.
 | [alcance-primera-version.md](alcance-primera-version.md) | Qué entra en el MVP y qué queda para después | Todos |
 | [hechos-y-supuestos.md](hechos-y-supuestos.md) | **Qué está confirmado y qué supusimos nosotros**, y qué fuente le gana a cuál | Todos |
 | [decisiones/](decisiones/) | Registro de decisiones, con fecha y motivo | Desarrollo |
+| [presentacion-runac.pdf](presentacion-runac.pdf) | La presentación de la implementación | Todos |
 
 ### Lo que NO está acá, porque es del módulo
 

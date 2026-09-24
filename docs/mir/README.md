@@ -21,6 +21,7 @@ docs/pae/      la segunda
 | [reglas-de-validacion.md](reglas-de-validacion.md) | Los tipos de regla y cómo se declaran |
 | [actores-y-roles.md](actores-y-roles.md) | Quién hace qué, dentro y fuera del sistema |
 | [esquema/](esquema/) | El modelo en SQL, capa por capa |
+| [presentacion-mir.pdf](presentacion-mir.pdf) | La presentación del módulo, para mostrar sin entrar al código |
 
 ---
 
