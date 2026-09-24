@@ -11,7 +11,7 @@ saber exactamente qué archivo, hoja, fila y campo debe corregir.
 |---|---|---|
 | **Error bloqueante** | Archivo incorrecto; columna faltante; documento o fecha con formato inválido; fecha de egreso anterior al ingreso; dispositivo obligatorio no encontrado; duplicado exacto | **Impide la importación completa del archivo.** Se corrige en el Excel y se vuelve a importar |
 | **Advertencia** | Dato opcional vacío; cambio muy alto respecto del trimestre anterior; edad o permanencia atípica; posible duplicado | Permite continuar. Se resuelve dentro del sistema, editando el dato o justificándolo |
-| **Control de catálogo** | Valor que no coincide con los desplegables de provincia, género, modalidad, tipo de dispositivo, situación procesal u otras categorías | Solicita corregir o mapear el valor provincial |
+| **Control de catálogo** | Valor que no coincide con los desplegables de la entidad, género, modalidad, tipo de dispositivo, situación procesal u otras categorías | Solicita corregir o mapear el valor de la entidad |
 
 **Controles prioritarios**, del requerimiento:
 
@@ -19,7 +19,7 @@ saber exactamente qué archivo, hoja, fila y campo debe corregir.
 - coherencia entre fecha de nacimiento, edad, ingreso, egreso e inicio o cese de
   medida;
 - posibles personas duplicadas por documento, CUIL, nombre, fecha de nacimiento e
-  identificador provincial;
+  identificador de la entidad;
 - posibles dispositivos duplicados por nombre, tipo, localidad y dependencia;
 - vínculo válido entre MPE y dispositivo residencial, y entre MPJ/DAE y
   dispositivo penal;
@@ -78,7 +78,7 @@ determina los parámetros necesarios y los operadores que admite.
 | **OBLIGATORIO_SI** | El campo es obligatorio cuando otro cumple una condición | campo_condicion, operador, valor_condicion | IGUAL, DISTINTO, ES_VACIO, NO_ES_VACIO, EN_LISTA, NO_EN_LISTA | *Descripción de otros* es obligatoria cuando *Tipo de respuesta* es OTROS |
 | **COMPARAR_CAMPO** | Compara con otro campo del mismo registro | campo_comparacion, operador | IGUAL, DISTINTO, MAYOR, MAYOR_IGUAL, MENOR, MENOR_IGUAL | La fecha de finalización debe ser posterior o igual a la de inicio |
 | **FORMATO** | El contenido respeta un formato | formato | — | El valor debe respetar el formato de CUIL |
-| **UNICO_EN_HOJA** | El valor no se repite dentro de la hoja | — | — | El identificador provincial no puede repetirse |
+| **UNICO_EN_HOJA** | El valor no se repite dentro de la hoja | — | — | El identificador de la entidad no puede repetirse |
 | **UNICO_COMBINADO** | No se repite una combinación de campos | campos_combinados | — | No puede repetirse el documento con la fecha de inicio |
 | **PROHIBIDO_SI** | El campo debe quedar **vacío** cuando otro cumple una condición | campo_condicion, operador, valor_condicion | los mismos que OBLIGATORIO_SI | *Nombre de la residencia* tiene que estar vacío cuando la modalidad de cuidado no es alojamiento formal |
 | **EXISTE_EN_ARCHIVO** | El valor corresponde a un registro de otro archivo ya importado | archivo, hoja, campo | — | El nombre del dispositivo debe corresponder a uno cargado por la jurisdicción |
@@ -92,7 +92,7 @@ sino un conjunto acotado de verificaciones reutilizables.
 <!-- COMENTARIO: EXISTE_EN_ARCHIVO se incorporó al analizar la vinculación entre
      medidas y dispositivos. Sin ese tipo, la propuesta del apartado 2 de
      08-analisis-de-las-planillas.md no tiene cómo implementarse. Sólo mira la
-     importación VIGENTE de cada archivo referenciado: si la provincia reimportó
+     importación VIGENTE de cada archivo referenciado: si la entidad reimportó
      los dispositivos, los identificadores válidos son los de la última, no los
      de la que quedó anulada.
 
@@ -190,7 +190,7 @@ incluye una columna **«Reglas»** donde cada condición se escribe en castellan
 Lo que se escriba ahí se traduce a una regla declarada y el sistema la controla
 al importar.
 
-Del otro lado, el operador provincial cuenta con una pantalla de consulta que
+Del otro lado, el operador de la entidad cuenta con una pantalla de consulta que
 muestra, **por archivo y hoja**, qué se espera de cada columna:
 
 | Col. | Campo | Oblig. | Qué se espera | Valores admitidos | Condiciones |

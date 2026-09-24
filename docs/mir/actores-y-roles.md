@@ -20,13 +20,13 @@ hecho.
 ## Roles del sistema
 
 Son cuatro. El **rol** define qué puede hacer; la **jurisdicción**, sobre qué
-datos. Son dos ejes distintos: un mismo rol existe en las 24 jurisdicciones.
+datos. Son dos ejes distintos: un mismo rol existe en las entidades que presentan.
 
 | Rol | Qué puede hacer |
 |---|---|
-| **Operador provincial** | Importar archivos, consultar errores, **corregir datos dentro del sistema** y responder observaciones |
-| **Responsable provincial** | Revisar lo cargado, **cerrar la carga**, responder observaciones y **presentar el período**. Responde institucionalmente por los datos |
-| **Revisor técnico nacional** | Revisar calidad, **formular observaciones** y **habilitar la presentación**. No modifica datos provinciales |
+| **Operador de la entidad** | Importar archivos, consultar errores, **corregir datos dentro del sistema** y responder observaciones |
+| **Responsable de la entidad** | Revisar lo cargado, **cerrar la carga**, responder observaciones y **presentar el período**. Responde institucionalmente por los datos |
+| **Revisor técnico nacional** | Revisar calidad, **formular observaciones** y **habilitar la presentación**. No modifica datos de la entidades |
 | **Administrador nacional** | Gestionar usuarios, jurisdicciones, períodos, catálogos y la estructura de los archivos |
 
 ### Qué ve cada rol
@@ -53,20 +53,20 @@ de revisión con el enlace «Ver carga».
 
 | Acción | Quién |
 |---|---|
-| Importar un archivo | Operador provincial |
-| Corregir un dato ya importado | Operador provincial |
-| Cerrar la carga | Responsable provincial |
-| Reabrir la carga | Responsable provincial |
+| Importar un archivo | Operador de la entidad |
+| Corregir un dato ya importado | Operador de la entidad |
+| Cerrar la carga | Responsable de la entidad |
+| Reabrir la carga | Responsable de la entidad |
 | Formular una observación | Revisor técnico nacional |
-| Responder una observación | Operador provincial |
+| Responder una observación | Operador de la entidad |
 | Habilitar la presentación | Revisor técnico nacional |
-| Presentar el período | Responsable provincial |
-| Registrar el número de expediente | Responsable provincial |
+| Presentar el período | Responsable de la entidad |
+| Registrar el número de expediente | Responsable de la entidad |
 | Definir la estructura de un período | Administrador nacional |
 
 **Dos reglas que atraviesan todo:**
 
-- El **nivel nacional no modifica datos provinciales**. Observa. Toda corrección
+- El **nivel nacional no modifica datos de la entidades**. Observa. Toda corrección
   la hace la jurisdicción.
 - Quien **carga** no es quien **cierra**: el operador prepara, el responsable
   declara que está listo. Es lo que hace que el cierre sea un acto y no un

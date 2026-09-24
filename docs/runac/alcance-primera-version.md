@@ -21,7 +21,7 @@ Conviene distinguirlos, porque se los confunde con facilidad:
 
 La primera es el escalón; la segunda, el piso sobre el que se para el período de
 carga. La entrega técnica se describe abajo; la versión funcional, en
-[01-alcance.md](01-alcance.md).
+[01-alcance.md](alcance.md).
 
 <!-- COMENTARIO: esta distinción resuelve una contradicción real que tenía el
      borrador funcional, donde el alcance prometía el circuito completo y el

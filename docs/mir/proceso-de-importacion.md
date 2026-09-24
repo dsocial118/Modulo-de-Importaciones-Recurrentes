@@ -4,13 +4,13 @@
 
 Cada período de carga se realiza sobre una **estructura de archivos definida y
 estable**. Una vez habilitada la carga, esa estructura no se modifica hasta el
-cierre: alguna provincia pudo haber importado con la versión vigente al comenzar.
+cierre: alguna entidad pudo haber importado con la versión vigente al comenzar.
 
 En la etapa actual las plantillas las provee la DNPYPI, y SISOC verifica que los
 archivos recibidos se correspondan con la estructura declarada.
 
 En una etapa posterior las plantillas se generarán desde el sistema a partir de
-esa misma definición. Ello garantiza que la planilla que completa la provincia y
+esa misma definición. Ello garantiza que la planilla que completa la entidad y
 la que el sistema espera sean la misma, e incorpora automáticamente las listas
 desplegables vigentes, los campos obligatorios señalados y las localidades y
 dispositivos de cada jurisdicción.
@@ -137,13 +137,13 @@ totalidad de sus registros supera las validaciones bloqueantes.
 
 - **Consistencia temporal.** La información de un período corresponde a un mismo
   momento y no a cargas sucesivas separadas por días o semanas.
-- **Ausencia de duplicados por reintento.** En la modalidad parcial la provincia
+- **Ausencia de duplicados por reintento.** En la modalidad parcial la entidad
   debería cargar sólo los registros que faltan; si vuelve a subir el archivo
   completo —lo más probable—, el sistema necesita distinguir cuáles ya entraron,
   lo que exige un identificador de registro confiable que hoy las planillas no
   garantizan.
 - **La desventaja está acotada.** El sistema informa cada error con su archivo,
-  hoja, fila, columna y motivo: la provincia sabe con precisión qué corregir.
+  hoja, fila, columna y motivo: la entidad sabe con precisión qué corregir.
 
 Un error bloqueante impide la importación completa y se corrige en la planilla.
 Las advertencias no la impiden y se resuelven dentro del sistema.
@@ -169,7 +169,7 @@ obligue a rehacer el Excel.
 
 ## Trazabilidad y versiones
 
-El requerimiento solicita poder establecer el origen de cada dato: provincia,
+El requerimiento solicita poder establecer el origen de cada dato: entidad,
 período, archivo, hoja, fila y versión. SISOC conserva de cada importación:
 
 - el **archivo** cargado y su denominación original;

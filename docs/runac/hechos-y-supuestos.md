@@ -125,7 +125,7 @@ Las consultas abiertas a la DNPYPI se mantienen en el documento de trabajo
 
 Las definiciones pendientes que dependen de la coordinación de SISOC —RENAPER,
 seguridad social, nomenclador territorial, alta de ciudadanos— están en
-[03-arquitectura.md](03-arquitectura.md).
+[03-arquitectura.md](../mir/arquitectura.md).
 
 Las decisiones técnicas pendientes están en [decisiones/](decisiones/).
 

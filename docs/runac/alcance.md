@@ -156,11 +156,11 @@ Se identifican como ampliaciones posibles, no comprometidas:
 
 Del requerimiento original, a cargo del equipo:
 
-- propuesta de arquitectura y modelo de datos → **[03](03-arquitectura.md)** y **[04](04-modelo-de-datos.md)**
-- plantillas definitivas de importación y columnas obligatorias → **[08](08-analisis-de-las-planillas.md)**
+- propuesta de arquitectura y modelo de datos → **[03](../mir/arquitectura.md)** y **[04](../mir/modelo-de-datos.md)**
+- plantillas definitivas de importación y columnas obligatorias → **[08](analisis-de-las-planillas.md)**
 - pantallas de carga, revisión, observación y consulta → **implementadas y navegables**
-- matriz de reglas de validación y mensajes al usuario → **[07](07-reglas-de-validacion.md)**
-- definición de roles, permisos y auditoría → **[02](02-actores-y-roles.md)**
+- matriz de reglas de validación y mensajes al usuario → **[07](../mir/reglas-de-validacion.md)**
+- definición de roles, permisos y auditoría → **[02](../mir/actores-y-roles.md)**
 - propuesta de reportes y alertas del MVP → pendiente
 - plan de pruebas con al menos una provincia piloto → **dos jurisdicciones con datos de prueba en tres variantes: correctos, con advertencias y con errores**
 - manual breve para usuarios provinciales y nacionales → pendiente

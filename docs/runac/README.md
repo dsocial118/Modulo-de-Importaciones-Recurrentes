@@ -33,10 +33,10 @@ de las jurisdicciones, el motor sirve sin tocarlo.
 Eso ya tiene nombres: en la reunión del 27 de agosto de 2026 se planteó
 incorporar **Decreto 5/2023**, **PAE** y **RENNYA**. Los dos primeros comparten
 universo con RUNAC —el MPE— y hoy se manejan en Excel. En
-[03-arquitectura.md](03-arquitectura.md) está qué de eso cubre el módulo tal como
+[03-arquitectura.md](../mir/arquitectura.md) está qué de eso cubre el módulo tal como
 está, y qué no.
 
-Está desarrollado en **[03-arquitectura.md](03-arquitectura.md)**, junto con la
+Está desarrollado en **[03-arquitectura.md](../mir/arquitectura.md)**, junto con la
 decisión que hay que tomar antes de integrar: hoy cada implementación tiene su
 propia base, y SISOC es una sola.
 
@@ -44,20 +44,22 @@ propia base, y SISOC es una sola.
 
 ## Cómo leer esta carpeta
 
-| Documento | Qué contiene | Para quién |
+| Documento | Qué responde | Para quién |
 |---|---|---|
-| [01-alcance.md](01-alcance.md) | Qué es RUNAC, qué entra y qué no | Todos |
-| [02-actores-y-roles.md](02-actores-y-roles.md) | Los cuatro roles del sistema y qué puede cada uno | Todos |
-| [03-arquitectura.md](03-arquitectura.md) | El módulo y sus implementaciones, y cómo se integra a SISOC | Desarrollo |
-| [04-modelo-de-datos.md](04-modelo-de-datos.md) | Las tres capas, el versionado y por qué | Desarrollo |
-| [05-circuito.md](05-circuito.md) | Los nueve pasos, de la carga a la consolidación | Todos |
-| [06-proceso-de-importacion.md](06-proceso-de-importacion.md) | Plantillas, orden, control de admisión, trazabilidad | Desarrollo |
-| [07-reglas-de-validacion.md](07-reglas-de-validacion.md) | Los diez tipos de regla y cómo se declaran | Desarrollo |
-| [08-analisis-de-las-planillas.md](08-analisis-de-las-planillas.md) | Propuestas de rediseño de los Excel provinciales | DNPYPI |
-| [09-alcance-primera-version.md](09-alcance-primera-version.md) | Qué entra en el MVP y qué queda para después | Todos |
-| [10-hechos-y-supuestos.md](10-hechos-y-supuestos.md) | **Qué está confirmado y qué supusimos nosotros**, y qué fuente le gana a cuál | Todos |
+| [alcance.md](alcance.md) | Qué es RUNAC, qué entra y qué no | Todos |
+| [analisis-de-las-planillas.md](analisis-de-las-planillas.md) | Propuestas de rediseño de los Excel que se reciben | DNPYPI |
+| [alcance-primera-version.md](alcance-primera-version.md) | Qué entra en el MVP y qué queda para después | Todos |
+| [hechos-y-supuestos.md](hechos-y-supuestos.md) | **Qué está confirmado y qué supusimos nosotros**, y qué fuente le gana a cuál | Todos |
 | [decisiones/](decisiones/) | Registro de decisiones, con fecha y motivo | Desarrollo |
-| [modelo/](modelo/) | Los scripts del modelo de tres capas, **de referencia: no se ejecutan contra SISOC** | Desarrollo |
+
+### Lo que NO está acá, porque es del módulo
+
+La arquitectura, las tres capas, el circuito, el proceso de importación, los
+tipos de regla, los roles y el esquema en SQL viven en **[../mir/](../mir/)**:
+valen igual para cualquier implementación.
+
+Sus ejemplos salen de RUNAC, que es la primera. Lo que describen no depende
+de ella.
 
 ---
 
@@ -85,7 +87,7 @@ advertencias y con errores.
    vacía: no hay todavía nada que lleve los datos recibidos hasta ella. Es lo que
    falta para poder hablar de un producto en uso.
 2. **La decisión de una base o varias**, antes de escribir las migraciones de
-   integración. Ver [03](03-arquitectura.md).
+   integración. Ver [03](../mir/arquitectura.md).
 3. **Las reglas que sólo la DNPYPI puede definir**: los límites numéricos, qué
    controles bloquean y cuáles avisan, y las respuestas pendientes que están
    marcadas en cada documento.

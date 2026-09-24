@@ -56,7 +56,7 @@ separarse por dato: una columna que diga a qué implementación pertenece cada
 archivo, cada período y cada presentación. No es difícil, pero cambia el modelo y
 conviene resolverlo antes de escribir las migraciones.
 
-Está desarrollado en [03-arquitectura.md](../03-arquitectura.md).
+Está desarrollado en [03-arquitectura.md](../../mir/arquitectura.md).
 
 ## La pieza que falta
 
@@ -90,4 +90,4 @@ veintiocho dígitos sin una queja— y siete estaban declarados como fecha sin
 serlo. En ambos casos la corrección no salió de una opinión del equipo: las
 hojas de categorías de la planilla de la DNPYPI ya declaraban el tipo correcto y
 nadie las estaba leyendo. Ver
-[08-analisis-de-las-planillas.md](../08-analisis-de-las-planillas.md).
+[08-analisis-de-las-planillas.md](../analisis-de-las-planillas.md).

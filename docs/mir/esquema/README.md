@@ -20,7 +20,7 @@ implementación que hoy funciona fuera del repositorio.
 | `03_capa3_consolidada.sql` | Capa 3 | La base consolidada: personas, caracterizaciones, medidas, dispositivos, normalización y trazabilidad |
 
 La explicación de por qué el modelo está organizado así está en
-[../04-modelo-de-datos.md](../04-modelo-de-datos.md). Este directorio es el
+[../04-modelo-de-datos.md](../modelo-de-datos.md). Este directorio es el
 detalle; ese documento es el fundamento.
 
 ---
@@ -35,7 +35,7 @@ una planilla habría que volver a escribirlas.
 
 Las genera un script de inicialización que se ejecuta una vez y se vuelve a
 ejecutar si la definición cambia antes de la aprobación. Ver
-[../09-alcance-primera-version.md](../09-alcance-primera-version.md).
+[../09-alcance-primera-version.md](../../runac/alcance-primera-version.md).
 
 **Tampoco están los INSERT de la definición.** Los 365 campos, 93 catálogos y 797
 opciones relevados de las cinco planillas se cargan con scripts generados

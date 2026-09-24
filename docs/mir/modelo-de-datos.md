@@ -8,14 +8,14 @@ resolverse en una única estructura.
 | | Qué contiene | Pregunta que responde |
 |---|---|---|
 | **Capa 1** | La definición de los archivos que se esperan y las reglas que deben cumplir | *¿Qué se espera recibir, y qué es correcto?* |
-| **Capa 2** | Los archivos recibidos, sus validaciones, observaciones y correcciones | *¿Qué informó cada provincia en cada período?* |
-| **Capa 3** | La base consolidada: personas, medidas, eventos y dispositivos | *¿Cuál es la situación, y cómo llegó a serlo?* |
+| **Capa 2** | Los archivos recibidos, sus validaciones, observaciones y correcciones | *¿Qué informó cada entidad en cada período?* |
+| **Capa 3** | La base consolidada: las entidades del dominio, ya resueltas y unificadas | *¿Cuál es la situación, y cómo llegó a serlo?* |
 
 Todas las tablas llevan el prefijo `mir_`, que es el comportamiento por defecto
 de SISOC —el nombre de la aplicación encabeza el de cada tabla—, y dentro del
 módulo el prefijo distingue la capa: `mir_c1_*`, `mir_c2_*`, `mir_c3_*`. El
 prefijo nombra al **módulo**, no a la implementación: ver
-[03-arquitectura.md](03-arquitectura.md).
+[03-arquitectura.md](arquitectura.md).
 
 ---
 
@@ -192,7 +192,7 @@ Esta capa admite dos modalidades, que **conviven y se eligen por jurisdicción**
 - **Presentación periódica.** La jurisdicción trabaja fuera de SISOC y aporta los
   archivos del período. Es la modalidad de la primera versión.
 - **Gestión continua.** La jurisdicción registra sus novedades dentro de SISOC a
-  medida que ocurren.
+  los hechos que ocurren.
 
 En ambos casos **la presentación es una fotografía**: al cierre se fija el estado
 a la fecha establecida. Lo que cambia es cómo se llegó a ese estado.
@@ -353,7 +353,7 @@ registra el valor **anterior** y no solamente que hubo un cambio.
 | | Capa 2 | Capa 3 |
 |---|---|---|
 | Pregunta que responde | *"El Excel decía X y el operador puso Y"* | *"En el trimestre pasado el apellido era X y ahora es Y"* |
-| Alcance | Dentro de una presentación | Cruza presentaciones, períodos y provincias |
+| Alcance | Dentro de una presentación | Cruza presentaciones, períodos y entidades |
 | Para qué sirve | Evidencia del proceso de subsanación | Trazabilidad del dato consolidado |
 
 Con una condición: el de la Capa 3 no repite la información, apunta al origen. Si

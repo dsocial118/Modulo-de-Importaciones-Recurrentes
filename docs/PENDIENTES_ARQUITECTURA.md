@@ -1,4 +1,5 @@
-# Pendientes de arquitectura
+| Documentación del motor | `docs/mir/` |
+| Documentación por implementación | `docs/runac/` · `docs/pae/` |# Pendientes de arquitectura
 
 Estado del módulo respecto de las decisiones de arquitectura, seguridad y
 operación que todavía no están tomadas o no están implementadas.
@@ -202,6 +203,7 @@ esquema.
 |---|---|
 | Descripción del módulo | `README.md` |
 | Instalación | `docs/INSTALAR.md` |
-| Análisis funcional, por implementación | `docs/runac/` |
+| Documentación del motor | `docs/mir/` |
+| Documentación por implementación | `docs/runac/` · `docs/pae/` |
 | Decisiones de diseño, fechadas | `docs/registro/decisiones/` |
 | Pruebas | `runac/tests/` |

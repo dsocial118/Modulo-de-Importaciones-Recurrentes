@@ -24,7 +24,7 @@ Eso no es una aspiración: es verificable. De las menciones a «runac» en
 negocio —MPI, MPE, dispositivos, niño, medida de protección— y lo único que
 aparece es un ejemplo dentro de un comentario.
 
-La consecuencia práctica: **cuando una provincia cambia una planilla, se cambian
+La consecuencia práctica: **cuando una entidad cambia una planilla, se cambian
 datos, no programas**. Y el día que otro programa reciba novedades periódicas de
 las jurisdicciones, el motor sirve sin tocarlo.
 
@@ -42,14 +42,14 @@ incorporar a SISOC tres programas más, interrelacionados con RUNAC:
 | **RENNYA** | Distinto: NyA que sufrieron violencia intrafamiliar o un femicidio. Pueden estar en el MPE, pero no es excluyente | Excel, ~1.400 casos |
 
 **Dos de los tres comparten universo con RUNAC.** El MPE ya se recibe: las mismas
-provincias, el mismo período, la misma persona. Eso es lo que vuelve razonable
+entidades, el mismo período, la misma persona. Eso es lo que vuelve razonable
 que compartan motor y no que se construyan tres veces.
 
 ### Qué de esto cubre el módulo tal como está
 
 La minuta describe, sin nombrarlo, el circuito que MIR ya hace:
 
-> «En una segunda instancia las provincias serán las que cargarán las novedades.
+> «En una segunda instancia las entidades que presentan serán las que cargarán las novedades.
 > Queda definir si se remite nómina completa o altas, bajas y novedades. La
 > información podría ser adjuntada como csv.»
 
@@ -65,7 +65,7 @@ Cambia el contenido, no el mecanismo: son filas nuevas en la Capa 1.
 - **Alertas por el paso del tiempo.** «Alguien está en etapa 1, cumplió 18 y la
   provincia no pidió el pase a etapa 2.» Las reglas de MIR validan **una fila
   contra su definición**, no el estado de una persona a lo largo del tiempo.
-- **RENNYA no encaja en el molde.** No participan las provincias: es una gestión
+- **RENNYA no encaja en el molde.** No participan las entidades que presentan: es una gestión
   tripartita entre ANSES, el Ministerio de Justicia y la SNNAyF, caso por caso y
   con un trámite de 140 días hábiles. Eso es gestión de expedientes, no
   importación recurrente. Conviene decirlo ahora y no descubrirlo después.
@@ -90,7 +90,7 @@ con RUNAC sola no se nota; con cuatro programas compartiendo universo, sí.
 **Hoy: fuera del repositorio, y funcionando.** Se trabaja sobre una
 implementación navegable con base MySQL propia, que se clona y se levanta con
 dos comandos. Se arrancó afuera por dos motivos que siguen vigentes: las
-planillas provinciales y el circuito cambian seguido, y modificar el
+planillas de la entidades y el circuito cambian seguido, y modificar el
 repositorio por cada ajuste implica migraciones y revisiones que no aportan
 mientras el diseño no esté cerrado.
 
@@ -183,19 +183,19 @@ rehacer nada.
 ## Datos personales
 
 RUNAC guarda **su propio padrón**, con la información tal como la entregan las
-provincias. Tres motivos:
+entidades. Tres motivos:
 
 - El requerimiento pide **trazabilidad del origen de cada dato** y prevé un
-  identificador provincial además del interno. Cumplirlo exige conservar lo que
+  identificador de la entidad además del interno. Cumplirlo exige conservar lo que
   informó cada archivo, coincida o no con lo que ya figura en el sistema y en
   RENAPER.
 - Un niño o adolescente **puede no tener DNI** y aun así debe poder registrarse;
-  en esos casos el identificador provincial es el único modo de reconocerlo entre
+  en esos casos el identificador de la entidad es el único modo de reconocerlo entre
   entregas.
-- La provincia suele tener el **domicilio real**, que no siempre coincide con el
+- La entidad suele tener el **domicilio real**, que no siempre coincide con el
   del documento.
 
-El padrón alcanza a los **tres tipos de persona** que informan las provincias:
+El padrón alcanza a los **tres tipos de persona** que informan las entidades que presentan:
 niños y adolescentes, referentes y responsables.
 
 Se vincula con el registro de ciudadanos de SISOC **siempre que sea posible**,
@@ -213,7 +213,7 @@ no modifican información de otras áreas. La lectura del registro de ciudadanos
 es sólo para identificar a la persona.
 
 > **Definición pendiente.** ¿Debe dar de alta ciudadanos en SISOC a partir de las
-> importaciones provinciales? Una presentación trimestral puede incorporar miles
+> importaciones de la entidades? Una presentación trimestral puede incorporar miles
 > de personas al padrón general. Existe precedente en sentido contrario: VAT
 > mantiene deliberadamente por fuera a los profesores, para no sumarlos al padrón
 > que alimenta la validación de identidad y la revisión de duplicados.
