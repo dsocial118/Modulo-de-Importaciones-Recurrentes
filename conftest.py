@@ -1,4 +1,4 @@
-"""Configuración de pytest para el prototipo.
+"""Configuración de pytest para el MVP.
 
 Los modelos son `managed = False`: la estructura la crea la Capa 1, no Django.
 Por eso los tests no crean base de datos, salvo los marcados `mysql_compat`,

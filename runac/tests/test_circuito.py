@@ -9,7 +9,7 @@ circuito deje de ser el que la contraparte validó:
   - que el nivel nacional no modifique datos provinciales.
 
 No tocan la base: prueban la tabla de transiciones, que es donde vive la regla.
-Los modelos del prototipo son `managed = False` —la estructura la crea la Capa 1,
+Los modelos del MVP son `managed = False` —la estructura la crea la Capa 1,
 no Django—, así que los tests que necesitan datos van marcados `mysql_compat`,
 igual que en SISOC.
 """

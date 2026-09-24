@@ -37,9 +37,10 @@ segunda se incorporó sin modificar el motor, lo que valida la parametrización.
 
 ## 2 · Estado del desarrollo
 
-**Prototipo funcional, no productivo.** Se construyó fuera de la plataforma, de
-forma deliberada y registrada, con el objetivo de validar decisiones funcionales
-sobre algo ejecutable.
+**Primera versión funcional (MVP), no productiva.** Se construyó fuera de la
+plataforma, de forma deliberada y registrada, con el objetivo de validar
+decisiones funcionales sobre algo ejecutable. Recorre el circuito completo y
+está en uso para pruebas con el organismo requirente.
 
 | | |
 |---|---|
@@ -201,5 +202,6 @@ esquema.
 |---|---|
 | Descripción del módulo | `README.md` |
 | Instalación | `docs/INSTALAR.md` |
+| Análisis funcional, por implementación | `docs/runac/` |
 | Decisiones de diseño, fechadas | `docs/registro/decisiones/` |
 | Pruebas | `runac/tests/` |

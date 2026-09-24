@@ -207,8 +207,9 @@ El circuito de nueve pasos —quién puede hacer qué y desde qué estado— est
 `runac/services/circuito_service.py`, en el diccionario `ACCIONES`. Es el único
 lugar donde viven las transiciones: si una acción no está ahí, no existe.
 
-El análisis funcional completo del que sale este circuito no forma parte de este
-repositorio: lo mantiene el responsable funcional en documentos aparte.
+El análisis funcional completo del que sale este circuito vive en
+**[docs/runac/](docs/runac/)** — una carpeta por implementación, para que el día
+que haya una segunda no se mezclen.
 
 ---
 

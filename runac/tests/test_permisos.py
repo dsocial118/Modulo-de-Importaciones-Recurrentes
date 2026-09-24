@@ -1,6 +1,6 @@
 """Tests de permisos: cada rol ve y puede lo que le corresponde.
 
-Surgen de un problema real detectado probando el prototipo: el operador
+Surgen de un problema real detectado en pruebas: el operador
 provincial veía en su menú la sección de revisión nacional.
 
 Hay dos cosas distintas y las dos se prueban:
