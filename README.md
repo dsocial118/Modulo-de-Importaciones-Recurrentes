@@ -101,8 +101,10 @@ Y se abre en **http://localhost:8100**. Después, para levantarlo alcanza con
 Los detalles —usuarios, cómo probar que anda, qué hacer si no arranca— están en
 **[docs/INSTALAR.md](docs/INSTALAR.md)**.
 
-La presentación del módulo, con el circuito y las pantallas, está en
-**[docs/MIR - Implementacion RUNAC.pdf](<docs/MIR - Implementacion RUNAC.pdf>)**.
+Hay una presentación por ámbito: la del módulo en
+**[docs/mir/presentacion-mir.pdf](docs/mir/presentacion-mir.pdf)** y la de la
+primera implementación en
+**[docs/runac/presentacion-runac.pdf](docs/runac/presentacion-runac.pdf)**.
 
 El repositorio trae todo lo necesario: la definición en el estado verificado,
 las plantillas, los archivos de prueba y los guiones que explican cada
