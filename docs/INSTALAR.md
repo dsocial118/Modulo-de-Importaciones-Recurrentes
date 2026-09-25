@@ -23,7 +23,7 @@ La primera vez tarda unos minutos: descarga MySQL, construye la imagen de la
 aplicación y carga la definición. Al terminar avisa:
 
 ```
-campos a cargar en el período : 365   (esperado: 365)
+campos a cargar en el período : 380   (esperado: 380)
 acentos                       : Sí    (tiene que decir «Sí»)
 
 Listo.  http://localhost:8100
@@ -44,19 +44,22 @@ De ahí en adelante, para levantarlo alcanza con `docker compose up -d`.
 
 ## Probar que anda
 
-Entrá como `operador` y subí, **en este orden**, los cinco archivos de
-`entorno/archivos_de_prueba/Chubut_correctos/`:
+Entrá como `operador` y subí los seis archivos de
+`entorno/mir-v2/archivos_de_prueba/Chubut_correctos/`. Los dispositivos y el
+legajo van primero, porque las nóminas los referencian:
 
 ```
-DISP_PENAL · DISP_SCP · MPI · MPE · MPJ_DAE
+DISP_PENAL · DISP_SCP · LEGAJO_NYA · MPI · MPE · MPJ_DAE
 ```
 
-Los cinco tienen que quedar **VÁLIDA, con cero bloqueantes y cero
-advertencias**. Después probá las otras dos carpetas: `_con_advertencias` entra
-igual pero observado, `_con_errores` no entra.
+Los seis tienen que quedar **VÁLIDA, con cero bloqueantes**. DISP_PENAL trae
+además 17 advertencias de rango, y es lo esperado. Después probá las otras dos
+carpetas: `_con_advertencias` entra igual pero con avisos, `_con_errores` no
+entra.
 
-Si preferís no subirlos a mano, en la pantalla de inicio hay un botón **«Armar
-demostración»** que deja una presentación completa de una vez.
+> El botón **«Armar demostración»** de la pantalla de inicio **hoy no sirve con
+> esta definición**: usa los Excel de `runac/demo/`, que son de la definición
+> anterior, y los rechaza por encabezados. Verificado el 25-09-2026.
 
 ## Cuando algo no anda
 

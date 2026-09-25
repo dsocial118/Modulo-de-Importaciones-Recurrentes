@@ -67,8 +67,8 @@ if [ "${YA//[$'\r\n ']/}" != "0" ]; then
   echo "   La base «$BASE» ya está armada. No se toca nada."
   echo "   Para rehacerla desde cero:  docker compose down -v  y volver a correr esto."
 else
-  # `base_inicial.sql` es el estado verificado de la definición: los cinco
-  # archivos, sus diez hojas de datos, sus 365 campos, sus catálogos y sus
+  # `base_inicial.sql` es el estado verificado de la definición: los seis
+  # archivos, sus doce hojas de datos, sus 380 campos, sus catálogos y sus
   # reglas, con todas las correcciones aplicadas. Es lo que se carga.
   #
   # Los guiones de `entorno/sql/` NO se cargan acá: están para leer cómo se
@@ -112,7 +112,7 @@ with connection.cursor() as cur:
     fila = cur.fetchone()
     acento = fila[0] if fila else "(no hay catálogo si_no)"
 
-print(f"   campos a cargar en el período : {campos}   (esperado: 365)")
+print(f"   campos a cargar en el período : {campos}   (esperado: 380)")
 print(f"   reglas enganchadas            : {reglas}")
 print(f"   acentos                       : {acento}   (tiene que decir «Sí»)")
 PY

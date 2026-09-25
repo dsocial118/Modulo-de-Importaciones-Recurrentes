@@ -131,8 +131,8 @@ La contraseña de todos es `runac`.
 
 | Usuario | Rol | Jurisdicción |
 |---|---|---|
-| `operador` | Operador provincial | Chaco |
-| `responsable` | Responsable provincial | Chaco |
+| `operador` | Operador provincial | Chubut |
+| `responsable` | Responsable provincial | Chubut |
 | `revisor` | Revisor técnico nacional | — |
 | `admin` | Administrador nacional | — |
 

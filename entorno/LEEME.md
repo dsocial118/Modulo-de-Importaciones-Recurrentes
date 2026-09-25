@@ -5,11 +5,15 @@ máquina donde el proyecto nunca estuvo.
 
 | Qué | Para qué |
 |---|---|
-| `base_inicial.sql` | **La definición, en el estado verificado.** Es lo que carga `preparar.sh`: los cinco archivos, sus diez hojas de datos, sus 365 campos, sus catálogos y sus reglas. |
-| `sql/` | Los guiones que llevaron la definición hasta ese estado. **No se cargan**: están para leer qué se corrigió y por qué, y para rehacerla desde los Excel originales. Cada uno lo explica en su encabezado. |
-| `plantillas/` | Los cinco Excel modelo que el sistema entrega a las provincias. La pantalla «Plantillas» los sirve desde acá. |
-| `archivos_de_prueba/` | Dos jurisdicciones por tres variantes: correctos, con advertencias, con errores. Datos inventados. |
+| `base_inicial.sql` | **La definición, en el estado verificado.** Es lo que carga `preparar.sh`: los seis archivos, sus doce hojas de datos, sus 380 campos, sus catálogos y sus reglas, más el nomenclador territorial, las jurisdicciones, el período y los usuarios de prueba. Sin importaciones. Se tomó el 25-09-2026 de `runac_v2`, la base que se muestra. |
+| `sql/` | Los guiones que llevaron la definición hasta ese estado. **No se cargan**: están para leer qué se corrigió y por qué, y para rehacerla desde los Excel originales. Cada uno lo explica en su encabezado. Llegan hasta el 19; los del 20 al 31 están en `analisis_datos\ModeloMySql\sql\`, fuera del repositorio. |
+| `mir-v2/archivos_de_prueba/` | Dos jurisdicciones por tres variantes —correctos, con advertencias, con errores— para la definición vigente. Datos inventados. |
+| `mir-v1/` | Lo mismo para la definición anterior. Se conserva para comparar. |
 | `preparar.sh` | El comando que arma todo, en orden. |
+| `estado.sh` | Muestra cómo está el sistema de verdad: qué base sirve cada puerto, cuántos campos y reglas tiene, y si hay desfasajes. |
+
+Las plantillas ya no se guardan en disco: el sistema las genera contra la base
+en el momento de descargarlas.
 
 ## Por qué hay dos fuentes y cuál manda
 
