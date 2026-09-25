@@ -318,8 +318,102 @@ def datos_de_la_hoja(
 # ---------------------------------------------------------------------------
 
 
+REGLAS_ENTRE_ARCHIVOS = ("EXISTE_EN_ARCHIVO", "COINCIDE_CON_ARCHIVO")
+
+
+def valores_de_otros_archivos(
+    reglas: dict[int, list[dict]], presentacion_id: int
+) -> dict[str, dict]:
+    """Lo que las reglas entre archivos necesitan saber de los otros archivos.
+
+    Es lo mismo que el motor lee antes de importar (`valores_referenciados` y
+    `valores_a_coincidir` en `motor/importar.py`): de la importación **vigente**
+    de cada archivo referenciado, dentro de la misma presentación. Faltaba al
+    corregir un dato, y sin esto toda corrección de una nómina que cruza con el
+    legajo se rechazaba con «no se pudieron leer los valores del archivo
+    referenciado» —visto el 25-09-2026—.
+
+    Si el archivo referenciado no está importado, la regla queda sin datos y el
+    motor lo dice, igual que al importar.
+    """
+    referencias: dict[int, set] = {}
+    coincidencias: dict[int, dict] = {}
+    todas = [r for lista in reglas.values() for r in lista]
+    with connection.cursor() as cur:
+        for regla in todas:
+            if regla["tipo_regla"] not in REGLAS_ENTRE_ARCHIVOS:
+                continue
+            par = regla["parametros"] or {}
+            cur.execute(
+                """
+                SELECT i.id, av.id AS version_id, av.numero AS version
+                FROM mir_c2_importacion i
+                JOIN mir_c1_archivo a ON a.id = i.archivo_id
+                JOIN mir_c1_archivo_version av ON av.id = i.archivo_version_id
+                WHERE i.presentacion_id = %s AND a.codigo = %s AND i.estado = 'VALIDA'
+                ORDER BY i.id DESC LIMIT 1
+                """,
+                [presentacion_id, par.get("archivo")],
+            )
+            vigente = _filas(cur)
+            if not vigente:
+                continue
+            vigente = vigente[0]
+            cur.execute(
+                """SELECT h.nombre_esperado,
+                          GROUP_CONCAT(c.nombre SEPARATOR '|') AS campos
+                   FROM mir_c1_hoja h JOIN mir_c1_campo c ON c.hoja_id = h.id
+                   WHERE h.archivo_version_id = %s
+                   GROUP BY h.id""",
+                [vigente["version_id"]],
+            )
+            hojas = _filas(cur)
+            varias = len(hojas) > 1
+            existe = regla["tipo_regla"] == "EXISTE_EN_ARCHIVO"
+            columnas = (
+                [par.get("campo")] if existe else [par.get("clave"), par.get("campo")]
+            )
+            juntados: set = set()
+            pares: dict = {}
+            for hoja in hojas:
+                # Sin hoja declarada se buscan todas, como hace el motor: el
+                # dispositivo penal está en la hoja que corresponde a su tipo.
+                if par.get("hoja") and hoja["nombre_esperado"] != par["hoja"]:
+                    continue
+                if not all(col in hoja["campos"].split("|") for col in columnas):
+                    continue
+                tabla = _identificador_seguro(
+                    nombre_tabla_receptora(
+                        par.get("archivo"),
+                        hoja["nombre_esperado"],
+                        varias,
+                        vigente["version"],
+                    )
+                )
+                elegidas = ", ".join(
+                    f"`{_identificador_seguro(col)}`" for col in columnas
+                )
+                cur.execute(
+                    f"SELECT {elegidas} FROM `{tabla}` WHERE importacion_id = %s",
+                    [vigente["id"]],
+                )
+                for fila in cur.fetchall():
+                    if existe:
+                        juntados.add(clave(fila[0]))
+                    elif fila[0] is not None:
+                        pares[clave(fila[0])] = clave(fila[1])
+            if existe:
+                referencias[regla["id"]] = juntados
+            else:
+                coincidencias[regla["id"]] = pares
+    return {"referencias": referencias, "coincidencias": coincidencias}
+
+
 def hallazgos_de_la_fila(
-    campos: list[dict], valores: dict, periodo: str | None = None
+    campos: list[dict],
+    valores: dict,
+    periodo: str | None = None,
+    presentacion_id: int | None = None,
 ) -> list[dict]:
     """Vuelve a aplicar sobre una fila todo lo que se controló al importar.
 
@@ -327,10 +421,15 @@ def hallazgos_de_la_fila(
     miran otro campo —«la fecha de egreso no puede ser anterior a la de
     ingreso», «si el vínculo es familiar el parentesco es obligatorio»—, así que
     corregir un dato puede resolver la advertencia de otro, o crearla.
+
+    Con la presentación, se leen además los otros archivos, para las reglas
+    que cruzan con ellos.
     """
     titulos = {c["nombre"]: c["titulo_esperado"] for c in campos}
     contexto = {"unicos": {}, "fila_actual": 0, "titulos": titulos}
     reglas = reglas_de_los_campos(campos)
+    if presentacion_id is not None:
+        contexto.update(valores_de_otros_archivos(reglas, presentacion_id))
     hallazgos: list[dict] = []
 
     def anotar(campo, codigo, severidad, detalle, regla_id=None, valor=None):
@@ -597,7 +696,9 @@ def editar(
         # deja la fila con un error bloqueante no se guarda —el archivo entró
         # porque no tenía ninguno, y una corrección no puede romper eso—.
         fila_nueva = {**fila_actual, campo["nombre"]: valor}
-        hallazgos = hallazgos_de_la_fila(campos, fila_nueva, contexto["periodo"])
+        hallazgos = hallazgos_de_la_fila(
+            campos, fila_nueva, contexto["periodo"], contexto["presentacion_id"]
+        )
         bloqueantes = [h for h in hallazgos if h["severidad"] == "BLOQUEANTE"]
         if bloqueantes:
             raise EdicionNoPermitida(
