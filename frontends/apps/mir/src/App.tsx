@@ -6,10 +6,19 @@ import ManageSearchOutlined from '@mui/icons-material/ManageSearchOutlined';
 import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
 import { Alert, Box, CircularProgress } from '@mui/material';
 import { useSesion } from '@mir/api';
-import { Layout, type ItemDeMenu } from '@mir/ui';
+import { Avisos, Layout, type ItemDeMenu } from '@mir/ui';
 import { useEffect, type ReactNode } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { conFiltros } from './comun/Selectores';
+import { Cargar } from './paginas/Cargar';
+import { Comprobante } from './paginas/Comprobante';
+import { Datos } from './paginas/Datos';
+import { Detalle } from './paginas/Detalle';
 import { Inicio } from './paginas/Inicio';
+import { Plantillas } from './paginas/Plantillas';
+import { Reglas } from './paginas/Reglas';
+import { Resultado } from './paginas/Resultado';
+import { Revision } from './paginas/Revision';
 
 // El ícono de cada sección. Las secciones y quién las ve las decide el back.
 const ICONOS: Record<string, ReactNode> = {
@@ -21,12 +30,24 @@ const ICONOS: Record<string, ReactNode> = {
   estructura: <ChecklistOutlined />,
 };
 
+// Qué sección del menú queda marcada según la dirección: el detalle de una
+// importación y el comprobante son parte del resultado.
+const SECCION_DE: Record<string, string> = {
+  '': 'inicio',
+  plantillas: 'plantillas',
+  cargar: 'cargar',
+  resultado: 'resultado',
+  presentacion: 'resultado',
+  revision: 'revision',
+  reglas: 'estructura',
+};
+
 const BASE = '/v2/mir';
 
 export function App() {
   const sesion = useSesion();
   const navegar = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   useEffect(() => {
     if (sesion.data) document.title = sesion.data.instancia;
@@ -48,32 +69,46 @@ export function App() {
   }
 
   const s = sesion.data;
-  const menu: ItemDeMenu[] = s.menu.map((m) => ({
-    clave: m.clave,
-    etiqueta: m.etiqueta,
-    href: m.ruta,
-    // Las rutas del back para /v2/ son absolutas; el router trabaja sin la base.
-    ruta: m.en_v2 ? m.ruta.replace(BASE, '') || '/' : m.ruta,
-    icono: ICONOS[m.clave] ?? <HomeOutlined />,
-    enV2: m.en_v2,
-  }));
-  const activa = pathname === '/' ? 'inicio' : pathname.split('/')[1];
+  // Al pasar de una sección a otra se conservan el período y la jurisdicción.
+  const actuales = new URLSearchParams(search);
+  const menu: ItemDeMenu[] = s.menu.map((m) => {
+    const ruta = m.en_v2 ? m.ruta.replace(BASE, '') || '/' : m.ruta;
+    return {
+      clave: m.clave,
+      etiqueta: m.etiqueta,
+      href: m.en_v2 ? `${BASE}${conFiltros(ruta, actuales.get('periodo'), actuales.get('jurisdiccion'))}` : m.ruta,
+      ruta: conFiltros(ruta, actuales.get('periodo'), actuales.get('jurisdiccion')),
+      icono: ICONOS[m.clave] ?? <HomeOutlined />,
+      enV2: m.en_v2,
+    };
+  });
+  const activa = SECCION_DE[pathname.split('/')[1] ?? ''] ?? '';
 
   return (
-    <Layout
-      instancia={s.instancia}
-      usuario={s.usuario}
-      rol={s.nombre_del_rol}
-      aviso={s.aviso}
-      menu={menu}
-      activa={activa}
-      salir={s.salir}
-      alNavegar={(ruta) => navegar(ruta)}
-    >
-      <Routes>
-        <Route path="/" element={<Inicio sesion={s} />} />
-        <Route path="*" element={<Alert severity="info">Esta sección todavía no está en la versión nueva.</Alert>} />
-      </Routes>
-    </Layout>
+    <Avisos>
+      <Layout
+        instancia={s.instancia}
+        usuario={s.usuario}
+        rol={s.nombre_del_rol}
+        aviso={s.aviso}
+        menu={menu}
+        activa={activa}
+        salir={s.salir}
+        alNavegar={(ruta) => navegar(ruta)}
+      >
+        <Routes>
+          <Route path="/" element={<Inicio sesion={s} />} />
+          <Route path="/plantillas" element={<Plantillas />} />
+          <Route path="/cargar" element={<Cargar />} />
+          <Route path="/resultado" element={<Resultado />} />
+          <Route path="/resultado/:id" element={<Detalle />} />
+          <Route path="/resultado/:id/datos" element={<Datos />} />
+          <Route path="/presentacion/:id/comprobante" element={<Comprobante />} />
+          <Route path="/revision" element={<Revision />} />
+          <Route path="/reglas" element={<Reglas />} />
+          <Route path="*" element={<Alert severity="info">Esa página no existe.</Alert>} />
+        </Routes>
+      </Layout>
+    </Avisos>
   );
 }

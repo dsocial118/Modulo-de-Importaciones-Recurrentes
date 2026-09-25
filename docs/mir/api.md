@@ -1,9 +1,8 @@
 # API del MIR
 
-**Estado al 25-09-2026: iniciada.** Existen la base y los dos primeros puntos de
-acceso; el resto está planificado y se construye pantalla por pantalla, a
-medida que el front pasa a React. Este documento separa siempre lo que **está
-hecho** de lo que **está previsto**.
+**Estado al 25-09-2026: hecha para el front; falta la carga entre sistemas.**
+Existen todos los puntos de acceso que usan las pantallas en React. Este
+documento separa siempre lo que **está hecho** de lo que **está previsto**.
 
 ---
 
@@ -45,30 +44,42 @@ actuales todavía no lo cumplen. Está cubierto por pruebas automáticas
 
 ## 3 · Hecho
 
-| Punto de acceso | Qué devuelve |
+**Todo lo que usan las pantallas del front nuevo.** El detalle de cada punto de
+acceso —qué recibe y qué devuelve— está en el esquema OpenAPI, en
+`/api/esquema/` (requiere sesión) y en `frontends/packages/api/esquema.yaml`.
+
+Todo va bajo `/api/mir/`:
+
+| Área | Puntos de acceso |
 |---|---|
-| `GET /api/mir/sesion/` | Quién está conectado, su rol, su entidad, qué puede hacer, las secciones de su menú y el token de CSRF |
-| `GET /api/mir/inicio/` | Los períodos, el estado de la presentación de la entidad y, por archivo, su estado de carga, filas y hallazgos |
-| `GET /api/esquema/` | El esquema OpenAPI completo. Requiere sesión |
+| Sesión | `sesion/` |
+| Inicio y período | `inicio/` · `periodos/<codigo>/estado/` |
+| Plantillas | `plantillas/` · `plantillas/<periodo>/<archivo>/` · `plantillas/<periodo>/todas/` |
+| Carga | `carga/` · `carga/<archivo>/` (subida) |
+| Resultado y circuito | `resultado/` · `presentaciones/<id>/acciones/<accion>/` · `presentaciones/<id>/observaciones/` · `presentaciones/<id>/expediente/` · `presentaciones/<id>/comprobante/` · `observaciones/<id>/respuesta/` · `revision/` |
+| Una importación | `importaciones/<id>/` · `importaciones/<id>/hallazgos/` (paginado) · `importaciones/<id>/errores.xlsx` · `importaciones/<id>/marcado.xlsx` · `importaciones/<id>/datos/` (ver y corregir) |
+| Reglas | `reglas/` (ver y guardar) |
+| Pruebas | `pruebas/armar-demo/` · `pruebas/borrar-importaciones/` |
+
+**Lo que se pide por número —una presentación, una importación, una
+observación— se controla contra la jurisdicción del usuario**, y lo ajeno da
+404. En las pantallas actuales no: verificado el 25-09-2026, un operador de una
+provincia ve el detalle, baja los errores y ve los datos de otra escribiendo la
+dirección.
 
 Y la pieza que los sirve al navegador: Django recibe `/v2/mir/` y lo reenvía al
 servicio del front (`runac/views/front_v2.py`), con las mismas reglas que SISOC:
 lista de módulos fija, sólo lectura, login obligatorio, 503 si el front no
 responde.
 
-## 4 · Previsto para el front
+## 4 · Pendiente
 
-Uno por pantalla, en el orden en que se migren:
-
-| Pantalla | Puntos de acceso previstos |
-|---|---|
-| Plantillas | listar las del período · descargar una o todas |
-| Carga | subir un archivo · ver qué necesita cargado antes |
-| Resultado | resumen de la importación · detalle de hallazgos, paginado y con filtros · descargar el informe y el archivo marcado |
-| Edición de datos | ver las filas de una importación · corregir un dato · justificar una advertencia |
-| Circuito | cerrar y reabrir la carga · observar · responder · habilitar · presentar · registrar el expediente |
-| Reglas | la estructura de cada archivo, con sus campos y reglas |
-| Períodos | crear, abrir y cerrar períodos (depende del diseño de roles y períodos en curso) |
+- **La carga entre sistemas**, en §5.
+- **Un error del servicio de edición, que la API hereda:** al corregir un dato
+  de un archivo que cruza con otro —por ejemplo, el MPI con el legajo—, la regla
+  que verifica la referencia no puede leer el archivo referenciado y la
+  corrección se rechaza. Pasa igual en las pantallas actuales. Visto el
+  25-09-2026.
 
 ## 5 · Previsto para la carga entre sistemas
 

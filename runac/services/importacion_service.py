@@ -493,7 +493,7 @@ def _filtro_de_hallazgos(importacion_id, severidad, hoja, buscar):
     return sql, params
 
 
-def hallazgos_de(
+def hallazgos_de(  # pylint: disable=too-many-arguments  # son los filtros de la pantalla
     importacion_id: int,
     severidad: str | None = None,
     hoja: str | None = None,

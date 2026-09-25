@@ -1,8 +1,8 @@
 # Front v2 (React)
 
-**Estado al 25-09-2026:** la base está armada y la primera pantalla, Inicio,
-funciona de punta a punta. El resto sigue en la versión actual y se migra de a
-una. Rama `front-react`.
+**Estado al 25-09-2026:** **todas las pantallas están migradas**, y el circuito
+completo se recorrió de punta a punta en el navegador, con cada rol. Rama
+`front-react`, sin fusionar a `main`. La versión actual sigue andando igual.
 
 ## Por qué, y con qué reglas
 
@@ -59,10 +59,19 @@ tipos en el mismo cambio.** Si no, el front compila contra una forma vieja.
 
 ## Migrado
 
-| Sección | Estado |
-|---|---|
-| Inicio | ✅ con su API, en escritorio y en teléfono, modo claro y oscuro |
-| Plantillas · Carga · Resultado · Edición · Revisión · Reglas | pendientes |
+Todas con su API, en escritorio y en teléfono, en modo claro y oscuro.
+
+| Sección | Ruta, bajo `/v2/mir` | Qué se probó en el navegador |
+|---|---|---|
+| Inicio | `/` | estado del período y de la presentación; herramientas del administrador |
+| Plantillas | `/plantillas` | descarga de una y de todas (zip) |
+| Carga | `/cargar` | lo que necesita cada archivo; subida por la API |
+| Resultado | `/resultado` | cierre de carga, observaciones, circuito |
+| Detalle | `/resultado/:id` | problemas del archivo, hallazgos filtrados y paginados, descargas |
+| Edición de datos | `/resultado/:id/datos` | corrección con motivo, historial |
+| Comprobante | `/presentacion/:id/comprobante` | datos y expediente; se imprime con el aviso de prueba |
+| Revisión | `/revision` | observar, habilitar |
+| Reglas | `/reglas` | cambiar un rango y deshacerlo, con el período en preparación |
 
 ## Pendientes de la base
 

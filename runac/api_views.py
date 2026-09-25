@@ -1,3 +1,5 @@
+# Un solo módulo de API por app, como pide la norma de SISOC (api_views.py).
+# pylint: disable=too-many-lines
 """API del front v2 (React), bajo `/api/mir/`.
 
 Sigue la norma de SISOC para el front nuevo (`docs/implementaciones/frontend_v2.md`
@@ -557,7 +559,9 @@ class ResultadoView(APIView):
     """El estado del período: qué entró, qué observó Nación y qué falta."""
 
     @extend_schema(responses=s.ResultadoSerializer)
-    def get(self, request):
+    def get(
+        self, request
+    ):  # pylint: disable=too-many-locals  # arma una pantalla entera
         _exigir(request.user, "resultado")
         usuario = request.user
         periodos, periodo = _periodos_y_elegido(request)
@@ -567,7 +571,8 @@ class ResultadoView(APIView):
             if periodo
             else {"presentacion": None, "archivos": [], "listo": False}
         )
-        pres = estado["presentacion"] if jurisdiccion else None
+        # Un dict vacío y no None: pylint no sigue el «if pres» y marca cada acceso.
+        pres = (estado["presentacion"] if jurisdiccion else None) or {}
 
         archivos, totales = [], {
             "filas": 0,
@@ -620,7 +625,9 @@ class ResultadoView(APIView):
             "totales": totales,
             "acciones": [
                 {"accion": a["accion"], "etiqueta": a["etiqueta"], "ayuda": a["ayuda"]}
-                for a in circuito.acciones_disponibles(pres, usuario, estado["listo"])
+                for a in circuito.acciones_disponibles(
+                    pres or None, usuario, estado["listo"]
+                )
             ],
             "observaciones": circuito.observaciones_de(pres["id"]) if pres else [],
             "puede_responder": puede_cargar(usuario) or puede_presentar(usuario),
@@ -1042,7 +1049,9 @@ class ReglasView(APIView):
     @extend_schema(
         parameters=[OpenApiParameter("hoja", str)], responses=s.ReglasSerializer
     )
-    def get(self, request):
+    def get(
+        self, request
+    ):  # pylint: disable=too-many-locals  # arma una pantalla entera
         _exigir(request.user, "estructura")
         hojas = []
         for h in svc.hojas_disponibles():
@@ -1159,7 +1168,12 @@ class ReglasView(APIView):
             )
         return Response(
             {
-                "mensaje": f'Guardado. {len(hecho["detalle"])} cambios.',
+                "mensaje": "Guardado. "
+                + (
+                    "1 cambio."
+                    if len(hecho["detalle"]) == 1
+                    else f'{len(hecho["detalle"])} cambios.'
+                ),
                 "detalle": list(hecho["detalle"]),
                 "errores": [],
             }

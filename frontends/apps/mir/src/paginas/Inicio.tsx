@@ -2,6 +2,7 @@ import ArrowForward from '@mui/icons-material/ArrowForward';
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardActionArea,
   CardContent,
@@ -20,9 +21,19 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { useInicio, type ArchivoDelPeriodo, type Sesion } from '@mir/api';
-import { EtiquetaDeEstado, type Tono } from '@mir/ui';
-import { useSearchParams } from 'react-router-dom';
+import {
+  mensajeDeError,
+  useArmarDemo,
+  useBorrarImportaciones,
+  useCambiarEstadoDelPeriodo,
+  useInicio,
+  type ArchivoDelPeriodo,
+  type Sesion,
+} from '@mir/api';
+import { EtiquetaDeEstado, useAvisar, useConfirmar, type Tono } from '@mir/ui';
+import type { MouseEvent } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { conFiltros } from '../comun/Selectores';
 
 // Cómo se muestra el estado de un archivo. Neutral a propósito: un archivo
 // válido no se pinta de verde, porque el verde es de marca.
@@ -84,7 +95,110 @@ function Filas({ a, alinear = 'flex-end' }: { a: ArchivoDelPeriodo; alinear?: 'f
   );
 }
 
+/**
+ * El período se abre y se cierra para todas las jurisdicciones a la vez: lo
+ * decide el nivel nacional. Al lado, las dos herramientas de prueba, que van
+ * juntas porque son un par: una limpia para volver a probar y la otra deja algo
+ * que mostrar.
+ */
+function HerramientasDelAdministrador({ periodo, estado }: { periodo: string; estado: string }) {
+  const cambiarEstado = useCambiarEstadoDelPeriodo();
+  const armar = useArmarDemo();
+  const borrar = useBorrarImportaciones();
+  const avisar = useAvisar();
+  const confirmar = useConfirmar();
+  const alTerminar = {
+    onSuccess: (r: { mensaje: string; aviso?: string }) => avisar({ texto: [r.mensaje, r.aviso].filter(Boolean).join(' ') }),
+    onError: (e: unknown) => avisar({ texto: mensajeDeError(e), error: true }),
+  };
+  const pasarA = async (nuevo: string, titulo: string, texto: string) => {
+    if ((await confirmar({ titulo, texto, confirmar: titulo })) === null) return;
+    cambiarEstado.mutate({ codigo: periodo, estado: nuevo }, alTerminar);
+  };
+  const ocupado = cambiarEstado.isPending || armar.isPending || borrar.isPending;
+
+  return (
+    <Card variant="outlined">
+      <CardContent>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: { md: 'center' } }}>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography sx={{ fontWeight: 500 }}>Administración del período</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Las herramientas de prueba borran o arman datos de ejemplo y no forman parte del sistema definitivo.
+            </Typography>
+          </Box>
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+            {estado !== 'ABIERTO' && (
+              <Button
+                variant="contained"
+                disabled={ocupado}
+                onClick={() => pasarA('ABIERTO', 'Abrir el período', 'Las jurisdicciones van a poder importar, y la estructura queda congelada.')}
+              >
+                Abrir el período
+              </Button>
+            )}
+            {estado === 'ABIERTO' && (
+              <>
+                <Button
+                  variant="outlined"
+                  disabled={ocupado}
+                  onClick={() => pasarA('CERRADO', 'Cerrar el período', 'Con el período cerrado ninguna jurisdicción puede importar.')}
+                >
+                  Cerrar el período
+                </Button>
+                <Button
+                  variant="outlined"
+                  disabled={ocupado}
+                  onClick={() =>
+                    pasarA(
+                      'PREPARACION',
+                      'Volver a preparación',
+                      'Habilita a cambiar la definición. Es una herramienta de prueba: en el sistema real, con el período abierto, la definición no se toca.',
+                    )
+                  }
+                >
+                  Volver a preparación (prueba)
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outlined"
+              disabled={ocupado}
+              onClick={async () => {
+                const ok = await confirmar({
+                  titulo: 'Armar demostración',
+                  texto: 'Se borrará lo que haya y se armará una presentación completa, con advertencias para corregir.',
+                  confirmar: 'Armar',
+                });
+                if (ok !== null) armar.mutate(undefined, alTerminar);
+              }}
+            >
+              Armar demostración
+            </Button>
+            <Button
+              variant="outlined"
+              color="warning"
+              disabled={ocupado}
+              onClick={async () => {
+                const ok = await confirmar({
+                  titulo: 'Borrar importaciones',
+                  texto: 'Se borrarán TODAS las importaciones de TODAS las jurisdicciones. Existe únicamente para hacer pruebas.',
+                  confirmar: 'Borrar todo',
+                });
+                if (ok !== null) borrar.mutate(undefined, alTerminar);
+              }}
+            >
+              Borrar importaciones
+            </Button>
+          </Stack>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function Inicio({ sesion }: { sesion: Sesion }) {
+  const navegar = useNavigate();
   const [params, setParams] = useSearchParams();
   const chico = useMediaQuery(useTheme().breakpoints.down('sm'));
   const inicio = useInicio(params.get('periodo'), params.get('jurisdiccion'));
@@ -103,6 +217,7 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
   const periodo = d.periodo;
   const estadoPeriodo = periodo ? ESTADO_DEL_PERIODO[periodo.estado] : undefined;
   const accesos = sesion.menu.filter((m) => m.clave !== 'inicio');
+  const destino = (ruta: string) => conFiltros(ruta.replace('/v2/mir', '') || '/', periodo?.codigo, d.jurisdiccion);
   const avance = d.avance.total ? Math.round((d.avance.cargados * 100) / d.avance.total) : 0;
 
   return (
@@ -163,6 +278,8 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
             : 'No se admiten más cargas.'}
         </Alert>
       )}
+
+      {sesion.permisos.administrar && periodo && <HerramientasDelAdministrador periodo={periodo.codigo} estado={periodo.estado} />}
 
       <Card variant="outlined">
         <CardHeader
@@ -256,9 +373,15 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
         <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(3, 1fr)' } }}>
           {accesos.map((s) => (
             <Card key={s.clave} variant="outlined">
-              {/* Las secciones que siguen en la versión actual se abren allá, con el mismo período. */}
+              {/* Se va con el mismo período y la misma jurisdicción. Lo que siga en la
+                  versión actual se abre allá. */}
               <CardActionArea
-                href={s.en_v2 ? s.ruta : `${s.ruta}?periodo=${periodo?.codigo ?? ''}`}
+                href={s.en_v2 ? `/v2/mir${destino(s.ruta)}` : `${s.ruta}?periodo=${periodo?.codigo ?? ''}`}
+                onClick={(e: MouseEvent) => {
+                  if (!s.en_v2 || e.ctrlKey || e.metaKey) return;
+                  e.preventDefault();
+                  navegar(destino(s.ruta));
+                }}
                 sx={{ height: '100%' }}
               >
                 <CardContent>

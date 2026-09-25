@@ -99,7 +99,8 @@ export function Layout({ instancia, usuario, rol, aviso, menu, activa, salir, al
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
+      {/* Al imprimir —un comprobante, por ejemplo— no van ni la barra ni el menú. */}
+      <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1, displayPrint: 'none' }}>
         <Toolbar>
           {!ancho && (
             <IconButton color="inherit" edge="start" aria-label="Abrir el menú" onClick={() => setAbierto(true)} sx={{ mr: 1 }}>
@@ -140,7 +141,7 @@ export function Layout({ instancia, usuario, rol, aviso, menu, activa, salir, al
         variant={ancho ? 'permanent' : 'temporary'}
         open={ancho || abierto}
         onClose={() => setAbierto(false)}
-        sx={{ width: ANCHO, flexShrink: 0, '& .MuiDrawer-paper': { width: ANCHO, boxSizing: 'border-box' } }}
+        sx={{ width: ANCHO, flexShrink: 0, displayPrint: 'none', '& .MuiDrawer-paper': { width: ANCHO, boxSizing: 'border-box' } }}
       >
         <Toolbar />
         {aviso && <Box sx={{ height: 28 }} />}
@@ -148,8 +149,8 @@ export function Layout({ instancia, usuario, rol, aviso, menu, activa, salir, al
       </Drawer>
 
       <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 } }}>
-        <Toolbar />
-        {aviso && <Box sx={{ height: 28 }} />}
+        <Toolbar sx={{ displayPrint: 'none' }} />
+        {aviso && <Box sx={{ height: 28, displayPrint: 'none' }} />}
         {children}
       </Box>
     </Box>
