@@ -1,0 +1,231 @@
+openapi: 3.0.3
+info:
+  title: MIR — API del front v2
+  version: 0.1.0
+paths:
+  /api/mir/inicio/:
+    get:
+      operationId: mir_inicio_retrieve
+      description: El período, y cómo viene la presentación de la jurisdicción.
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inicio'
+          description: ''
+  /api/mir/sesion/:
+    get:
+      operationId: mir_sesion_retrieve
+      description: 'Quién está conectado y qué puede hacer: lo primero que pide el
+        front.'
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sesion'
+          description: ''
+components:
+  schemas:
+    ArchivoDelPeriodo:
+      type: object
+      properties:
+        codigo:
+          type: string
+        nombre:
+          type: string
+        obligatorio:
+          type: boolean
+        campos:
+          type: integer
+        reglas:
+          type: integer
+        estado:
+          type: string
+        filas:
+          type: integer
+          nullable: true
+        bloqueantes:
+          type: integer
+        advertencias:
+          type: integer
+      required:
+      - advertencias
+      - bloqueantes
+      - campos
+      - codigo
+      - estado
+      - filas
+      - nombre
+      - obligatorio
+      - reglas
+    Avance:
+      type: object
+      properties:
+        cargados:
+          type: integer
+        total:
+          type: integer
+      required:
+      - cargados
+      - total
+    Inicio:
+      type: object
+      properties:
+        periodos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Periodo'
+        periodo:
+          allOf:
+          - $ref: '#/components/schemas/Periodo'
+          nullable: true
+        jurisdiccion:
+          type: string
+          nullable: true
+        jurisdicciones:
+          type: array
+          items:
+            type: string
+        presentacion:
+          allOf:
+          - $ref: '#/components/schemas/Presentacion'
+          nullable: true
+        archivos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArchivoDelPeriodo'
+        avance:
+          $ref: '#/components/schemas/Avance'
+      required:
+      - archivos
+      - avance
+      - jurisdiccion
+      - jurisdicciones
+      - periodo
+      - periodos
+      - presentacion
+    Periodo:
+      type: object
+      properties:
+        codigo:
+          type: string
+        estado:
+          type: string
+        fecha_desde:
+          type: string
+          format: date
+        fecha_hasta:
+          type: string
+          format: date
+      required:
+      - codigo
+      - estado
+      - fecha_desde
+      - fecha_hasta
+    Permisos:
+      type: object
+      properties:
+        cargar:
+          type: boolean
+        presentar:
+          type: boolean
+        editar_datos:
+          type: boolean
+        revisar:
+          type: boolean
+        administrar:
+          type: boolean
+      required:
+      - administrar
+      - cargar
+      - editar_datos
+      - presentar
+      - revisar
+    Presentacion:
+      type: object
+      properties:
+        id:
+          type: integer
+        estado:
+          type: string
+        estado_legible:
+          type: string
+      required:
+      - estado
+      - estado_legible
+      - id
+    Seccion:
+      type: object
+      properties:
+        clave:
+          type: string
+        etiqueta:
+          type: string
+        detalle:
+          type: string
+        ruta:
+          type: string
+        en_v2:
+          type: boolean
+      required:
+      - clave
+      - detalle
+      - en_v2
+      - etiqueta
+      - ruta
+    Sesion:
+      type: object
+      properties:
+        instancia:
+          type: string
+        usuario:
+          type: string
+        rol:
+          type: string
+          nullable: true
+        nombre_del_rol:
+          type: string
+        es_nacional:
+          type: boolean
+        jurisdiccion:
+          type: string
+          nullable: true
+        permisos:
+          $ref: '#/components/schemas/Permisos'
+        menu:
+          type: array
+          items:
+            $ref: '#/components/schemas/Seccion'
+        csrf_token:
+          type: string
+        salir:
+          type: string
+        aviso:
+          type: string
+      required:
+      - aviso
+      - csrf_token
+      - es_nacional
+      - instancia
+      - jurisdiccion
+      - menu
+      - nombre_del_rol
+      - permisos
+      - rol
+      - salir
+      - usuario
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sesion_runac

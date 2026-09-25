@@ -51,6 +51,10 @@ De ahí en adelante, para levantarlo alcanza con `docker compose up -d`.
 | `revisor` | Revisor técnico nacional | `runac` |
 | `admin` | Administrador nacional | `runac` |
 
+**La versión nueva, en React**, está en **http://localhost:8100/v2/mir/**, con
+los mismos usuarios. Convive con la actual: lo que todavía no se migró lleva a
+la pantalla de siempre. Ver [`docs/mir/front-v2.md`](mir/front-v2.md).
+
 ## Probar que anda
 
 Entrá como `operador` y subí los seis archivos de
@@ -100,6 +104,46 @@ jurisdicción: `MPI_2026_T1_Chubut.xlsx`. Se admite lo que venga después.
 **Una nómina no se deja subir.** También es correcto: las nóminas referencian a
 los dispositivos, así que `DISP_PENAL` y `DISP_SCP` van primero. El mensaje lo
 dice.
+
+**`/v2/mir/` responde «El front nuevo no responde».** El servicio `front_mir`
+todavía está arrancando, o se cayó: `docker compose logs front_mir`. La versión
+actual sigue andando igual.
+
+### Redes que inspeccionan el tráfico
+
+Algunos antivirus corporativos —por ejemplo Kaspersky Endpoint Security—
+inspeccionan las conexiones seguras con un certificado propio. Windows confía
+en él, pero los contenedores no, y **la construcción de las imágenes falla al
+descargar paquetes** con `certificate verify failed` o `connection reset`.
+
+Se resuelve sin tocar el antivirus ni el repositorio:
+
+1. Sacar el certificado de la conexión, desde Git Bash:
+
+   ```bash
+   mkdir -p certificados_locales && echo | openssl s_client -showcerts -connect registry.npmjs.org:443 -servername registry.npmjs.org 2>/dev/null | awk '/BEGIN CERTIFICATE/{n++} n==2{print} /END CERTIFICATE/ && n==2{exit}' > certificados_locales/ca.pem
+   ```
+
+2. Crear `docker-compose.override.yml`, que Docker lee solo, para pasárselo a
+   la construcción:
+
+   ```yaml
+   services:
+     web:
+       build:
+         secrets: [certificado_ca]
+     front_mir:
+       build:
+         secrets: [certificado_ca]
+   secrets:
+     certificado_ca:
+       file: ./certificados_locales/ca.pem
+   ```
+
+Las dos cosas están en `.gitignore`: son de esa máquina. Los Dockerfile **suman**
+ese certificado a los habituales, no los reemplazan, porque el antivirus puede
+inspeccionar unos sitios y otros no. Donde no hace falta, no se crea nada y todo
+funciona igual.
 
 ## Qué hay adentro
 

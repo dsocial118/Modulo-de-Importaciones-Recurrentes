@@ -1,0 +1,27 @@
+{
+  "name": "mir-frontends",
+  "private": true,
+  "description": "Front v2 del MIR, en React. Misma estructura, stack y versiones que frontends/ de SISOC (docs/implementaciones/frontend_v2.md).",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/mir",
+    "build": "npm run build -w apps/mir",
+    "tipos": "npm run tipos -w packages/api",
+    "chequear": "tsc -p apps/mir --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.4",
+    "openapi-typescript": "7.13.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "yaml": "2.9.1"
+  }
+}

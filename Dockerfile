@@ -34,6 +34,24 @@ RUN pip install --no-cache-dir \
       pytest-mock==3.14.1 \
       pytest-xdist==3.6.1
 
+# Front v2: el esquema OpenAPI de la API y el reenvío de /v2/ al servicio del
+# front. Mismas versiones que SISOC.
+#
+# El certificado es opcional y sirve para las redes que inspeccionan el tráfico
+# seguro, como un antivirus corporativo: sin él, pip no confía en la conexión.
+# Se SUMA a los certificados de siempre, no los reemplaza: el antivirus puede
+# interceptar unos sitios y otros no. Donde no hace falta, no se pasa y esto
+# funciona igual. Ver docs/INSTALAR.md.
+RUN --mount=type=secret,id=certificado_ca,required=false \
+    if [ -s /run/secrets/certificado_ca ]; then \
+      cat "$(python -c 'import pip._vendor.certifi as c; print(c.where())')" \
+          /run/secrets/certificado_ca > /tmp/certificados.pem; \
+      export PIP_CERT=/tmp/certificados.pem; \
+    fi; \
+    pip install --no-cache-dir \
+      drf-spectacular==0.29.0 \
+      requests==2.34.2
+
 WORKDIR /app
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

@@ -40,8 +40,36 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "crispy_forms",
     "crispy_bootstrap5",
+    "rest_framework",
+    "drf_spectacular",
     "runac",
 ]
+
+# API del front v2. Las mismas convenciones que SISOC: sesión de Django con
+# CSRF (sin tokens en el navegador), paginación de DRF y esquema OpenAPI.
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 50,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+SPECTACULAR_SETTINGS = {
+    "TITLE": "MIR — API del front v2",
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}
+
+# Front v2 (React). Django reenvía /v2/<modulo>/ al servicio de cada front: la
+# lista sale de acá, nunca del pedido. Ver runac/views/front_v2.py.
+FRONTS_V2 = {
+    "mir": os.getenv("FRONT_MIR_URL", "http://front_mir:5173"),
+}
+FRONTS_V2_TIMEOUT = float(os.getenv("FRONTS_V2_TIMEOUT", "5"))
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
@@ -142,5 +170,9 @@ RUNAC_INFORMES = BASE_DIR / "media" / "informes"
 # que esta en uso, que es lo que todavia no es cierto.
 #
 # La mitad que protege no se saca mientras el sistema se muestre por ngrok.
+# Cómo se presenta la implementación ante sus usuarios. Cada instancia pone el
+# suyo; «MIR» es cómo le decimos al módulo entre nosotros.
+MIR_INSTANCIA = os.getenv("MIR_INSTANCIA", "RUNAC")
+
 MIR_MOSTRAR_AVISO = True
 MIR_AVISO = "RUNAC · versión funcional · datos de prueba"

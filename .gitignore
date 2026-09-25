@@ -9,3 +9,13 @@ staticfiles/
 # donde también vive runac_v2. No va al repositorio.
 docker-compose.local.yml
 informes/
+
+# Front v2: dependencias y compilados. Se instalan dentro del contenedor.
+frontends/node_modules/
+frontends/**/node_modules/
+frontends/**/dist/
+
+# Configuración propia de una máquina: no va al repositorio.
+# Ver docs/INSTALAR.md, «Redes que inspeccionan el tráfico».
+certificados_locales/
+docker-compose.override.yml

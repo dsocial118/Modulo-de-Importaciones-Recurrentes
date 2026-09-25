@@ -65,7 +65,41 @@ services:
       DATABASE_USER: root
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-runac_local}
       TZ: America/Argentina/Buenos_Aires
+      # Adónde reenvía Django lo que llega a /v2/mir/.
+      FRONT_MIR_URL: http://front_mir:5173
+    healthcheck:
+      # /salud/ no toca la base: dice sólo si Django atiende.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/salud/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  # Front v2 (React). Se entra por Django, en http://localhost:8100/v2/mir/.
+  # El puerto propio es sólo para la recarga en caliente mientras se desarrolla.
+  front_mir:
+    build:
+      context: ./frontends
+      target: dev
+      args:
+        APP: mir
+    depends_on:
+      web:
+        condition: service_healthy
+    volumes:
+      - ./frontends:/frontends
+      # Las dependencias quedan en el contenedor: las de Linux no sirven en
+      # Windows, y al revés.
+      - front_node_modules:/frontends/node_modules
+    ports:
+      - "${PUERTO_FRONT:-5173}:5173"
+    environment:
+      VITE_HMR_PUERTO: ${PUERTO_FRONT:-5173}
+      # Docker Desktop en Windows no avisa los cambios de archivo al contenedor.
+      VITE_SONDEO: "1"
     restart: unless-stopped
 
 volumes:
   datos_mysql:
+  front_node_modules:
