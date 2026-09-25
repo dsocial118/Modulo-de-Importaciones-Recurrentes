@@ -18,11 +18,16 @@
 
 set -u
 
-MYSQL_CONT="${MIR_MYSQL:-runac_c1_mysql}"
-PASS="${MIR_MYSQL_PASS:-runac_local}"
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/_comun.sh"
 
-sql() { docker exec "$MYSQL_CONT" mysql -uroot -p"$PASS" --default-character-set=utf8mb4 -N -s -e "$1" 2>/dev/null; }
+MYSQL_CONT="$(contenedor_mysql)"
+if [ -z "$MYSQL_CONT" ] || ! sql "SELECT 1" >/dev/null; then
+    echo
+    echo "  No encuentro la base: ningún contenedor de MySQL responde."
+    echo "  ¿Está levantado?  docker compose ps"
+    echo
+    exit 1
+fi
 
 echo
 echo "  ══ QUÉ SIRVE CADA PUERTO ═══════════════════════════════════════════"
@@ -137,6 +142,24 @@ for base in $(sql "SELECT schema_name FROM information_schema.schemata WHERE sch
         AND NOT EXISTS (SELECT 1 FROM ${base}.mir_c1_catalogo_opcion o WHERE o.catalogo_id=cat.id AND o.activo=1);")
     [ -n "$vacias" ] && { echo "$vacias"; hubo=1; }
 done
+
+# La base del repositorio es una copia de la que se muestra. Si la de origen
+# cambió y la copia no, quien clona recibe una versión vieja y no hay cómo
+# darse cuenta: pasó el 25-09-2026. Sólo se puede comparar donde está la base
+# de origen, o sea en la máquina de trabajo.
+origen=$(dato_de_la_base_inicial origen)
+guardada=$(dato_de_la_base_inicial huella_capa1)
+if [ -z "$guardada" ]; then
+    echo "  entorno/base_inicial.sql no tiene huella: regenerarla con  bash entorno/exportar_base.sh"
+    hubo=1
+elif [ -n "$(sql "SHOW DATABASES LIKE '$origen';")" ]; then
+    actual=$(huella_capa1 "$origen")
+    if [ "$actual" != "$guardada" ]; then
+        echo "  entorno/base_inicial.sql quedó atrasada: la Capa 1 de $origen cambió desde que se exportó."
+        echo "      regenerarla con  bash entorno/exportar_base.sh  y commitearla"
+        hubo=1
+    fi
+fi
 
 [ "$hubo" = "0" ] && echo "  ninguno"
 echo

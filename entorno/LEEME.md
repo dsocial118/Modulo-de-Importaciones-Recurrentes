@@ -5,12 +5,14 @@ máquina donde el proyecto nunca estuvo.
 
 | Qué | Para qué |
 |---|---|
-| `base_inicial.sql` | **La definición, en el estado verificado.** Es lo que carga `preparar.sh`: los seis archivos, sus doce hojas de datos, sus 380 campos, sus catálogos y sus reglas, más el nomenclador territorial, las jurisdicciones, el período y los usuarios de prueba. Sin importaciones. Se tomó el 25-09-2026 de `runac_v2`, la base que se muestra. |
+| `base_inicial.sql` | **La definición, en el estado verificado.** Es lo que carga `preparar.sh`: los archivos, sus campos, sus catálogos y sus reglas, más el nomenclador territorial, las jurisdicciones, el período y los usuarios de prueba. Sin importaciones. **No se edita a mano**: la genera `exportar_base.sh`, y su encabezado dice de qué base salió, cuándo y qué contiene. |
+| `exportar_base.sh` | Regenera `base_inicial.sql` desde la base que se muestra (`runac_v2`). Se corre cada vez que esa base cambia, y se commitea junto con el cambio. |
+| `_comun.sh` | Lo que comparten `estado.sh` y `exportar_base.sh`. No se corre solo. |
 | `sql/` | Los guiones que llevaron la definición hasta ese estado. **No se cargan**: están para leer qué se corrigió y por qué, y para rehacerla desde los Excel originales. Cada uno lo explica en su encabezado. Llegan hasta el 19; los del 20 al 31 están en `analisis_datos\ModeloMySql\sql\`, fuera del repositorio. |
 | `mir-v2/archivos_de_prueba/` | Dos jurisdicciones por tres variantes —correctos, con advertencias, con errores— para la definición vigente. Datos inventados. |
 | `mir-v1/` | Lo mismo para la definición anterior. Se conserva para comparar. |
 | `preparar.sh` | El comando que arma todo, en orden. |
-| `estado.sh` | Muestra cómo está el sistema de verdad: qué base sirve cada puerto, cuántos campos y reglas tiene, y si hay desfasajes. |
+| `estado.sh` | Muestra cómo está el sistema de verdad: qué base sirve cada puerto, cuántos campos y reglas tiene, y si hay desfasajes, incluido que `base_inicial.sql` haya quedado atrasada. **Las cifras de la definición se consultan acá, no en los documentos.** |
 
 Las plantillas ya no se guardan en disco: el sistema las genera contra la base
 en el momento de descargarlas.

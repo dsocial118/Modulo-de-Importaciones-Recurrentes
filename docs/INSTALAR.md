@@ -23,11 +23,20 @@ La primera vez tarda unos minutos: descarga MySQL, construye la imagen de la
 aplicación y carga la definición. Al terminar avisa:
 
 ```
-campos a cargar en el período : 380   (esperado: 380)
+campos a cargar en el período : …   (esperado: …)
 acentos                       : Sí    (tiene que decir «Sí»)
 
 Listo.  http://localhost:8100
 ```
+
+Los dos números de «campos» tienen que coincidir. Después, para confirmar que
+quedó bien:
+
+```bash
+bash entorno/estado.sh
+```
+
+En «DESFASAJES» tiene que decir **«ninguno»**.
 
 De ahí en adelante, para levantarlo alcanza con `docker compose up -d`.
 
@@ -52,8 +61,8 @@ legajo van primero, porque las nóminas los referencian:
 DISP_PENAL · DISP_SCP · LEGAJO_NYA · MPI · MPE · MPJ_DAE
 ```
 
-Los seis tienen que quedar **VÁLIDA, con cero bloqueantes**. DISP_PENAL trae
-además 17 advertencias de rango, y es lo esperado. Después probá las otras dos
+Los seis tienen que quedar **VÁLIDA, con cero bloqueantes**. Alguno puede
+traer advertencias de rango —DISP_PENAL las trae—, y es lo esperado. Después probá las otras dos
 carpetas: `_con_advertencias` entra igual pero con avisos, `_con_errores` no
 entra.
 

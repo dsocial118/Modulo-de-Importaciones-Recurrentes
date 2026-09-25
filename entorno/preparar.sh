@@ -67,9 +67,9 @@ if [ "${YA//[$'\r\n ']/}" != "0" ]; then
   echo "   La base «$BASE» ya está armada. No se toca nada."
   echo "   Para rehacerla desde cero:  docker compose down -v  y volver a correr esto."
 else
-  # `base_inicial.sql` es el estado verificado de la definición: los seis
-  # archivos, sus doce hojas de datos, sus 380 campos, sus catálogos y sus
-  # reglas, con todas las correcciones aplicadas. Es lo que se carga.
+  # `base_inicial.sql` es el estado verificado de la definición, con todas las
+  # correcciones aplicadas. Es lo que se carga. Lo genera exportar_base.sh, y
+  # su encabezado dice de qué base salió y qué contiene.
   #
   # Los guiones de `entorno/sql/` NO se cargan acá: están para leer cómo se
   # llegó hasta este estado y por qué, y para rehacer la definición desde los
@@ -86,7 +86,10 @@ docker compose exec -T web python manage.py datos_iniciales
 
 echo
 echo "== 5. Comprobación =="
-docker compose exec -T web python - <<'PY'
+# Lo esperado se lee del encabezado de la base, no se escribe acá: una cifra
+# escrita a mano queda vieja apenas cambia la definición.
+ESPERADO=$(head -12 entorno/base_inicial.sql | sed -n 's/^-- campos: //p' | tr -d '\r')
+docker compose exec -T -e ESPERADO="${ESPERADO:-?}" web python - <<'PY'
 import django, os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
@@ -112,7 +115,7 @@ with connection.cursor() as cur:
     fila = cur.fetchone()
     acento = fila[0] if fila else "(no hay catálogo si_no)"
 
-print(f"   campos a cargar en el período : {campos}   (esperado: 380)")
+print(f"   campos a cargar en el período : {campos}   (esperado: {os.environ.get('ESPERADO', '?')})")
 print(f"   reglas enganchadas            : {reglas}")
 print(f"   acentos                       : {acento}   (tiene que decir «Sí»)")
 PY

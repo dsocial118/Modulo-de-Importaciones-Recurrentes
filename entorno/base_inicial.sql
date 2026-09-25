@@ -1,6 +1,9 @@
--- Base inicial del MIR, implementación RUNAC.
--- Generada desde runac_v2 (la base que se muestra) el 2026-09-25: definición vigente,
--- nomenclador territorial, jurisdicciones, período y usuarios de prueba. Sin importaciones.
+-- Base inicial del MIR, implementación RUNAC. La genera entorno/exportar_base.sh: no editar a mano.
+-- origen: runac_v2
+-- generada: 2026-09-25
+-- contenido: 6 archivos · 380 campos
+-- campos: 380
+-- huella_capa1: 7ae7d28b144bac27
 /*!50503 SET NAMES utf8mb4 */;
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `runac` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */;
 USE `runac`;
@@ -2183,7 +2186,7 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-25 14:29:28
+-- Dump completed on 2026-09-25 15:03:02
 -- MySQL dump 10.13  Distrib 8.4.11, for Linux (x86_64)
 --
 -- Host: localhost    Database: runac_v2
@@ -2500,4 +2503,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-25 14:29:30
+-- Dump completed on 2026-09-25 15:03:03
