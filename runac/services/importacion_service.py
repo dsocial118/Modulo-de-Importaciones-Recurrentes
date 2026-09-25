@@ -477,20 +477,9 @@ def procesar(
     return resultado
 
 
-def hallazgos_de(
-    importacion_id: int,
-    severidad: str | None = None,
-    hoja: str | None = None,
-    buscar: str | None = None,
-    limite: int = 500,
-):
-    # Las reglas incumplidas son de un archivo que SÍ fue admitido. Los problemas
-    # del archivo entero viven en mir_c2_errores_de_importacion.
-    sql = """
-        SELECT h.numero_fila, h.nombre_hoja, h.columna, h.nombre_campo, h.severidad,
-               h.codigo, h.valor_encontrado, h.descripcion, h.identificador_registro
-        FROM mir_c2_reglas_incumplidas h WHERE h.importacion_id = %s
-    """
+def _filtro_de_hallazgos(importacion_id, severidad, hoja, buscar):
+    """El WHERE de los hallazgos, compartido por la lista y por su cuenta."""
+    sql = " FROM mir_c2_reglas_incumplidas h WHERE h.importacion_id = %s"
     params: list = [importacion_id]
     if severidad:
         sql += " AND h.severidad = %s"
@@ -501,11 +490,108 @@ def hallazgos_de(
     if buscar:
         sql += " AND (h.descripcion LIKE %s OR h.nombre_campo LIKE %s)"
         params += [f"%{buscar}%", f"%{buscar}%"]
-    sql += " ORDER BY h.numero_fila, h.severidad DESC LIMIT %s"
-    params.append(limite)
+    return sql, params
+
+
+def hallazgos_de(
+    importacion_id: int,
+    severidad: str | None = None,
+    hoja: str | None = None,
+    buscar: str | None = None,
+    limite: int = 500,
+    desde: int = 0,
+):
+    # Las reglas incumplidas son de un archivo que SÍ fue admitido. Los problemas
+    # del archivo entero viven en mir_c2_errores_de_importacion.
+    filtro, params = _filtro_de_hallazgos(importacion_id, severidad, hoja, buscar)
+    sql = (
+        """SELECT h.numero_fila, h.nombre_hoja, h.columna, h.nombre_campo, h.severidad,
+               h.codigo, h.valor_encontrado, h.descripcion, h.identificador_registro"""
+        + filtro
+        + " ORDER BY h.numero_fila, h.severidad DESC LIMIT %s OFFSET %s"
+    )
     with connection.cursor() as cur:
-        cur.execute(sql, params)
+        cur.execute(sql, params + [limite, desde])
         return _fila_a_dict(cur)
+
+
+def contar_hallazgos(
+    importacion_id: int,
+    severidad: str | None = None,
+    hoja: str | None = None,
+    buscar: str | None = None,
+) -> int:
+    """Cuántos hallazgos hay con esos filtros: para paginar sin cortar en silencio."""
+    filtro, params = _filtro_de_hallazgos(importacion_id, severidad, hoja, buscar)
+    with connection.cursor() as cur:
+        cur.execute("SELECT COUNT(*)" + filtro, params)
+        return cur.fetchone()[0]
+
+
+def importacion(importacion_id: int) -> dict | None:
+    """Una importación con su archivo, su versión y su jurisdicción."""
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT i.*, a.codigo AS archivo_codigo, av.titulo AS archivo_titulo,
+                   av.numero AS version, j.nombre AS jurisdiccion, p.codigo AS periodo
+            FROM mir_c2_importacion i
+            LEFT JOIN mir_c1_archivo a ON a.id = i.archivo_id
+            LEFT JOIN mir_c1_archivo_version av ON av.id = i.archivo_version_id
+            LEFT JOIN mir_c2_presentacion s ON s.id = i.presentacion_id
+            LEFT JOIN mir_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
+            LEFT JOIN mir_c2_periodo p ON p.id = s.periodo_id
+            WHERE i.id = %s
+        """,
+            [importacion_id],
+        )
+        filas = _fila_a_dict(cur)
+    return filas[0] if filas else None
+
+
+def hojas_con_hallazgos(importacion_id: int) -> list[str]:
+    with connection.cursor() as cur:
+        cur.execute(
+            """SELECT DISTINCT nombre_hoja FROM mir_c2_reglas_incumplidas
+                       WHERE importacion_id = %s AND nombre_hoja IS NOT NULL""",
+            [importacion_id],
+        )
+        return [r[0] for r in cur.fetchall()]
+
+
+def errores_del_archivo(importacion_id: int, limite: int = 200) -> list[dict]:
+    """Los problemas del archivo entero: no tienen un campo al que señalar."""
+    with connection.cursor() as cur:
+        cur.execute(
+            """SELECT tipo, hoja, numero_fila, esperado, encontrado, descripcion
+                       FROM mir_c2_errores_de_importacion
+                       WHERE importacion_id = %s ORDER BY id LIMIT %s""",
+            [importacion_id, limite],
+        )
+        return _fila_a_dict(cur)
+
+
+def jurisdiccion_de_la_presentacion(presentacion_id: int) -> str | None:
+    """De quién es una presentación: es lo que decide quién puede tocarla."""
+    with connection.cursor() as cur:
+        cur.execute(
+            """SELECT j.nombre FROM mir_c2_presentacion s
+                 JOIN mir_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
+                WHERE s.id = %s""",
+            [presentacion_id],
+        )
+        fila = cur.fetchone()
+    return fila[0] if fila else None
+
+
+def presentacion_de_la_observacion(observacion_id: int) -> int | None:
+    with connection.cursor() as cur:
+        cur.execute(
+            "SELECT presentacion_id FROM mir_c2_observacion WHERE id = %s",
+            [observacion_id],
+        )
+        fila = cur.fetchone()
+    return fila[0] if fila else None
 
 
 def resumen_de_hallazgos(importacion_id: int):

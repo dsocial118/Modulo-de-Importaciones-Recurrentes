@@ -10,7 +10,6 @@ el operador.
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import connection
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.views import View
@@ -253,38 +252,10 @@ class DetalleView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
         hoja = self.request.GET.get("hoja") or None
         buscar = self.request.GET.get("buscar") or None
 
-        with connection.cursor() as cur:
-            cur.execute(
-                """
-                SELECT i.*, a.codigo AS archivo_codigo, av.titulo AS archivo_titulo,
-                       av.numero AS version
-                FROM mir_c2_importacion i
-                LEFT JOIN mir_c1_archivo a ON a.id = i.archivo_id
-                LEFT JOIN mir_c1_archivo_version av ON av.id = i.archivo_version_id
-                WHERE i.id = %s
-            """,
-                [importacion_id],
-            )
-            columnas = [c[0] for c in cur.description]
-            fila = cur.fetchone()
-            importacion = dict(zip(columnas, fila)) if fila else None
-
-            cur.execute(
-                """SELECT DISTINCT nombre_hoja FROM mir_c2_reglas_incumplidas
-                           WHERE importacion_id = %s AND nombre_hoja IS NOT NULL""",
-                [importacion_id],
-            )
-            hojas = [r[0] for r in cur.fetchall()]
-
-            # Los problemas del archivo entero van aparte de las reglas incumplidas.
-            cur.execute(
-                """SELECT tipo, hoja, numero_fila, esperado, encontrado, descripcion
-                           FROM mir_c2_errores_de_importacion
-                           WHERE importacion_id = %s ORDER BY id LIMIT 200""",
-                [importacion_id],
-            )
-            columnas = [c[0] for c in cur.description]
-            errores_archivo = [dict(zip(columnas, f)) for f in cur.fetchall()]
+        importacion = svc.importacion(importacion_id)
+        hojas = svc.hojas_con_hallazgos(importacion_id)
+        # Los problemas del archivo entero van aparte de las reglas incumplidas.
+        errores_archivo = svc.errores_del_archivo(importacion_id)
 
         hallazgos = svc.hallazgos_de(importacion_id, severidad, hoja, buscar)
         resumen = svc.resumen_de_hallazgos(importacion_id)

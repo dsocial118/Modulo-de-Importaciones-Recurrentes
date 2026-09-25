@@ -225,6 +225,29 @@ def ejecutar(presentacion_id: int, accion: str, usuario, listo: bool = True) -> 
 # ---------------------------------------------------------------------------
 
 
+def presentaciones_del_periodo(codigo_periodo: str) -> list[dict]:
+    """La bandeja del revisor: qué presentó cada jurisdicción en el período."""
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT s.id, s.estado, s.version, s.cerrada_el, s.habilitada_el,
+                   s.presentada_el, s.expediente, j.nombre AS jurisdiccion,
+                   (SELECT COUNT(*) FROM mir_c2_importacion i
+                     WHERE i.presentacion_id = s.id AND i.estado = 'VALIDA') AS importados,
+                   (SELECT COUNT(*) FROM mir_c2_observacion o
+                     WHERE o.presentacion_id = s.id AND o.estado = 'ABIERTA') AS observaciones
+            FROM mir_c2_presentacion s
+            JOIN mir_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
+            JOIN mir_c2_periodo p ON p.id = s.periodo_id
+            WHERE p.codigo = %s
+            ORDER BY j.nombre
+        """,
+            [codigo_periodo],
+        )
+        columnas = [c[0] for c in cur.description]
+        return [dict(zip(columnas, f)) for f in cur.fetchall()]
+
+
 def observaciones_de(presentacion_id: int, solo_abiertas: bool = False) -> list[dict]:
     sql = """
         SELECT o.*, a.codigo AS archivo_codigo

@@ -3,6 +3,231 @@ info:
   title: MIR — API del front v2
   version: 0.1.0
 paths:
+  /api/mir/carga/:
+    get:
+      operationId: mir_carga_retrieve
+      description: Los archivos del período, con su estado y lo que necesita cada
+        uno.
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carga'
+          description: ''
+  /api/mir/carga/{codigo}/:
+    post:
+      operationId: mir_carga_create
+      description: Sube UN archivo, declarado por quien carga.
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+        required: true
+      tags:
+      - mir
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                archivo:
+                  type: string
+                  format: binary
+                periodo:
+                  type: string
+                jurisdiccion:
+                  type: string
+              required:
+              - archivo
+              - periodo
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoDeImportar'
+          description: ''
+  /api/mir/importaciones/{importacion_id}/:
+    get:
+      operationId: mir_importaciones_retrieve
+      description: 'Lo que pasó con una importación: problemas del archivo y hallazgos.'
+      parameters:
+      - in: path
+        name: importacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detalle'
+          description: ''
+  /api/mir/importaciones/{importacion_id}/datos/:
+    get:
+      operationId: mir_importaciones_datos_retrieve
+      description: Los datos importados de una hoja, para revisar y corregir.
+      parameters:
+      - in: query
+        name: hoja
+        schema:
+          type: integer
+      - in: path
+        name: importacion_id
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: pagina
+        schema:
+          type: integer
+      - in: query
+        name: solo
+        schema:
+          type: string
+        description: '«avisos»: sólo las filas con advertencia'
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Datos'
+          description: ''
+    post:
+      operationId: mir_importaciones_datos_create
+      description: Los datos importados de una hoja, para revisar y corregir.
+      parameters:
+      - in: path
+        name: importacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Correccion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Correccion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Correccion'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorreccionHecha'
+          description: ''
+  /api/mir/importaciones/{importacion_id}/errores.xlsx:
+    get:
+      operationId: mir_importaciones_errores.xlsx_retrieve
+      description: Un Excel con los errores, una hoja por cada hoja del archivo.
+      parameters:
+      - in: path
+        name: importacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/mir/importaciones/{importacion_id}/hallazgos/:
+    get:
+      operationId: mir_importaciones_hallazgos_retrieve
+      description: Los hallazgos de una importación, filtrados y paginados.
+      parameters:
+      - in: query
+        name: buscar
+        schema:
+          type: string
+      - in: query
+        name: hoja
+        schema:
+          type: string
+      - in: path
+        name: importacion_id
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: severidad
+        schema:
+          type: string
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaDeHallazgos'
+          description: ''
+  /api/mir/importaciones/{importacion_id}/marcado.xlsx:
+    get:
+      operationId: mir_importaciones_marcado.xlsx_retrieve
+      description: El archivo que subió la jurisdicción, con las celdas marcadas.
+      parameters:
+      - in: path
+        name: importacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/mir/inicio/:
     get:
       operationId: mir_inicio_retrieve
@@ -17,6 +242,358 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Inicio'
+          description: ''
+  /api/mir/observaciones/{observacion_id}/respuesta/:
+    post:
+      operationId: mir_observaciones_respuesta_create
+      description: La jurisdicción responde una observación.
+      parameters:
+      - in: path
+        name: observacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Respuesta'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Respuesta'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Respuesta'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensaje'
+          description: ''
+  /api/mir/periodos/{codigo}/estado/:
+    post:
+      operationId: mir_periodos_estado_create
+      description: Abre, cierra o vuelve a preparar un período. Lo decide el nivel
+        nacional.
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+        required: true
+      tags:
+      - mir
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstadoDelPeriodo'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EstadoDelPeriodo'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EstadoDelPeriodo'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodoCambiado'
+          description: ''
+  /api/mir/plantillas/:
+    get:
+      operationId: mir_plantillas_retrieve
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plantillas'
+          description: ''
+  /api/mir/plantillas/{periodo}/{codigo}/:
+    get:
+      operationId: mir_plantilla_descargar
+      description: Una plantilla, generada en el momento contra la definición vigente.
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: periodo
+        schema:
+          type: string
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/mir/plantillas/{periodo}/todas/:
+    get:
+      operationId: mir_plantillas_todas_retrieve
+      description: Todas las plantillas del período en un solo zip.
+      parameters:
+      - in: path
+        name: periodo
+        schema:
+          type: string
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/mir/presentaciones/{presentacion_id}/acciones/{accion}/:
+    post:
+      operationId: mir_presentaciones_acciones_create
+      description: Ejecuta una transición del circuito sobre una presentación.
+      parameters:
+      - in: path
+        name: accion
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: presentacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccionHecha'
+          description: ''
+  /api/mir/presentaciones/{presentacion_id}/comprobante/:
+    get:
+      operationId: mir_presentaciones_comprobante_retrieve
+      description: 'El comprobante de presentación: constancia de la entrega.'
+      parameters:
+      - in: path
+        name: presentacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comprobante'
+          description: ''
+  /api/mir/presentaciones/{presentacion_id}/expediente/:
+    post:
+      operationId: mir_presentaciones_expediente_create
+      description: Registra el número GDE, después de remitir el comprobante.
+      parameters:
+      - in: path
+        name: presentacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Expediente'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Expediente'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Expediente'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensaje'
+          description: ''
+  /api/mir/presentaciones/{presentacion_id}/observaciones/:
+    post:
+      operationId: mir_presentaciones_observaciones_create
+      description: El revisor nacional formula una observación. No modifica el dato.
+      parameters:
+      - in: path
+        name: presentacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NuevaObservacion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NuevaObservacion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NuevaObservacion'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensaje'
+          description: ''
+  /api/mir/pruebas/armar-demo/:
+    post:
+      operationId: mir_pruebas_armar_demo_create
+      description: 'Herramienta de prueba: deja una presentación completa para mostrar.'
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensaje'
+          description: ''
+  /api/mir/pruebas/borrar-importaciones/:
+    post:
+      operationId: mir_pruebas_borrar_importaciones_create
+      description: 'Herramienta de prueba: deja el sistema sin ninguna importación.'
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensaje'
+          description: ''
+  /api/mir/reglas/:
+    get:
+      operationId: mir_reglas_retrieve
+      description: |-
+        Qué se espera en cada columna de una hoja, y —antes de abrir el período—
+        los cambios del administrador.
+      parameters:
+      - in: query
+        name: hoja
+        schema:
+          type: string
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reglas'
+          description: ''
+    post:
+      operationId: mir_reglas_create
+      description: |-
+        Qué se espera en cada columna de una hoja, y —antes de abrir el período—
+        los cambios del administrador.
+      tags:
+      - mir
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiosDeReglas'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CambiosDeReglas'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CambiosDeReglas'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReglasGuardadas'
+          description: ''
+  /api/mir/resultado/:
+    get:
+      operationId: mir_resultado_retrieve
+      description: 'El estado del período: qué entró, qué observó Nación y qué falta.'
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resultado'
+          description: ''
+  /api/mir/revision/:
+    get:
+      operationId: mir_revision_retrieve
+      description: 'Bandeja del revisor técnico nacional: qué presentó cada jurisdicción.'
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Revision'
           description: ''
   /api/mir/sesion/:
     get:
@@ -36,6 +613,88 @@ paths:
           description: ''
 components:
   schemas:
+    Accion:
+      type: object
+      properties:
+        accion:
+          type: string
+        etiqueta:
+          type: string
+        ayuda:
+          type: string
+      required:
+      - accion
+      - ayuda
+      - etiqueta
+    AccionHecha:
+      type: object
+      properties:
+        estado:
+          type: string
+        estado_legible:
+          type: string
+        mensaje:
+          type: string
+      required:
+      - estado
+      - estado_legible
+      - mensaje
+    ArchivoACargar:
+      type: object
+      properties:
+        codigo:
+          type: string
+        nombre:
+          type: string
+        obligatorio:
+          type: boolean
+        estado:
+          type: string
+        importada:
+          type: boolean
+        filas:
+          type: integer
+          nullable: true
+        necesita:
+          type: array
+          items:
+            type: string
+        bloqueado_por:
+          type: array
+          items:
+            type: string
+        nombre_sugerido:
+          type: string
+      required:
+      - bloqueado_por
+      - codigo
+      - estado
+      - filas
+      - importada
+      - necesita
+      - nombre
+      - nombre_sugerido
+      - obligatorio
+    ArchivoDelComprobante:
+      type: object
+      properties:
+        codigo:
+          type: string
+        nombre_archivo:
+          type: string
+          nullable: true
+        filas_incorporadas:
+          type: integer
+          nullable: true
+        iniciada_el:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - codigo
+      - filas_incorporadas
+      - iniciada_el
+      - nombre_archivo
     ArchivoDelPeriodo:
       type: object
       properties:
@@ -68,6 +727,32 @@ components:
       - nombre
       - obligatorio
       - reglas
+    ArchivoDelResultado:
+      type: object
+      properties:
+        codigo:
+          type: string
+        nombre:
+          type: string
+        estado:
+          type: string
+        importada:
+          type: boolean
+        importacion:
+          allOf:
+          - $ref: '#/components/schemas/ImportacionBreve'
+          nullable: true
+        resumen:
+          type: array
+          items:
+            $ref: '#/components/schemas/HallazgoResumido'
+      required:
+      - codigo
+      - estado
+      - importacion
+      - importada
+      - nombre
+      - resumen
     Avance:
       type: object
       properties:
@@ -78,6 +763,622 @@ components:
       required:
       - cargados
       - total
+    AvisoDeFila:
+      type: object
+      properties:
+        nombre_campo:
+          type: string
+          nullable: true
+        severidad:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+      required:
+      - descripcion
+      - nombre_campo
+      - severidad
+    Cambio:
+      type: object
+      properties:
+        numero_fila:
+          type: integer
+          nullable: true
+        documento:
+          type: string
+        campo:
+          type: string
+          nullable: true
+        valor_anterior:
+          type: string
+          nullable: true
+        valor_nuevo:
+          type: string
+          nullable: true
+        motivo:
+          type: string
+          nullable: true
+        usuario:
+          type: string
+          nullable: true
+        fecha:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - campo
+      - documento
+      - fecha
+      - motivo
+      - numero_fila
+      - usuario
+      - valor_anterior
+      - valor_nuevo
+    CambioDeCampo:
+      type: object
+      properties:
+        campo_id:
+          type: integer
+        obligatorio:
+          type: boolean
+        advierte:
+          type: array
+          items:
+            type: string
+          maxItems: 2
+          minItems: 2
+        bloquea:
+          type: array
+          items:
+            type: string
+          maxItems: 2
+          minItems: 2
+      required:
+      - campo_id
+    CambiosDeReglas:
+      type: object
+      properties:
+        cambios:
+          type: array
+          items:
+            $ref: '#/components/schemas/CambioDeCampo'
+        severidades:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeveridadNueva'
+    CampoDeReglas:
+      type: object
+      properties:
+        id:
+          type: integer
+        letra:
+          type: string
+        titulo:
+          type: string
+        nombre:
+          type: string
+        ayuda:
+          type: string
+        obligatorio:
+          type: boolean
+        condicionado:
+          type: boolean
+        numerico:
+          type: boolean
+        valores:
+          $ref: '#/components/schemas/ValoresAdmitidos'
+        rangos:
+          $ref: '#/components/schemas/Rangos'
+        otras:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condicion'
+      required:
+      - ayuda
+      - condicionado
+      - id
+      - letra
+      - nombre
+      - numerico
+      - obligatorio
+      - otras
+      - rangos
+      - titulo
+      - valores
+    Carga:
+      type: object
+      properties:
+        periodos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Periodo'
+        periodo:
+          allOf:
+          - $ref: '#/components/schemas/Periodo'
+          nullable: true
+        jurisdiccion:
+          type: string
+          nullable: true
+        jurisdicciones:
+          type: array
+          items:
+            type: string
+        estado_legible:
+          type: string
+        carga_abierta:
+          type: boolean
+        puede_cargar:
+          type: boolean
+        listo:
+          type: boolean
+        archivos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArchivoACargar'
+      required:
+      - archivos
+      - carga_abierta
+      - estado_legible
+      - jurisdiccion
+      - jurisdicciones
+      - listo
+      - periodo
+      - periodos
+      - puede_cargar
+    Celda:
+      type: object
+      properties:
+        nombre:
+          type: string
+        titulo:
+          type: string
+        obligatorio:
+          type: boolean
+        tipo_dato:
+          type: string
+          nullable: true
+        valor:
+          type: string
+        opciones:
+          type: array
+          items:
+            type: string
+        tiene_aviso:
+          type: boolean
+      required:
+      - nombre
+      - obligatorio
+      - opciones
+      - tiene_aviso
+      - tipo_dato
+      - titulo
+      - valor
+    Comprobante:
+      type: object
+      properties:
+        id:
+          type: integer
+        version:
+          type: integer
+          nullable: true
+        estado:
+          type: string
+        presentada_el:
+          type: string
+          format: date-time
+          nullable: true
+        usuario_presenta:
+          type: string
+          nullable: true
+        expediente:
+          type: string
+          nullable: true
+        jurisdiccion:
+          type: string
+        periodo:
+          type: string
+        fecha_desde:
+          type: string
+          format: date
+        fecha_hasta:
+          type: string
+          format: date
+        archivos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArchivoDelComprobante'
+      required:
+      - archivos
+      - estado
+      - expediente
+      - fecha_desde
+      - fecha_hasta
+      - id
+      - jurisdiccion
+      - periodo
+      - presentada_el
+      - usuario_presenta
+      - version
+    Condicion:
+      type: object
+      properties:
+        aplicacion_id:
+          type: integer
+        severidad:
+          type: string
+        texto:
+          type: string
+      required:
+      - aplicacion_id
+      - severidad
+      - texto
+    ContextoDeEdicion:
+      type: object
+      properties:
+        id:
+          type: integer
+        archivo_codigo:
+          type: string
+        jurisdiccion:
+          type: string
+        periodo:
+          type: string
+        version:
+          type: integer
+        estado_presentacion:
+          type: string
+        estado_legible:
+          type: string
+        editable:
+          type: boolean
+      required:
+      - archivo_codigo
+      - editable
+      - estado_legible
+      - estado_presentacion
+      - id
+      - jurisdiccion
+      - periodo
+      - version
+    Correccion:
+      type: object
+      description: Lo que se manda para corregir un dato.
+      properties:
+        hoja_id:
+          type: integer
+        numero_fila:
+          type: integer
+        campo:
+          type: string
+        valor:
+          type: string
+        motivo:
+          type: string
+          default: ''
+      required:
+      - campo
+      - hoja_id
+      - numero_fila
+      - valor
+    CorreccionHecha:
+      type: object
+      properties:
+        sin_cambios:
+          type: boolean
+        valor:
+          type: string
+        advertencias:
+          type: integer
+        observaciones:
+          type: array
+          items:
+            type: string
+      required:
+      - advertencias
+      - observaciones
+      - sin_cambios
+      - valor
+    Datos:
+      type: object
+      properties:
+        contexto:
+          $ref: '#/components/schemas/ContextoDeEdicion'
+        hojas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hoja'
+        hoja:
+          $ref: '#/components/schemas/Hoja'
+        puede_editar:
+          type: boolean
+        total:
+          type: integer
+        pagina:
+          type: integer
+        paginas:
+          type: integer
+        con_advertencia:
+          type: integer
+        filas:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilaDeDatos'
+        historial:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cambio'
+      required:
+      - con_advertencia
+      - contexto
+      - filas
+      - historial
+      - hoja
+      - hojas
+      - pagina
+      - paginas
+      - puede_editar
+      - total
+    Descargas:
+      type: object
+      properties:
+        errores:
+          type: string
+        marcado:
+          type: string
+      required:
+      - errores
+      - marcado
+    Detalle:
+      type: object
+      properties:
+        importacion:
+          $ref: '#/components/schemas/Importacion'
+        hojas:
+          type: array
+          items:
+            type: string
+        errores_archivo:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDelArchivo'
+        resumen:
+          type: array
+          items:
+            $ref: '#/components/schemas/HallazgoResumido'
+        severidad_unica:
+          type: string
+          nullable: true
+        puede_editar:
+          type: boolean
+        descargas:
+          $ref: '#/components/schemas/Descargas'
+      required:
+      - descargas
+      - errores_archivo
+      - hojas
+      - importacion
+      - puede_editar
+      - resumen
+      - severidad_unica
+    ErrorDelArchivo:
+      type: object
+      properties:
+        tipo:
+          type: string
+        hoja:
+          type: string
+          nullable: true
+        numero_fila:
+          type: integer
+          nullable: true
+        esperado:
+          type: string
+          nullable: true
+        encontrado:
+          type: string
+          nullable: true
+        descripcion:
+          type: string
+          nullable: true
+      required:
+      - descripcion
+      - encontrado
+      - esperado
+      - hoja
+      - numero_fila
+      - tipo
+    EstadoDelPeriodo:
+      type: object
+      description: Lo que se pide para abrir, cerrar o volver a preparar un período.
+      properties:
+        estado:
+          $ref: '#/components/schemas/EstadoEnum'
+      required:
+      - estado
+    EstadoEnum:
+      enum:
+      - PREPARACION
+      - ABIERTO
+      - CERRADO
+      type: string
+      description: |-
+        * `PREPARACION` - PREPARACION
+        * `ABIERTO` - ABIERTO
+        * `CERRADO` - CERRADO
+    Expediente:
+      type: object
+      properties:
+        expediente:
+          type: string
+          maxLength: 100
+      required:
+      - expediente
+    FilaDeDatos:
+      type: object
+      properties:
+        numero_fila:
+          type: integer
+        estado:
+          type: string
+          nullable: true
+        avisos:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvisoDeFila'
+        celdas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Celda'
+      required:
+      - avisos
+      - celdas
+      - estado
+      - numero_fila
+    Hallazgo:
+      type: object
+      properties:
+        numero_fila:
+          type: integer
+          nullable: true
+        nombre_hoja:
+          type: string
+          nullable: true
+        columna:
+          type: string
+          nullable: true
+        nombre_campo:
+          type: string
+          nullable: true
+        severidad:
+          type: string
+        codigo:
+          type: string
+        valor_encontrado:
+          type: string
+          nullable: true
+        descripcion:
+          type: string
+          nullable: true
+        identificador_registro:
+          type: string
+          nullable: true
+      required:
+      - codigo
+      - columna
+      - descripcion
+      - identificador_registro
+      - nombre_campo
+      - nombre_hoja
+      - numero_fila
+      - severidad
+      - valor_encontrado
+    HallazgoResumido:
+      type: object
+      properties:
+        codigo:
+          type: string
+        severidad:
+          type: string
+        casos:
+          type: integer
+        ejemplo:
+          type: string
+          nullable: true
+      required:
+      - casos
+      - codigo
+      - ejemplo
+      - severidad
+    Hoja:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+      required:
+      - id
+      - nombre
+    HojaDeReglas:
+      type: object
+      properties:
+        clave:
+          type: string
+        etiqueta:
+          type: string
+      required:
+      - clave
+      - etiqueta
+    Importacion:
+      type: object
+      properties:
+        id:
+          type: integer
+        archivo_codigo:
+          type: string
+          nullable: true
+        nombre_archivo:
+          type: string
+          nullable: true
+        estado:
+          type: string
+        filas_leidas:
+          type: integer
+          nullable: true
+        filas_incorporadas:
+          type: integer
+          nullable: true
+        bloqueantes:
+          type: integer
+          nullable: true
+        advertencias:
+          type: integer
+          nullable: true
+        duracion_ms:
+          type: integer
+          nullable: true
+        jurisdiccion:
+          type: string
+          nullable: true
+        periodo:
+          type: string
+          nullable: true
+      required:
+      - advertencias
+      - archivo_codigo
+      - bloqueantes
+      - duracion_ms
+      - estado
+      - filas_incorporadas
+      - filas_leidas
+      - id
+      - jurisdiccion
+      - nombre_archivo
+      - periodo
+    ImportacionBreve:
+      type: object
+      properties:
+        id:
+          type: integer
+        estado:
+          type: string
+        filas_leidas:
+          type: integer
+          nullable: true
+        filas_incorporadas:
+          type: integer
+          nullable: true
+        bloqueantes:
+          type: integer
+        advertencias:
+          type: integer
+      required:
+      - advertencias
+      - bloqueantes
+      - estado
+      - filas_incorporadas
+      - filas_leidas
+      - id
     Inicio:
       type: object
       properties:
@@ -114,6 +1415,101 @@ components:
       - periodo
       - periodos
       - presentacion
+    Mensaje:
+      type: object
+      description: 'Lo que devuelve una acción: qué pasó, dicho para una persona.'
+      properties:
+        mensaje:
+          type: string
+      required:
+      - mensaje
+    NuevaObservacion:
+      type: object
+      properties:
+        texto:
+          type: string
+        importacion_id:
+          type: integer
+          nullable: true
+        numero_fila:
+          type: integer
+          nullable: true
+      required:
+      - texto
+    Observacion:
+      type: object
+      properties:
+        id:
+          type: integer
+        estado:
+          type: string
+        texto:
+          type: string
+        usuario_observa:
+          type: string
+          nullable: true
+        creada_el:
+          type: string
+          format: date-time
+          nullable: true
+        archivo_codigo:
+          type: string
+          nullable: true
+        numero_fila:
+          type: integer
+          nullable: true
+        respuesta:
+          type: string
+          nullable: true
+        usuario_responde:
+          type: string
+          nullable: true
+        respondida_el:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - archivo_codigo
+      - creada_el
+      - estado
+      - id
+      - numero_fila
+      - respondida_el
+      - respuesta
+      - texto
+      - usuario_observa
+      - usuario_responde
+    PaginaDeHallazgos:
+      type: object
+      description: Una página de hallazgos, con la forma estándar de DRF.
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hallazgo'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    Paso:
+      type: object
+      properties:
+        nombre:
+          type: string
+        actual:
+          type: boolean
+      required:
+      - actual
+      - nombre
     Periodo:
       type: object
       properties:
@@ -132,6 +1528,19 @@ components:
       - estado
       - fecha_desde
       - fecha_hasta
+    PeriodoCambiado:
+      type: object
+      properties:
+        estado:
+          type: string
+        mensaje:
+          type: string
+        aviso:
+          type: string
+      required:
+      - aviso
+      - estado
+      - mensaje
     Permisos:
       type: object
       properties:
@@ -151,6 +1560,50 @@ components:
       - editar_datos
       - presentar
       - revisar
+    Plantilla:
+      type: object
+      properties:
+        codigo:
+          type: string
+        nombre:
+          type: string
+        hojas:
+          type: integer
+        campos:
+          type: integer
+        obligatorio:
+          type: boolean
+        descarga:
+          type: string
+      required:
+      - campos
+      - codigo
+      - descarga
+      - hojas
+      - nombre
+      - obligatorio
+    Plantillas:
+      type: object
+      properties:
+        periodos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Periodo'
+        periodo:
+          allOf:
+          - $ref: '#/components/schemas/Periodo'
+          nullable: true
+        archivos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plantilla'
+        descarga_todas:
+          type: string
+      required:
+      - archivos
+      - descarga_todas
+      - periodo
+      - periodos
     Presentacion:
       type: object
       properties:
@@ -164,6 +1617,252 @@ components:
       - estado
       - estado_legible
       - id
+    PresentacionDelResultado:
+      type: object
+      properties:
+        id:
+          type: integer
+        estado:
+          type: string
+        estado_legible:
+          type: string
+        estado_ayuda:
+          type: string
+        version:
+          type: integer
+          nullable: true
+        expediente:
+          type: string
+          nullable: true
+      required:
+      - estado
+      - estado_ayuda
+      - estado_legible
+      - expediente
+      - id
+      - version
+    PresentacionEnRevision:
+      type: object
+      properties:
+        id:
+          type: integer
+        jurisdiccion:
+          type: string
+        estado:
+          type: string
+        estado_legible:
+          type: string
+        version:
+          type: integer
+          nullable: true
+        importados:
+          type: integer
+        observaciones:
+          type: integer
+        cerrada_el:
+          type: string
+          format: date-time
+          nullable: true
+        expediente:
+          type: string
+          nullable: true
+        acciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Accion'
+        puede_observar:
+          type: boolean
+      required:
+      - acciones
+      - cerrada_el
+      - estado
+      - estado_legible
+      - expediente
+      - id
+      - importados
+      - jurisdiccion
+      - observaciones
+      - puede_observar
+      - version
+    Rangos:
+      type: object
+      properties:
+        avisa:
+          allOf:
+          - $ref: '#/components/schemas/Techo'
+          nullable: true
+        frena:
+          allOf:
+          - $ref: '#/components/schemas/Techo'
+          nullable: true
+      required:
+      - avisa
+      - frena
+    Reglas:
+      type: object
+      properties:
+        hojas:
+          type: array
+          items:
+            $ref: '#/components/schemas/HojaDeReglas'
+        hoja:
+          type: string
+        ver_tecnico:
+          type: boolean
+        puede_editar:
+          type: boolean
+        periodo_abierto:
+          type: string
+          nullable: true
+        campos:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampoDeReglas'
+      required:
+      - campos
+      - hoja
+      - hojas
+      - periodo_abierto
+      - puede_editar
+      - ver_tecnico
+    ReglasGuardadas:
+      type: object
+      properties:
+        mensaje:
+          type: string
+        detalle:
+          type: array
+          items:
+            type: string
+        errores:
+          type: array
+          items:
+            type: string
+      required:
+      - detalle
+      - errores
+      - mensaje
+    Respuesta:
+      type: object
+      properties:
+        respuesta:
+          type: string
+      required:
+      - respuesta
+    Resultado:
+      type: object
+      properties:
+        periodos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Periodo'
+        periodo:
+          allOf:
+          - $ref: '#/components/schemas/Periodo'
+          nullable: true
+        jurisdiccion:
+          type: string
+          nullable: true
+        jurisdicciones:
+          type: array
+          items:
+            type: string
+        presentacion:
+          allOf:
+          - $ref: '#/components/schemas/PresentacionDelResultado'
+          nullable: true
+        pasos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Paso'
+        archivos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArchivoDelResultado'
+        totales:
+          $ref: '#/components/schemas/Totales'
+        acciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Accion'
+        observaciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Observacion'
+        puede_responder:
+          type: boolean
+        puede_presentar:
+          type: boolean
+        puede_editar:
+          type: boolean
+        listo:
+          type: boolean
+      required:
+      - acciones
+      - archivos
+      - jurisdiccion
+      - jurisdicciones
+      - listo
+      - observaciones
+      - pasos
+      - periodo
+      - periodos
+      - presentacion
+      - puede_editar
+      - puede_presentar
+      - puede_responder
+      - totales
+    ResultadoDeImportar:
+      type: object
+      description: Cómo le fue a un archivo recién subido.
+      properties:
+        rechazado:
+          type: boolean
+        mensaje:
+          type: string
+        importacion_id:
+          type: integer
+          nullable: true
+        estado:
+          type: string
+          nullable: true
+        filas:
+          type: integer
+          nullable: true
+        bloqueantes:
+          type: integer
+        advertencias:
+          type: integer
+      required:
+      - advertencias
+      - bloqueantes
+      - estado
+      - filas
+      - importacion_id
+      - mensaje
+      - rechazado
+    Revision:
+      type: object
+      properties:
+        periodos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Periodo'
+        periodo:
+          allOf:
+          - $ref: '#/components/schemas/Periodo'
+          nullable: true
+        es_revisor:
+          type: boolean
+        presentaciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/PresentacionEnRevision'
+      required:
+      - es_revisor
+      - periodo
+      - periodos
+      - presentaciones
     Seccion:
       type: object
       properties:
@@ -224,6 +1923,72 @@ components:
       - rol
       - salir
       - usuario
+    SeveridadEnum:
+      enum:
+      - ADVERTENCIA
+      - BLOQUEANTE
+      type: string
+      description: |-
+        * `ADVERTENCIA` - ADVERTENCIA
+        * `BLOQUEANTE` - BLOQUEANTE
+    SeveridadNueva:
+      type: object
+      properties:
+        aplicacion_id:
+          type: integer
+        severidad:
+          $ref: '#/components/schemas/SeveridadEnum'
+      required:
+      - aplicacion_id
+      - severidad
+    Techo:
+      type: object
+      description: 'Un rango: desde dónde y hasta dónde, escrito como se lee en castellano.'
+      properties:
+        minimo:
+          type: string
+        maximo:
+          type: string
+        texto:
+          type: string
+        compartida:
+          type: boolean
+      required:
+      - compartida
+      - maximo
+      - minimo
+      - texto
+    Totales:
+      type: object
+      properties:
+        filas:
+          type: integer
+        validas:
+          type: integer
+        bloqueantes:
+          type: integer
+        advertencias:
+          type: integer
+      required:
+      - advertencias
+      - bloqueantes
+      - filas
+      - validas
+    ValoresAdmitidos:
+      type: object
+      properties:
+        texto:
+          type: string
+        detalle:
+          type: string
+        opciones:
+          type: array
+          items:
+            type: string
+      required:
+      - detalle
+      - opciones
+      - texto
   securitySchemes:
     cookieAuth:
       type: apiKey

@@ -4,6 +4,126 @@
  */
 
 export interface paths {
+    "/api/mir/carga/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Los archivos del período, con su estado y lo que necesita cada uno. */
+        get: operations["mir_carga_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/carga/{codigo}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Sube UN archivo, declarado por quien carga. */
+        post: operations["mir_carga_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/importaciones/{importacion_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Lo que pasó con una importación: problemas del archivo y hallazgos. */
+        get: operations["mir_importaciones_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/importaciones/{importacion_id}/datos/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Los datos importados de una hoja, para revisar y corregir. */
+        get: operations["mir_importaciones_datos_retrieve"];
+        put?: never;
+        /** @description Los datos importados de una hoja, para revisar y corregir. */
+        post: operations["mir_importaciones_datos_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/importaciones/{importacion_id}/errores.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Un Excel con los errores, una hoja por cada hoja del archivo. */
+        get: operations["mir_importaciones_errores.xlsx_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/importaciones/{importacion_id}/hallazgos/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Los hallazgos de una importación, filtrados y paginados. */
+        get: operations["mir_importaciones_hallazgos_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/importaciones/{importacion_id}/marcado.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description El archivo que subió la jurisdicción, con las celdas marcadas. */
+        get: operations["mir_importaciones_marcado.xlsx_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mir/inicio/": {
         parameters: {
             query?: never;
@@ -13,6 +133,250 @@ export interface paths {
         };
         /** @description El período, y cómo viene la presentación de la jurisdicción. */
         get: operations["mir_inicio_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/observaciones/{observacion_id}/respuesta/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description La jurisdicción responde una observación. */
+        post: operations["mir_observaciones_respuesta_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/periodos/{codigo}/estado/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Abre, cierra o vuelve a preparar un período. Lo decide el nivel nacional. */
+        post: operations["mir_periodos_estado_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/plantillas/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["mir_plantillas_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/plantillas/{periodo}/{codigo}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Una plantilla, generada en el momento contra la definición vigente. */
+        get: operations["mir_plantilla_descargar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/plantillas/{periodo}/todas/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Todas las plantillas del período en un solo zip. */
+        get: operations["mir_plantillas_todas_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/presentaciones/{presentacion_id}/acciones/{accion}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Ejecuta una transición del circuito sobre una presentación. */
+        post: operations["mir_presentaciones_acciones_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/presentaciones/{presentacion_id}/comprobante/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description El comprobante de presentación: constancia de la entrega. */
+        get: operations["mir_presentaciones_comprobante_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/presentaciones/{presentacion_id}/expediente/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Registra el número GDE, después de remitir el comprobante. */
+        post: operations["mir_presentaciones_expediente_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/presentaciones/{presentacion_id}/observaciones/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description El revisor nacional formula una observación. No modifica el dato. */
+        post: operations["mir_presentaciones_observaciones_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/pruebas/armar-demo/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Herramienta de prueba: deja una presentación completa para mostrar. */
+        post: operations["mir_pruebas_armar_demo_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/pruebas/borrar-importaciones/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Herramienta de prueba: deja el sistema sin ninguna importación. */
+        post: operations["mir_pruebas_borrar_importaciones_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/reglas/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Qué se espera en cada columna de una hoja, y —antes de abrir el período—
+         *     los cambios del administrador.
+         */
+        get: operations["mir_reglas_retrieve"];
+        put?: never;
+        /**
+         * @description Qué se espera en cada columna de una hoja, y —antes de abrir el período—
+         *     los cambios del administrador.
+         */
+        post: operations["mir_reglas_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/resultado/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description El estado del período: qué entró, qué observó Nación y qué falta. */
+        get: operations["mir_resultado_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/revision/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Bandeja del revisor técnico nacional: qué presentó cada jurisdicción. */
+        get: operations["mir_revision_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -42,6 +406,34 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Accion: {
+            accion: string;
+            etiqueta: string;
+            ayuda: string;
+        };
+        AccionHecha: {
+            estado: string;
+            estado_legible: string;
+            mensaje: string;
+        };
+        ArchivoACargar: {
+            codigo: string;
+            nombre: string;
+            obligatorio: boolean;
+            estado: string;
+            importada: boolean;
+            filas: number | null;
+            necesita: string[];
+            bloqueado_por: string[];
+            nombre_sugerido: string;
+        };
+        ArchivoDelComprobante: {
+            codigo: string;
+            nombre_archivo: string | null;
+            filas_incorporadas: number | null;
+            /** Format: date-time */
+            iniciada_el: string | null;
+        };
         ArchivoDelPeriodo: {
             codigo: string;
             nombre: string;
@@ -53,9 +445,221 @@ export interface components {
             bloqueantes: number;
             advertencias: number;
         };
+        ArchivoDelResultado: {
+            codigo: string;
+            nombre: string;
+            estado: string;
+            importada: boolean;
+            importacion: components["schemas"]["ImportacionBreve"] | null;
+            resumen: components["schemas"]["HallazgoResumido"][];
+        };
         Avance: {
             cargados: number;
             total: number;
+        };
+        AvisoDeFila: {
+            nombre_campo: string | null;
+            severidad: string;
+            descripcion: string | null;
+        };
+        Cambio: {
+            numero_fila: number | null;
+            documento: string;
+            campo: string | null;
+            valor_anterior: string | null;
+            valor_nuevo: string | null;
+            motivo: string | null;
+            usuario: string | null;
+            /** Format: date-time */
+            fecha: string | null;
+        };
+        CambioDeCampo: {
+            campo_id: number;
+            obligatorio?: boolean;
+            advierte?: string[];
+            bloquea?: string[];
+        };
+        CambiosDeReglas: {
+            cambios?: components["schemas"]["CambioDeCampo"][];
+            severidades?: components["schemas"]["SeveridadNueva"][];
+        };
+        CampoDeReglas: {
+            id: number;
+            letra: string;
+            titulo: string;
+            nombre: string;
+            ayuda: string;
+            obligatorio: boolean;
+            condicionado: boolean;
+            numerico: boolean;
+            valores: components["schemas"]["ValoresAdmitidos"];
+            rangos: components["schemas"]["Rangos"];
+            otras: components["schemas"]["Condicion"][];
+        };
+        Carga: {
+            periodos: components["schemas"]["Periodo"][];
+            periodo: components["schemas"]["Periodo"] | null;
+            jurisdiccion: string | null;
+            jurisdicciones: string[];
+            estado_legible: string;
+            carga_abierta: boolean;
+            puede_cargar: boolean;
+            listo: boolean;
+            archivos: components["schemas"]["ArchivoACargar"][];
+        };
+        Celda: {
+            nombre: string;
+            titulo: string;
+            obligatorio: boolean;
+            tipo_dato: string | null;
+            valor: string;
+            opciones: string[];
+            tiene_aviso: boolean;
+        };
+        Comprobante: {
+            id: number;
+            version: number | null;
+            estado: string;
+            /** Format: date-time */
+            presentada_el: string | null;
+            usuario_presenta: string | null;
+            expediente: string | null;
+            jurisdiccion: string;
+            periodo: string;
+            /** Format: date */
+            fecha_desde: string;
+            /** Format: date */
+            fecha_hasta: string;
+            archivos: components["schemas"]["ArchivoDelComprobante"][];
+        };
+        Condicion: {
+            aplicacion_id: number;
+            severidad: string;
+            texto: string;
+        };
+        ContextoDeEdicion: {
+            id: number;
+            archivo_codigo: string;
+            jurisdiccion: string;
+            periodo: string;
+            version: number;
+            estado_presentacion: string;
+            estado_legible: string;
+            editable: boolean;
+        };
+        /** @description Lo que se manda para corregir un dato. */
+        Correccion: {
+            hoja_id: number;
+            numero_fila: number;
+            campo: string;
+            valor: string;
+            /** @default  */
+            motivo: string;
+        };
+        CorreccionHecha: {
+            sin_cambios: boolean;
+            valor: string;
+            advertencias: number;
+            observaciones: string[];
+        };
+        Datos: {
+            contexto: components["schemas"]["ContextoDeEdicion"];
+            hojas: components["schemas"]["Hoja"][];
+            hoja: components["schemas"]["Hoja"];
+            puede_editar: boolean;
+            total: number;
+            pagina: number;
+            paginas: number;
+            con_advertencia: number;
+            filas: components["schemas"]["FilaDeDatos"][];
+            historial: components["schemas"]["Cambio"][];
+        };
+        Descargas: {
+            errores: string;
+            marcado: string;
+        };
+        Detalle: {
+            importacion: components["schemas"]["Importacion"];
+            hojas: string[];
+            errores_archivo: components["schemas"]["ErrorDelArchivo"][];
+            resumen: components["schemas"]["HallazgoResumido"][];
+            severidad_unica: string | null;
+            puede_editar: boolean;
+            descargas: components["schemas"]["Descargas"];
+        };
+        ErrorDelArchivo: {
+            tipo: string;
+            hoja: string | null;
+            numero_fila: number | null;
+            esperado: string | null;
+            encontrado: string | null;
+            descripcion: string | null;
+        };
+        /** @description Lo que se pide para abrir, cerrar o volver a preparar un período. */
+        EstadoDelPeriodo: {
+            estado: components["schemas"]["EstadoEnum"];
+        };
+        /**
+         * @description * `PREPARACION` - PREPARACION
+         *     * `ABIERTO` - ABIERTO
+         *     * `CERRADO` - CERRADO
+         * @enum {string}
+         */
+        EstadoEnum: "PREPARACION" | "ABIERTO" | "CERRADO";
+        Expediente: {
+            expediente: string;
+        };
+        FilaDeDatos: {
+            numero_fila: number;
+            estado: string | null;
+            avisos: components["schemas"]["AvisoDeFila"][];
+            celdas: components["schemas"]["Celda"][];
+        };
+        Hallazgo: {
+            numero_fila: number | null;
+            nombre_hoja: string | null;
+            columna: string | null;
+            nombre_campo: string | null;
+            severidad: string;
+            codigo: string;
+            valor_encontrado: string | null;
+            descripcion: string | null;
+            identificador_registro: string | null;
+        };
+        HallazgoResumido: {
+            codigo: string;
+            severidad: string;
+            casos: number;
+            ejemplo: string | null;
+        };
+        Hoja: {
+            id: number;
+            nombre: string;
+        };
+        HojaDeReglas: {
+            clave: string;
+            etiqueta: string;
+        };
+        Importacion: {
+            id: number;
+            archivo_codigo: string | null;
+            nombre_archivo: string | null;
+            estado: string;
+            filas_leidas: number | null;
+            filas_incorporadas: number | null;
+            bloqueantes: number | null;
+            advertencias: number | null;
+            duracion_ms: number | null;
+            jurisdiccion: string | null;
+            periodo: string | null;
+        };
+        ImportacionBreve: {
+            id: number;
+            estado: string;
+            filas_leidas: number | null;
+            filas_incorporadas: number | null;
+            bloqueantes: number;
+            advertencias: number;
         };
         Inicio: {
             periodos: components["schemas"]["Periodo"][];
@@ -66,6 +670,40 @@ export interface components {
             archivos: components["schemas"]["ArchivoDelPeriodo"][];
             avance: components["schemas"]["Avance"];
         };
+        /** @description Lo que devuelve una acción: qué pasó, dicho para una persona. */
+        Mensaje: {
+            mensaje: string;
+        };
+        NuevaObservacion: {
+            texto: string;
+            importacion_id?: number | null;
+            numero_fila?: number | null;
+        };
+        Observacion: {
+            id: number;
+            estado: string;
+            texto: string;
+            usuario_observa: string | null;
+            /** Format: date-time */
+            creada_el: string | null;
+            archivo_codigo: string | null;
+            numero_fila: number | null;
+            respuesta: string | null;
+            usuario_responde: string | null;
+            /** Format: date-time */
+            respondida_el: string | null;
+        };
+        /** @description Una página de hallazgos, con la forma estándar de DRF. */
+        PaginaDeHallazgos: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["Hallazgo"][];
+        };
+        Paso: {
+            nombre: string;
+            actual: boolean;
+        };
         Periodo: {
             codigo: string;
             estado: string;
@@ -74,6 +712,11 @@ export interface components {
             /** Format: date */
             fecha_hasta: string;
         };
+        PeriodoCambiado: {
+            estado: string;
+            mensaje: string;
+            aviso: string;
+        };
         Permisos: {
             cargar: boolean;
             presentar: boolean;
@@ -81,10 +724,98 @@ export interface components {
             revisar: boolean;
             administrar: boolean;
         };
+        Plantilla: {
+            codigo: string;
+            nombre: string;
+            hojas: number;
+            campos: number;
+            obligatorio: boolean;
+            descarga: string;
+        };
+        Plantillas: {
+            periodos: components["schemas"]["Periodo"][];
+            periodo: components["schemas"]["Periodo"] | null;
+            archivos: components["schemas"]["Plantilla"][];
+            descarga_todas: string;
+        };
         Presentacion: {
             id: number;
             estado: string;
             estado_legible: string;
+        };
+        PresentacionDelResultado: {
+            id: number;
+            estado: string;
+            estado_legible: string;
+            estado_ayuda: string;
+            version: number | null;
+            expediente: string | null;
+        };
+        PresentacionEnRevision: {
+            id: number;
+            jurisdiccion: string;
+            estado: string;
+            estado_legible: string;
+            version: number | null;
+            importados: number;
+            observaciones: number;
+            /** Format: date-time */
+            cerrada_el: string | null;
+            expediente: string | null;
+            acciones: components["schemas"]["Accion"][];
+            puede_observar: boolean;
+        };
+        Rangos: {
+            avisa: components["schemas"]["Techo"] | null;
+            frena: components["schemas"]["Techo"] | null;
+        };
+        Reglas: {
+            hojas: components["schemas"]["HojaDeReglas"][];
+            hoja: string;
+            ver_tecnico: boolean;
+            puede_editar: boolean;
+            periodo_abierto: string | null;
+            campos: components["schemas"]["CampoDeReglas"][];
+        };
+        ReglasGuardadas: {
+            mensaje: string;
+            detalle: string[];
+            errores: string[];
+        };
+        Respuesta: {
+            respuesta: string;
+        };
+        Resultado: {
+            periodos: components["schemas"]["Periodo"][];
+            periodo: components["schemas"]["Periodo"] | null;
+            jurisdiccion: string | null;
+            jurisdicciones: string[];
+            presentacion: components["schemas"]["PresentacionDelResultado"] | null;
+            pasos: components["schemas"]["Paso"][];
+            archivos: components["schemas"]["ArchivoDelResultado"][];
+            totales: components["schemas"]["Totales"];
+            acciones: components["schemas"]["Accion"][];
+            observaciones: components["schemas"]["Observacion"][];
+            puede_responder: boolean;
+            puede_presentar: boolean;
+            puede_editar: boolean;
+            listo: boolean;
+        };
+        /** @description Cómo le fue a un archivo recién subido. */
+        ResultadoDeImportar: {
+            rechazado: boolean;
+            mensaje: string;
+            importacion_id: number | null;
+            estado: string | null;
+            filas: number | null;
+            bloqueantes: number;
+            advertencias: number;
+        };
+        Revision: {
+            periodos: components["schemas"]["Periodo"][];
+            periodo: components["schemas"]["Periodo"] | null;
+            es_revisor: boolean;
+            presentaciones: components["schemas"]["PresentacionEnRevision"][];
         };
         Seccion: {
             clave: string;
@@ -106,6 +837,34 @@ export interface components {
             salir: string;
             aviso: string;
         };
+        /**
+         * @description * `ADVERTENCIA` - ADVERTENCIA
+         *     * `BLOQUEANTE` - BLOQUEANTE
+         * @enum {string}
+         */
+        SeveridadEnum: "ADVERTENCIA" | "BLOQUEANTE";
+        SeveridadNueva: {
+            aplicacion_id: number;
+            severidad: components["schemas"]["SeveridadEnum"];
+        };
+        /** @description Un rango: desde dónde y hasta dónde, escrito como se lee en castellano. */
+        Techo: {
+            minimo: string;
+            maximo: string;
+            texto: string;
+            compartida: boolean;
+        };
+        Totales: {
+            filas: number;
+            validas: number;
+            bloqueantes: number;
+            advertencias: number;
+        };
+        ValoresAdmitidos: {
+            texto: string;
+            detalle: string;
+            opciones: string[];
+        };
     };
     responses: never;
     parameters: never;
@@ -115,6 +874,198 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    mir_carga_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Carga"];
+                };
+            };
+        };
+    };
+    mir_carga_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                codigo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    archivo: string;
+                    periodo: string;
+                    jurisdiccion?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultadoDeImportar"];
+                };
+            };
+        };
+    };
+    mir_importaciones_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detalle"];
+                };
+            };
+        };
+    };
+    mir_importaciones_datos_retrieve: {
+        parameters: {
+            query?: {
+                hoja?: number;
+                pagina?: number;
+                /** @description «avisos»: sólo las filas con advertencia */
+                solo?: string;
+            };
+            header?: never;
+            path: {
+                importacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Datos"];
+                };
+            };
+        };
+    };
+    mir_importaciones_datos_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Correccion"];
+                "application/x-www-form-urlencoded": components["schemas"]["Correccion"];
+                "multipart/form-data": components["schemas"]["Correccion"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorreccionHecha"];
+                };
+            };
+        };
+    };
+    "mir_importaciones_errores.xlsx_retrieve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+        };
+    };
+    mir_importaciones_hallazgos_retrieve: {
+        parameters: {
+            query?: {
+                buscar?: string;
+                hoja?: string;
+                page?: number;
+                page_size?: number;
+                severidad?: string;
+            };
+            header?: never;
+            path: {
+                importacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaDeHallazgos"];
+                };
+            };
+        };
+    };
+    "mir_importaciones_marcado.xlsx_retrieve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+        };
+    };
     mir_inicio_retrieve: {
         parameters: {
             query?: never;
@@ -130,6 +1081,341 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Inicio"];
+                };
+            };
+        };
+    };
+    mir_observaciones_respuesta_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                observacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Respuesta"];
+                "application/x-www-form-urlencoded": components["schemas"]["Respuesta"];
+                "multipart/form-data": components["schemas"]["Respuesta"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensaje"];
+                };
+            };
+        };
+    };
+    mir_periodos_estado_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                codigo: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EstadoDelPeriodo"];
+                "application/x-www-form-urlencoded": components["schemas"]["EstadoDelPeriodo"];
+                "multipart/form-data": components["schemas"]["EstadoDelPeriodo"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodoCambiado"];
+                };
+            };
+        };
+    };
+    mir_plantillas_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Plantillas"];
+                };
+            };
+        };
+    };
+    mir_plantilla_descargar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                codigo: string;
+                periodo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+        };
+    };
+    mir_plantillas_todas_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                periodo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+        };
+    };
+    mir_presentaciones_acciones_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accion: string;
+                presentacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccionHecha"];
+                };
+            };
+        };
+    };
+    mir_presentaciones_comprobante_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                presentacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comprobante"];
+                };
+            };
+        };
+    };
+    mir_presentaciones_expediente_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                presentacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Expediente"];
+                "application/x-www-form-urlencoded": components["schemas"]["Expediente"];
+                "multipart/form-data": components["schemas"]["Expediente"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensaje"];
+                };
+            };
+        };
+    };
+    mir_presentaciones_observaciones_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                presentacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NuevaObservacion"];
+                "application/x-www-form-urlencoded": components["schemas"]["NuevaObservacion"];
+                "multipart/form-data": components["schemas"]["NuevaObservacion"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensaje"];
+                };
+            };
+        };
+    };
+    mir_pruebas_armar_demo_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensaje"];
+                };
+            };
+        };
+    };
+    mir_pruebas_borrar_importaciones_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensaje"];
+                };
+            };
+        };
+    };
+    mir_reglas_retrieve: {
+        parameters: {
+            query?: {
+                hoja?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reglas"];
+                };
+            };
+        };
+    };
+    mir_reglas_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CambiosDeReglas"];
+                "application/x-www-form-urlencoded": components["schemas"]["CambiosDeReglas"];
+                "multipart/form-data": components["schemas"]["CambiosDeReglas"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReglasGuardadas"];
+                };
+            };
+        };
+    };
+    mir_resultado_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resultado"];
+                };
+            };
+        };
+    };
+    mir_revision_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Revision"];
                 };
             };
         };

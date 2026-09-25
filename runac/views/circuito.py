@@ -156,29 +156,9 @@ class RevisionView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
     template_name = "runac/revision.html"
 
     def get_context_data(self, **kwargs):
-        from django.db import connection
-
         ctx = super().get_context_data(**kwargs)
         periodo = self.request.GET.get("periodo") or "2026_T1"
-        with connection.cursor() as cur:
-            cur.execute(
-                """
-                SELECT s.id, s.estado, s.version, s.cerrada_el, s.habilitada_el,
-                       s.presentada_el, s.expediente, j.nombre AS jurisdiccion,
-                       (SELECT COUNT(*) FROM mir_c2_importacion i
-                         WHERE i.presentacion_id = s.id AND i.estado = 'VALIDA') AS importados,
-                       (SELECT COUNT(*) FROM mir_c2_observacion o
-                         WHERE o.presentacion_id = s.id AND o.estado = 'ABIERTA') AS observaciones
-                FROM mir_c2_presentacion s
-                JOIN mir_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
-                JOIN mir_c2_periodo p ON p.id = s.periodo_id
-                WHERE p.codigo = %s
-                ORDER BY j.nombre
-            """,
-                [periodo],
-            )
-            columnas = [c[0] for c in cur.description]
-            filas = [dict(zip(columnas, f)) for f in cur.fetchall()]
+        filas = circuito.presentaciones_del_periodo(periodo)
 
         for f in filas:
             f["estado_legible"] = circuito.estado_legible(f["estado"])

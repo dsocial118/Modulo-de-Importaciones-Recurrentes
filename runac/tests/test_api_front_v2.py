@@ -179,11 +179,101 @@ def test_el_menu_marca_que_secciones_estan_en_v2():
         _pedido("/api/mir/sesion/", OPERADOR_CHUBUT)
     ).data
     menu = {m["clave"]: m for m in datos["menu"]}
-    assert menu["inicio"]["en_v2"] is True
     assert menu["inicio"]["ruta"] == "/v2/mir/"
-    # Lo que no se migró lleva a la pantalla actual.
-    assert menu["cargar"]["en_v2"] is False
-    assert not menu["cargar"]["ruta"].startswith("/v2/")
+    # Todas las secciones migraron: ninguna lleva a la pantalla actual.
+    assert all(m["en_v2"] and m["ruta"].startswith("/v2/mir") for m in menu.values())
+
+
+def test_una_seccion_sin_pantalla_en_v2_lleva_a_la_actual(mocker):
+    mocker.patch.dict(api_views.EN_V2, {}, clear=True)
+    datos = api_views.SesionView.as_view()(
+        _pedido("/api/mir/sesion/", OPERADOR_CHUBUT)
+    ).data
+    cargar = next(m for m in datos["menu"] if m["clave"] == "cargar")
+    assert cargar["en_v2"] is False
+    assert not cargar["ruta"].startswith("/v2/")
+
+
+# ---------------------------------------------------------------------------
+# Lo de otra jurisdicción no existe
+# ---------------------------------------------------------------------------
+
+
+def test_lo_de_otra_jurisdiccion_da_404(mocker):
+    """Verificado el 25-09-2026: en las pantallas actuales esto da 200."""
+    from rest_framework.exceptions import NotFound
+
+    mocker.patch.object(
+        api_views.svc, "importacion", return_value={"id": 6, "jurisdiccion": "Chaco"}
+    )
+    with pytest.raises(NotFound):
+        api_views._importacion_permitida(OPERADOR_CHUBUT, 6)
+
+
+def test_lo_propio_se_ve(mocker):
+    mocker.patch.object(
+        api_views.svc, "importacion", return_value={"id": 1, "jurisdiccion": "Chubut"}
+    )
+    assert api_views._importacion_permitida(OPERADOR_CHUBUT, 1)["id"] == 1
+
+
+def test_el_nacional_ve_cualquier_jurisdiccion(mocker):
+    mocker.patch.object(
+        api_views.svc, "jurisdiccion_de_la_presentacion", return_value="Chaco"
+    )
+    assert api_views._presentacion_permitida(REVISOR, 6) == "Chaco"
+
+
+def test_una_accion_sobre_otra_jurisdiccion_no_se_ejecuta(mocker):
+    mocker.patch.object(
+        api_views.svc, "jurisdiccion_de_la_presentacion", return_value="Chaco"
+    )
+    ejecutar = mocker.patch.object(api_views.circuito, "ejecutar")
+    pedido = APIRequestFactory().post(
+        "/api/mir/presentaciones/6/acciones/cerrar_carga/"
+    )
+    force_authenticate(pedido, user=_usuario("responsable_provincial", "Chubut"))
+    respuesta = api_views.AccionView.as_view()(
+        pedido, presentacion_id=6, accion="cerrar_carga"
+    )
+    assert respuesta.status_code == 404
+    ejecutar.assert_not_called()
+
+
+def test_el_nacional_no_corrige_datos(mocker):
+    mocker.patch.object(
+        api_views.svc, "importacion", return_value={"id": 1, "jurisdiccion": "Chubut"}
+    )
+    editar = mocker.patch.object(api_views.edicion, "editar")
+    pedido = APIRequestFactory().post(
+        "/api/mir/importaciones/1/datos/",
+        {"hoja_id": 1, "numero_fila": 2, "campo": "x", "valor": "y"},
+        format="json",
+    )
+    force_authenticate(pedido, user=REVISOR)
+    respuesta = api_views.DatosView.as_view()(pedido, importacion_id=1)
+    assert respuesta.status_code == 403
+    editar.assert_not_called()
+
+
+def test_el_provincial_carga_en_su_jurisdiccion_aunque_mande_otra(mocker):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    importar = mocker.patch.object(
+        api_views.svc, "importar_uno", return_value={"rechazado": True, "mensaje": "x"}
+    )
+    pedido = APIRequestFactory().post(
+        "/api/mir/carga/MPI/",
+        {
+            "archivo": SimpleUploadedFile("MPI.xlsx", b"x"),
+            "periodo": "2026_T1",
+            "jurisdiccion": "Chaco",
+        },
+        format="multipart",
+    )
+    force_authenticate(pedido, user=OPERADOR_CHUBUT)
+    api_views.CargarArchivoView.as_view()(pedido, codigo="MPI")
+    assert importar.call_args.args[2] == "Chubut"
 
 
 def test_la_sesion_dice_la_jurisdiccion_y_el_aviso():
