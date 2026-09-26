@@ -120,6 +120,17 @@ def datos_de_la_importacion(importacion_id: int) -> dict[str, Any]:
         )
         archivo = _filas(cur)
 
+        # Lo que el motor haya encontrado en una hoja de referencia no se
+        # informa: esas hojas no se validan desde el 26-09-2026 (#87), y las
+        # importaciones anteriores tienen hallazgos guardados en ellas.
+        cur.execute(
+            "SELECT nombre_esperado FROM mir_c1_hoja WHERE archivo_version_id = %s AND referencia",
+            [cabecera["archivo_version_id"]],
+        )
+        referencia = {fila[0] for fila in cur.fetchall()}
+        reglas = [r for r in reglas if r["nombre_hoja"] not in referencia]
+        archivo = [a for a in archivo if a["hoja"] not in referencia]
+
         cur.execute(
             """
             SELECT numero_fila, campo_id, valor_anterior, valor_nuevo, usuario, fecha
