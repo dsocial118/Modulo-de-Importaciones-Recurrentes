@@ -226,7 +226,7 @@ export function Cargar() {
   return (
     <>
       <Titulo
-        titulo="Cargar archivos"
+        titulo={d.jurisdiccion ? `Cargar archivos · ${d.jurisdiccion}` : "Cargar archivos"}
         subtitulo="Los archivos se cargan de a uno y deben tener el nombre y la estructura indicada en la plantilla modelo."
       >
         <SelectorDeJurisdiccion

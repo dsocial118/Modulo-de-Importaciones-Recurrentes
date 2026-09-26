@@ -90,6 +90,7 @@ export function App() {
         instancia={s.instancia}
         usuario={s.usuario}
         rol={s.nombre_del_rol}
+        entidad={s.jurisdiccion}
         aviso={s.aviso}
         menu={menu}
         activa={activa}

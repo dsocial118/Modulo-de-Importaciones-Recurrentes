@@ -39,6 +39,9 @@ type Props = {
   instancia: string;
   usuario: string;
   rol: string;
+  // La entidad sobre la que trabaja, si es de una. Siempre a la vista: desde
+  // que el usuario de una entidad no elige, no había otro lugar que la dijera.
+  entidad?: string | null;
   aviso: string;
   menu: ItemDeMenu[];
   activa: string;
@@ -50,7 +53,7 @@ type Props = {
 const ANCHO = 264;
 
 /** AppBar + Drawer del front v2. Propio de /v2/: no reusa el menú viejo. */
-export function Layout({ instancia, usuario, rol, aviso, menu, activa, salir, alNavegar, children }: Props) {
+export function Layout({ instancia, usuario, rol, entidad, aviso, menu, activa, salir, alNavegar, children }: Props) {
   const theme = useTheme();
   const { modo, alternar } = useModo();
   const ancho = useMediaQuery(theme.breakpoints.up('md'));
@@ -107,12 +110,32 @@ export function Layout({ instancia, usuario, rol, aviso, menu, activa, salir, al
               <MenuIcon />
             </IconButton>
           )}
-          <Typography variant="h6" component="div" sx={{ fontWeight: 700, flexGrow: 1 }}>
-            {instancia}
-          </Typography>
+          <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 1 }}>
+            <Typography variant="h6" component="div" sx={{ fontWeight: 700 }}>
+              {instancia}
+            </Typography>
+            {/* En el teléfono no entra el bloque de usuario: la entidad va acá. */}
+            {entidad && (
+              <Typography
+                variant="body2"
+                component="div"
+                sx={{ display: { xs: 'block', sm: 'none' }, color: 'nav.accent', fontWeight: 500 }}
+              >
+                {entidad}
+              </Typography>
+            )}
+          </Box>
           <Box sx={{ textAlign: 'right', mr: 1, display: { xs: 'none', sm: 'block' } }}>
             <Typography variant="body2" sx={{ lineHeight: 1.2 }}>{usuario}</Typography>
-            <Typography variant="caption" sx={{ color: 'nav.textMuted' }}>{rol}</Typography>
+            <Typography variant="caption" sx={{ color: 'nav.textMuted' }}>
+              {rol}
+              {entidad && (
+                <Box component="span" sx={{ color: 'nav.accent', fontWeight: 500 }}>
+                  {' '}
+                  · {entidad}
+                </Box>
+              )}
+            </Typography>
           </Box>
           <Tooltip title={modo === 'light' ? 'Modo oscuro' : 'Modo claro'}>
             <IconButton color="inherit" onClick={alternar} aria-label="Cambiar el modo de color">
