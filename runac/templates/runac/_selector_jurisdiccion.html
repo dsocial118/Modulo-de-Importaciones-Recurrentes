@@ -4,26 +4,35 @@ elija: la tiene asignada. Está acá porque durante las pruebas hace falta poder
 cambiarla, y por eso va marcada como función de prueba: quien mire la pantalla
 tiene que poder distinguir una herramienta de testeo de un error de diseño.
 
+Desde el 25-09-2026 el selector es SÓLO del nivel nacional. El usuario
+provincial ve su jurisdicción y no la cambia: con el selector, un operador de
+Chubut podía cargar y corregir en Chaco (hallazgo #10 de auditoría). Para
+probar varias provincias hay usuarios de prueba de cada una.
+
 Al integrar a SISOC, el selector de jurisdicción desaparece.
 
-Necesita en el contexto: jurisdicciones, jurisdiccion, periodos, periodo_elegido.
+Necesita en el contexto: jurisdicciones, jurisdiccion, periodos, periodo_elegido,
+es_nacional.
 {% endcomment %}
-
 <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
-    <div class="modo-prueba d-flex flex-wrap gap-2 align-items-center">
-        <span class="etiqueta-prueba" title="No forma parte del sistema definitivo">Prueba</span>
-        <label class="ayuda mb-0" for="sel-jurisdiccion">Jurisdicción</label>
-        <select class="form-select form-select-sm"
-                style="width: auto"
-                id="sel-jurisdiccion"
-                name="jurisdiccion"
-                data-actual="{{ jurisdiccion }}"
-                onchange="confirmarCambioDeJurisdiccion(this)">
-            {% for j in jurisdicciones %}
-                <option value="{{ j }}" {% if j == jurisdiccion %}selected{% endif %}>{{ j }}</option>
-            {% endfor %}
-        </select>
-    </div>
+    {% if es_nacional %}
+        <div class="modo-prueba d-flex flex-wrap gap-2 align-items-center">
+            <span class="etiqueta-prueba" title="No forma parte del sistema definitivo">Prueba</span>
+            <label class="ayuda mb-0" for="sel-jurisdiccion">Jurisdicción</label>
+            <select class="form-select form-select-sm"
+                    style="width: auto"
+                    id="sel-jurisdiccion"
+                    name="jurisdiccion"
+                    data-actual="{{ jurisdiccion }}"
+                    onchange="confirmarCambioDeJurisdiccion(this)">
+                {% for j in jurisdicciones %}
+                    <option value="{{ j }}" {% if j == jurisdiccion %}selected{% endif %}>{{ j }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    {% else %}
+        <span class="ayuda">Jurisdicción: <strong>{{ jurisdiccion }}</strong></span>
+    {% endif %}
 
     <div class="d-flex gap-2 align-items-center">
         <label class="ayuda mb-0" for="sel-periodo">Período</label>

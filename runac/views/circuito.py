@@ -20,6 +20,7 @@ from runac.permissions import (
     puede_administrar,
     puede_revisar,
 )
+from runac.services import alcance_service as alcance
 from runac.services import circuito_service as circuito
 from runac.services import demo_service
 from runac.services import informe_errores_service as informes
@@ -54,6 +55,7 @@ class AccionView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     seccion = "resultado"
 
     def post(self, request, presentacion_id, accion):
+        alcance.exigir_presentacion(request.user, presentacion_id)
         # La completitud se calcula desde la presentación de la URL y no desde
         # lo que manda el formulario. Antes salía de la jurisdicción enviada por
         # el navegador y, si faltaba, el valor por defecto era «listo»: bastaba
@@ -81,6 +83,7 @@ class ObservarView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     seccion = "revision"
 
     def post(self, request, presentacion_id):
+        alcance.exigir_presentacion(request.user, presentacion_id)
         try:
             circuito.crear_observacion(
                 presentacion_id,
@@ -110,6 +113,7 @@ class ResponderView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     seccion = "resultado"
 
     def post(self, request, observacion_id):
+        alcance.exigir_observacion(request.user, observacion_id)
         try:
             circuito.responder_observacion(
                 observacion_id, request.user, request.POST.get("respuesta", "")
@@ -126,6 +130,7 @@ class ExpedienteView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     seccion = "resultado"
 
     def post(self, request, presentacion_id):
+        alcance.exigir_presentacion(request.user, presentacion_id)
         try:
             circuito.registrar_expediente(
                 presentacion_id, request.POST.get("expediente", ""), request.user
@@ -145,7 +150,9 @@ class ComprobanteView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["comprobante"] = circuito.comprobante(int(kwargs["presentacion_id"]))
+        presentacion_id = int(kwargs["presentacion_id"])
+        alcance.exigir_presentacion(self.request.user, presentacion_id)
+        ctx["comprobante"] = circuito.comprobante(presentacion_id)
         return ctx
 
 
@@ -183,6 +190,7 @@ class PlanillaDeErroresView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     seccion = "resultado"
 
     def get(self, request, importacion_id):
+        alcance.exigir_importacion(request.user, importacion_id)
         contenido = informes.planilla_de_errores(importacion_id)
         if not contenido:
             raise Http404("No existe esa importación.")
@@ -199,6 +207,7 @@ class ArchivoMarcadoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     seccion = "resultado"
 
     def get(self, request, importacion_id):
+        alcance.exigir_importacion(request.user, importacion_id)
         contenido, nombre = informes.archivo_marcado(importacion_id)
         if not contenido:
             messages.warning(

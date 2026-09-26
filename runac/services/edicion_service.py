@@ -321,7 +321,7 @@ def datos_de_la_hoja(
 REGLAS_ENTRE_ARCHIVOS = ("EXISTE_EN_ARCHIVO", "COINCIDE_CON_ARCHIVO")
 
 
-def valores_de_otros_archivos(
+def valores_de_otros_archivos(  # pylint: disable=too-many-locals  # dos consultas por regla
     reglas: dict[int, list[dict]], presentacion_id: int
 ) -> dict[str, dict]:
     """Lo que las reglas entre archivos necesitan saber de los otros archivos.

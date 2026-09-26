@@ -17,10 +17,12 @@ from django.views.generic import TemplateView
 
 from runac.permissions import (
     SeccionPermitidaMixin,
+    es_nacional,
     jurisdiccion_de,
     puede_cargar,
     puede_presentar,
 )
+from runac.services import alcance_service as alcance
 from runac.services import circuito_service as circuito
 from runac.services import importacion_service as svc
 
@@ -28,20 +30,25 @@ from runac.services import importacion_service as svc
 def jurisdiccion_en_curso(request) -> str:
     """La jurisdicción sobre la que se está trabajando.
 
-    Acá se puede elegir, y **la elección se recuerda**: si no, cada
-    pantalla mostraba una jurisdicción distinta —Inicio la del usuario y Cargar
-    la elegida— y eso confunde más de lo que ayuda.
+    **Un usuario provincial trabaja sólo sobre la suya**, pida lo que pida: sale
+    de su usuario, no de la dirección ni de la sesión. Hasta el 25-09-2026 la
+    elegía el selector —una herramienta de prueba— y con eso un operador de
+    Chubut podía cargar, ver y corregir en Chaco (hallazgo #10 de auditoría).
+
+    El nivel nacional sí elige, sólo entre las que existen, y **la elección se
+    recuerda**: si no, cada pantalla mostraba una jurisdicción distinta.
 
     Al integrar a SISOC esto desaparece: el alcance territorial lo resuelve el
-    sistema y el operador no elige nada.
+    sistema.
     """
+    if not es_nacional(request.user):
+        return jurisdiccion_de(request.user)
     elegida = request.GET.get("jurisdiccion") or request.POST.get("jurisdiccion")
-    if elegida:
+    if elegida in JURISDICCIONES:
         request.session["jurisdiccion"] = elegida
         return elegida
-    return (
-        request.session.get("jurisdiccion") or jurisdiccion_de(request.user) or "Chubut"
-    )
+    guardada = request.session.get("jurisdiccion")
+    return guardada if guardada in JURISDICCIONES else "Chubut"
 
 
 # Nombre corto, para las vistas de este módulo.
@@ -248,6 +255,7 @@ class DetalleView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         importacion_id = int(kwargs["importacion_id"])
+        alcance.exigir_importacion(self.request.user, importacion_id)
         severidad = self.request.GET.get("severidad") or None
         hoja = self.request.GET.get("hoja") or None
         buscar = self.request.GET.get("buscar") or None

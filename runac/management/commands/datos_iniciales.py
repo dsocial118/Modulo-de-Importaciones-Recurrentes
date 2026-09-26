@@ -17,9 +17,15 @@ CLAVE = "runac"
 # `armar_demo`. Con los usuarios en Chaco, quien entraba por primera vez caia en
 # una pantalla vacia y tenia que descubrir el selector de jurisdiccion -que es
 # una herramienta de prueba- para ver algo.
+#
+# Los de Chaco existen desde el 25-09-2026, cuando el usuario provincial dejó de
+# poder cambiar de jurisdicción: para probar dos provincias hacen falta usuarios
+# de las dos.
 USUARIOS = [
     ("operador", "operador_provincial", "Chubut"),
     ("responsable", "responsable_provincial", "Chubut"),
+    ("operador_chaco", "operador_provincial", "Chaco"),
+    ("responsable_chaco", "responsable_provincial", "Chaco"),
     ("revisor", "revisor_nacional", None),
     ("admin", "administrador_nacional", None),
 ]

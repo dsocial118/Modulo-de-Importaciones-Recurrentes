@@ -48,6 +48,8 @@ De ahí en adelante, para levantarlo alcanza con `docker compose up -d`.
 |---|---|---|
 | `operador` | Operador provincial · Chubut | `runac` |
 | `responsable` | Responsable provincial · Chubut | `runac` |
+| `operador_chaco` | Operador provincial · Chaco | `runac` |
+| `responsable_chaco` | Responsable provincial · Chaco | `runac` |
 | `revisor` | Revisor técnico nacional | `runac` |
 | `admin` | Administrador nacional | `runac` |
 
