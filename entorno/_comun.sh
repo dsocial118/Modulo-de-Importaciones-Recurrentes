@@ -19,6 +19,26 @@ contenedor_mysql() {
 
 sql() { docker exec "$MYSQL_CONT" mysql -uroot -p"$PASS" --default-character-set=utf8mb4 -N -s -e "$1" 2>/dev/null; }
 
+# Lo mismo, contra otro contenedor y con otra clave.
+sql_en() { docker exec "$1" mysql -uroot -p"$2" --default-character-set=utf8mb4 -N -s -e "$3" 2>/dev/null; }
+
+# El MySQL que usa un contenedor web: el que responde al nombre de su
+# DATABASE_HOST en alguna de sus redes. La instancia de React tiene el suyo y
+# también se llama `mysql`, así que buscarlo por nombre no alcanza.
+mysql_de_la_web() {
+    local web="$1" host="$2" red otro
+    [ -z "$host" ] && return
+    for red in $(docker inspect "$web" --format '{{range $k, $v := .NetworkSettings.Networks}}{{println $k}}{{end}}' 2>/dev/null); do
+        for otro in $(docker ps --filter "network=$red" --format '{{.Names}}' 2>/dev/null); do
+            if docker inspect "$otro" --format "{{with index .NetworkSettings.Networks \"$red\"}}{{join .Aliases \" \"}}{{end}}" 2>/dev/null \
+                 | tr ' ' '\n' | grep -qx "$host"; then
+                echo "$otro"
+                return
+            fi
+        done
+    done
+}
+
 # La huella de la Capa 1 de una base: cambia si cambia cualquier fila de la
 # definición. Contar campos no alcanza —los desfasajes del 22 y el 23 fueron
 # cambios de tipo, con la misma cantidad de campos—.

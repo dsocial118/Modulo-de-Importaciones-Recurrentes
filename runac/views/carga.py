@@ -76,7 +76,9 @@ def _ultima_importacion(filas, codigo) -> dict:
     for fila in filas:
         if fila.get("codigo") != codigo:
             continue
-        imp = fila.get("importacion")
+        # La última que se intentó, no la vigente: si la nueva falló, la
+        # vigente es la anterior y su resultado no es el de este archivo.
+        imp = fila.get("ultima")
         if not imp:
             # Rechazado antes de registrarse: no hay importación que mostrar.
             return {**vacio, "recien_importado": codigo, "recien_estado": "FALLIDA"}

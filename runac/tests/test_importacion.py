@@ -183,3 +183,55 @@ def test_el_nombre_respeta_el_limite_de_mysql():
 def test_el_nombre_no_tiene_caracteres_raros():
     nombre = nombre_tabla_receptora("MPJ DAE", "Guardia Comisaría", True, 1)
     assert nombre.replace("_", "").isalnum()
+
+
+# ---------------------------------------------------------------------------
+# Qué se anuncia al terminar de importar
+#
+# El 26-09-2026 un legajo con errores se rechazó (FALLIDA, 18 bloqueantes) y la
+# pantalla anunció «Los registros se incorporaron. Quedan 8 advertencias»: el
+# resultado de la importación ANTERIOR, que seguía vigente. Se leía la vigente
+# en vez de la última que se intentó.
+# ---------------------------------------------------------------------------
+
+
+def _con_importaciones(monkeypatch, importaciones):
+    monkeypatch.setattr(svc, "presentacion_de", lambda *a: {"id": 1})
+    monkeypatch.setattr(svc, "archivos_esperados", lambda periodo: list(ARCHIVOS))
+    # Como la consulta real: la más reciente primero.
+    monkeypatch.setattr(svc, "importaciones_de", lambda pid: list(importaciones))
+
+
+def test_si_la_nueva_falla_la_ultima_es_la_nueva_y_la_vigente_la_anterior(
+    monkeypatch,
+):
+    fallida = {"id": 14, "archivo_codigo": "LEGAJO_NYA", "estado": "FALLIDA"}
+    anterior = {"id": 10, "archivo_codigo": "LEGAJO_NYA", "estado": "VALIDA"}
+    _con_importaciones(monkeypatch, [fallida, anterior])
+
+    fila = next(
+        f
+        for f in svc.estado_de_la_presentacion("Chubut", "2026_T1")["archivos"]
+        if f["codigo"] == "LEGAJO_NYA"
+    )
+
+    assert fila["ultima"]["id"] == 14, "se anuncia la que se acaba de intentar"
+    assert fila["importacion"]["id"] == 10, "los datos siguen siendo los anteriores"
+    assert fila["importada"]
+
+
+def test_el_aviso_de_la_pantalla_actual_lee_la_ultima():
+    from runac.views.carga import _ultima_importacion
+
+    filas = [
+        {
+            "codigo": "LEGAJO_NYA",
+            "importacion": {"id": 10, "estado": "VALIDA", "advertencias": 8},
+            "ultima": {"id": 14, "estado": "FALLIDA", "bloqueantes": 18},
+        }
+    ]
+    aviso = _ultima_importacion(filas, "LEGAJO_NYA")
+
+    assert aviso["recien_estado"] == "FALLIDA"
+    assert aviso["recien_bloqueantes"] == 18
+    assert aviso["recien_importacion_id"] == 14

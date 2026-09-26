@@ -359,6 +359,7 @@ def estado_de_la_presentacion(jurisdiccion: str, codigo_periodo: str):
                 {
                     **a,
                     "importacion": None,
+                    "ultima": None,
                     "importada": False,
                     "estado": "SIN_CARGAR",
                 }
@@ -386,6 +387,11 @@ def estado_de_la_presentacion(jurisdiccion: str, codigo_periodo: str):
             {
                 **a,
                 "importacion": imp or ultimo,
+                # La última que se intentó, haya entrado o no. Es la que hay
+                # que mostrar al terminar de importar: la vigente puede ser una
+                # anterior, y anunciar su resultado hacía pasar por buena una
+                # importación que había fallado (26-09-2026).
+                "ultima": ultimo,
                 "importada": bool(imp),
                 "estado": (
                     (imp or ultimo)["estado"] if (imp or ultimo) else "SIN_CARGAR"
