@@ -523,7 +523,10 @@ class CargarArchivoView(APIView):
         # había fallado.
         estado = svc.estado_de_la_presentacion(jurisdiccion, periodo)
         fila = next((a for a in estado["archivos"] if a["codigo"] == codigo), {})
-        imp = fila.get("importacion") or {}
+        # La última que se intentó, no la vigente: si la nueva falló, la
+        # vigente es la anterior, y anunciar su resultado hacía pasar por
+        # buena una importación rechazada (26-09-2026).
+        imp = fila.get("ultima") or {}
         datos = {
             "rechazado": False,
             "mensaje": "",

@@ -276,6 +276,40 @@ def test_el_provincial_carga_en_su_jurisdiccion_aunque_mande_otra(mocker):
     assert importar.call_args.args[2] == "Chubut"
 
 
+def test_si_la_nueva_falla_se_anuncia_la_nueva_y_no_la_vigente(mocker):
+    """El 26-09-2026 un legajo rechazado se anunció con las 8 advertencias de
+    la importación anterior, que seguía vigente."""
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    mocker.patch.object(
+        api_views.svc, "importar_uno", return_value={"rechazado": False}
+    )
+    mocker.patch.object(
+        api_views.svc,
+        "estado_de_la_presentacion",
+        return_value={
+            "archivos": [
+                {
+                    "codigo": "LEGAJO_NYA",
+                    "importacion": {"id": 10, "estado": "VALIDA", "advertencias": 8},
+                    "ultima": {"id": 14, "estado": "FALLIDA", "bloqueantes": 18},
+                }
+            ]
+        },
+    )
+    pedido = APIRequestFactory().post(
+        "/api/mir/carga/LEGAJO_NYA/",
+        {"archivo": SimpleUploadedFile("LEGAJO_NYA.xlsx", b"x"), "periodo": "2026_T1"},
+        format="multipart",
+    )
+    force_authenticate(pedido, user=OPERADOR_CHUBUT)
+    datos = api_views.CargarArchivoView.as_view()(pedido, codigo="LEGAJO_NYA").data
+
+    assert datos["importacion_id"] == 14
+    assert datos["estado"] == "FALLIDA"
+    assert datos["bloqueantes"] == 18
+
+
 def test_la_sesion_dice_la_jurisdiccion_y_el_aviso():
     datos = api_views.SesionView.as_view()(
         _pedido("/api/mir/sesion/", OPERADOR_CHUBUT)
