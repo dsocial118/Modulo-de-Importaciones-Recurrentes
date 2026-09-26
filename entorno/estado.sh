@@ -33,16 +33,30 @@ echo
 echo "  ══ QUÉ SIRVE CADA PUERTO ═══════════════════════════════════════════"
 echo
 docker ps --format '{{.Names}}\t{{.Ports}}' 2>/dev/null | grep -v mysql | grep -v phpmyadmin | while IFS=$'\t' read -r nombre puertos; do
-    base=$(docker inspect "$nombre" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | sed -n 's/^DATABASE_NAME=//p')
+    entorno=$(docker inspect "$nombre" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null)
+    base=$(echo "$entorno" | sed -n 's/^DATABASE_NAME=//p' | head -1)
     [ -z "$base" ] && continue
     puerto=$(echo "$puertos" | grep -o '0\.0\.0\.0:[0-9]*' | head -1 | cut -d: -f2)
+    # Cada web se consulta en SU MySQL. Hasta el 26-09-2026 se consultaba
+    # siempre el principal, y la instancia de React (8110), que tiene base
+    # propia con el mismo nombre `runac`, figuraba con la definición de la 8100.
+    suyo=$(mysql_de_la_web "$nombre" "$(echo "$entorno" | sed -n 's/^DATABASE_HOST=//p' | head -1)")
+    [ -z "$suyo" ] && suyo="$MYSQL_CONT"
+    clave=$(echo "$entorno" | sed -n 's/^DATABASE_PASSWORD=//p' | head -1)
     # Qué versión de cada archivo está VIGENTE: es lo que el contenedor sirve.
-    vig=$(sql "SELECT GROUP_CONCAT(CONCAT(a.codigo,' v',av.numero) ORDER BY a.codigo SEPARATOR ' · ')
+    vig=$(sql_en "$suyo" "${clave:-$PASS}" "SELECT GROUP_CONCAT(CONCAT(a.codigo,' v',av.numero) ORDER BY a.codigo SEPARATOR ' · ')
                FROM ${base}.mir_c1_archivo a
                JOIN ${base}.mir_c1_archivo_version av ON av.archivo_id=a.id AND av.estado='VIGENTE';")
     # Un contenedor sin Capa 1 no es del MIR (por ejemplo, el SISOC local).
     [ -z "$vig" ] && continue
-    printf "  %-6s %-12s %s\n" "${puerto:-—}" "$base" "$vig"
+    # Si la base no está en el MySQL principal se dice en cuál: dos bases
+    # pueden llamarse igual y no ser la misma.
+    etiqueta="$base"
+    if [ "$suyo" != "$MYSQL_CONT" ]; then
+        pm=$(docker port "$suyo" 3306 2>/dev/null | grep -o '0\.0\.0\.0:[0-9]*' | head -1 | cut -d: -f2)
+        etiqueta="$base (MySQL ${pm:-$suyo})"
+    fi
+    printf "  %-6s %-20s %s\n" "${puerto:-—}" "$etiqueta" "$vig"
 done
 echo
 
