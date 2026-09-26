@@ -100,7 +100,7 @@ def _cabecera(**extra):
         "archivo_codigo": "MPI",
         "archivo_nombre": "Nómina MPI",
         "version": 1,
-        "que_es_una_fila": "Niña, niño o adolescente",
+        "que_es_una_fila": "Niño, niña o adolescente",
         "jurisdiccion": "Chubut",
         "periodo": "2026_T1",
         **extra,
@@ -142,7 +142,7 @@ def test_el_informe_abre_en_los_problemas_y_termina_en_el_resumen():
     assert wb.active.title == "Problemas"
     ws = wb["Problemas"]
     # El título de la identificación dice qué es una fila de este archivo.
-    assert ws["D1"].value == "Niña, niño o adolescente"
+    assert ws["D1"].value == "Niño, niña o adolescente"
     assert ws["G2"].value == "Advertencia"
     assert ws["H2"].value.startswith("Fuera de lo esperable (hasta 17)")
 

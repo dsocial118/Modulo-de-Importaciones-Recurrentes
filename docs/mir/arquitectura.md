@@ -189,7 +189,7 @@ entidades. Tres motivos:
   identificador de la entidad además del interno. Cumplirlo exige conservar lo que
   informó cada archivo, coincida o no con lo que ya figura en el sistema y en
   RENAPER.
-- Un niño o adolescente **puede no tener DNI** y aun así debe poder registrarse;
+- Un niño, niña o adolescente **puede no tener DNI** y aun así debe poder registrarse;
   en esos casos el identificador de la entidad es el único modo de reconocerlo entre
   entregas.
 - La entidad suele tener el **domicilio real**, que no siempre coincide con el
