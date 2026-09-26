@@ -18,7 +18,7 @@ ALTER TABLE mir_c1_archivo_version
   COMMENT 'Qué representa una fila del archivo, para titular la identificación en los informes.';
 
 UPDATE mir_c1_archivo_version av JOIN mir_c1_archivo a ON a.id = av.archivo_id
-   SET av.que_es_una_fila = 'Niña, niño o adolescente'
+   SET av.que_es_una_fila = 'Niño, niña o adolescente'
  WHERE a.codigo IN ('LEGAJO_NYA', 'MPI', 'MPE', 'MPJ_DAE');
 
 UPDATE mir_c1_archivo_version av JOIN mir_c1_archivo a ON a.id = av.archivo_id

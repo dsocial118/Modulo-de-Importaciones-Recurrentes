@@ -29,7 +29,7 @@ El sistema debe permitir:
 
 - cargar los archivos Excel sin modificar su estructura básica;
 - detectar errores, campos incompletos, duplicados e inconsistencias;
-- relacionar a cada niño o adolescente con sus medidas y, cuando corresponda, con
+- relacionar a cada niño, niña o adolescente con sus medidas y, cuando corresponda, con
   un dispositivo;
 - guardar las sucesivas presentaciones trimestrales de cada provincia;
 - permitir la revisión nacional y la subsanación provincial;
