@@ -121,12 +121,23 @@ export const useCarga = (periodo: string | null, jurisdiccion: string | null) =>
 export function useCargarArchivo() {
   const cliente = useQueryClient();
   return useMutation({
-    mutationFn: async (d: { codigo: string; archivo: File; periodo: string; jurisdiccion?: string | null }) => {
+    mutationFn: async (d: {
+      codigo: string;
+      archivo: File;
+      periodo: string;
+      jurisdiccion?: string | null;
+      // Cuánto del archivo ya viajó, de 0 a 100. Al llegar a 100 el archivo
+      // está en el servidor y lo que falta es revisarlo.
+      alAvanzar?: (porcentaje: number) => void;
+    }) => {
       const formulario = new FormData();
       formulario.append('archivo', d.archivo);
       formulario.append('periodo', d.periodo);
       if (d.jurisdiccion) formulario.append('jurisdiccion', d.jurisdiccion);
-      return (await api.post<ResultadoDeImportar>(`carga/${d.codigo}/`, formulario)).data;
+      const { data } = await api.post<ResultadoDeImportar>(`carga/${d.codigo}/`, formulario, {
+        onUploadProgress: (e) => d.alAvanzar?.(e.total ? Math.round((e.loaded * 100) / e.total) : 0),
+      });
+      return data;
     },
     onSuccess: () => cliente.invalidateQueries(),
   });

@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   CardContent,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -23,7 +22,7 @@ import {
   type ResultadoDeImportar,
 } from '@mir/api';
 import { EtiquetaDeEstado, Titulo, useAvisar, useConfirmar } from '@mir/ui';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ESTADO_DEL_ARCHIVO, formaDe } from '../comun/estados';
 import { plural } from '../comun/formato';
@@ -36,16 +35,47 @@ type Recien = ResultadoDeImportar & { codigo: string };
  * Una fila por archivo. Un solo botón que cambia en el mismo lugar: primero
  * «Seleccionar archivo», y con el archivo elegido pasa a ser «Importar».
  */
+/**
+ * Mientras se importa, la fila lo dice y dice en qué va: primero sube el
+ * archivo, con porcentaje, y después el sistema lo revisa, que con un archivo
+ * grande es lo que más tarda. Antes el botón desaparecía al apretarlo y la
+ * fila quedaba como si nada, con el archivo subiendo por detrás.
+ */
+function Avance({ porcentaje }: { porcentaje: number }) {
+  const revisando = porcentaje >= 100;
+  return (
+    <Box sx={{ width: '100%' }} role="status" aria-live="polite">
+      <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+        {revisando ? 'Revisando el archivo…' : `Subiendo el archivo… ${porcentaje} %`}
+      </Typography>
+      <LinearProgress
+        variant={revisando ? 'indeterminate' : 'determinate'}
+        value={porcentaje}
+        aria-label={revisando ? 'Revisando el archivo' : 'Subiendo el archivo'}
+      />
+      {revisando && (
+        <Typography variant="caption" color="text.secondary">
+          Se controlan la estructura y cada fila. Con archivos grandes puede tardar.
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
 function FilaDeCarga({
   a,
   habilitada,
-  subiendo,
+  progreso,
+  ocupado,
   alImportar,
 }: {
   a: ArchivoACargar;
   habilitada: boolean;
-  subiendo: boolean;
-  alImportar: (a: ArchivoACargar, archivo: File) => void;
+  // null: esta fila no está importando. De 0 a 100, cuánto subió.
+  progreso: number | null;
+  // Otra fila está importando: una por vez.
+  ocupado: boolean;
+  alImportar: (a: ArchivoACargar, archivo: File) => Promise<void>;
 }) {
   const campo = useRef<HTMLInputElement>(null);
   const [elegido, setElegido] = useState<File | null>(null);
@@ -80,7 +110,9 @@ function FilaDeCarga({
         </Box>
 
         <Box sx={{ minWidth: { md: 280 } }}>
-          {a.bloqueado_por.length > 0 ? (
+          {progreso !== null ? (
+            <Avance porcentaje={progreso} />
+          ) : a.bloqueado_por.length > 0 ? (
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <LockOutlined fontSize="small" color="action" />
               <Typography variant="body2" color="text.secondary">
@@ -112,10 +144,12 @@ function FilaDeCarga({
                   <Button
                     variant="contained"
                     size="small"
-                    disabled={subiendo}
-                    startIcon={subiendo ? <CircularProgress size={16} color="inherit" /> : <UploadFileOutlined />}
-                    onClick={() => {
-                      alImportar(a, elegido);
+                    disabled={ocupado}
+                    startIcon={<UploadFileOutlined />}
+                    onClick={async () => {
+                      // El archivo elegido se suelta recién al terminar: si se
+                      // soltaba antes, desaparecía el botón y no se veía nada.
+                      await alImportar(a, elegido);
                       setElegido(null);
                       if (campo.current) campo.current.value = '';
                     }}
@@ -124,7 +158,7 @@ function FilaDeCarga({
                   </Button>
                 </>
               ) : (
-                <Button variant="outlined" size="small" onClick={() => campo.current?.click()}>
+                <Button variant="outlined" size="small" disabled={ocupado} onClick={() => campo.current?.click()}>
                   Seleccionar archivo
                 </Button>
               )}
@@ -199,6 +233,17 @@ export function Cargar() {
   const confirmar = useConfirmar();
   const navegar = useNavigate();
   const [recien, setRecien] = useState<Recien | null>(null);
+  // Qué archivo se está importando y cuánto subió. Uno por vez.
+  const [enCurso, setEnCurso] = useState<{ codigo: string; porcentaje: number } | null>(null);
+
+  // Cerrar la pestaña en medio de una importación la corta sin avisar: el
+  // navegador pregunta antes.
+  useEffect(() => {
+    if (!enCurso) return;
+    const avisarAlSalir = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', avisarAlSalir);
+    return () => window.removeEventListener('beforeunload', avisarAlSalir);
+  }, [enCurso]);
 
   if (consulta.isPending) return <LinearProgress aria-label="Cargando" />;
   if (consulta.isError) return <Alert severity="error">No se pudo cargar la pantalla.</Alert>;
@@ -215,13 +260,21 @@ export function Cargar() {
       });
       if (ok === null) return;
     }
-    cargar.mutate(
-      { codigo: a.codigo, archivo, periodo: d.periodo!.codigo, jurisdiccion: d.jurisdiccion },
-      {
-        onSuccess: (r) => setRecien({ ...r, codigo: a.codigo }),
-        onError: (e) => avisar({ texto: mensajeDeError(e), error: true }),
-      },
-    );
+    setEnCurso({ codigo: a.codigo, porcentaje: 0 });
+    try {
+      const r = await cargar.mutateAsync({
+        codigo: a.codigo,
+        archivo,
+        periodo: d.periodo!.codigo,
+        jurisdiccion: d.jurisdiccion,
+        alAvanzar: (porcentaje) => setEnCurso({ codigo: a.codigo, porcentaje }),
+      });
+      setRecien({ ...r, codigo: a.codigo });
+    } catch (e) {
+      avisar({ texto: mensajeDeError(e), error: true });
+    } finally {
+      setEnCurso(null);
+    }
   };
 
   return (
@@ -272,7 +325,8 @@ export function Cargar() {
                   key={a.codigo}
                   a={a}
                   habilitada={habilitada}
-                  subiendo={cargar.isPending && cargar.variables?.codigo === a.codigo}
+                  progreso={enCurso?.codigo === a.codigo ? enCurso.porcentaje : null}
+                  ocupado={!!enCurso}
                   alImportar={importar}
                 />
               ))

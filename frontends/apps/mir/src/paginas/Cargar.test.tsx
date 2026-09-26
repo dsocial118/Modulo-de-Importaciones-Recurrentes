@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { envio, mostrar, resuelta } from '../pruebas';
 import { Cargar } from './Cargar';
@@ -74,6 +74,31 @@ describe('Cargar', () => {
       target: { files: [new File(['x'], 'MPI_2026_T1_Chubut.xlsx')] },
     });
     expect(screen.getByRole('button', { name: /Reemplazar/ })).toBeInTheDocument();
+  });
+
+  it('mientras importa, la fila dice en qué va y no se puede importar otro', async () => {
+    // Antes el botón desaparecía al apretarlo y la fila quedaba como si nada.
+    let avanzar: (n: number) => void = () => {};
+    api.useCargarArchivo.mockReturnValue({
+      ...envio(),
+      mutateAsync: (d: { alAvanzar: (n: number) => void }) => {
+        avanzar = d.alAvanzar;
+        return new Promise(() => {}); // no termina: se mira el durante
+      },
+    });
+    api.useCarga.mockReturnValue(resuelta(carga([archivo('MPI'), archivo('MPE')])));
+    const { container } = mostrar(<Cargar />);
+    fireEvent.change(container.querySelector('input[type=file]')!, {
+      target: { files: [new File(['x'], 'MPI_2026_T1_Chubut.xlsx')] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Importar/ }));
+
+    await act(async () => avanzar(40));
+    expect(screen.getByText('Subiendo el archivo… 40 %')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Seleccionar archivo' })).toBeDisabled();
+
+    await act(async () => avanzar(100));
+    expect(screen.getByText('Revisando el archivo…')).toBeInTheDocument();
   });
 
   it('con la carga cerrada no se ofrece subir nada', () => {
