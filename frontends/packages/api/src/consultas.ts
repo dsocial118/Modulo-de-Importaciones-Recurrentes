@@ -91,6 +91,10 @@ export function useSesion() {
       return data;
     },
     staleTime: 5 * 60 * 1000,
+    // La sesión trae el menú, y el menú dice qué secciones están en /v2/. Una
+    // pestaña abierta desde antes de una migración seguía llevando a la versión
+    // actual, porque nunca volvía a pedirla. Al volver a la pestaña se renueva.
+    refetchOnWindowFocus: true,
   });
 }
 
