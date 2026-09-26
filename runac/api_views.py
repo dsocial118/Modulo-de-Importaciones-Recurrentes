@@ -54,6 +54,7 @@ from runac.permissions import (
     puede_revisar,
     rol_de,
 )
+from runac.services import alcance_service as alcance
 from runac.services import circuito_service as circuito
 from runac.services import demo_service
 from runac.services import edicion_service as edicion
@@ -113,23 +114,21 @@ def jurisdiccion_permitida(request) -> str | None:
     return pedida if pedida in JURISDICCIONES else None
 
 
-def _es_suya(usuario, jurisdiccion: str | None) -> bool:
-    """El nivel nacional ve todas; el provincial, sólo la propia."""
-    if jurisdiccion is None:
-        return False
-    return es_nacional(usuario) or jurisdiccion == jurisdiccion_de(usuario)
+# De quién es cada cosa lo decide `alcance_service`, el mismo que usan las
+# pantallas actuales: un solo control para las dos versiones. Acá sólo se
+# traduce su 404 al de DRF.
 
 
 def _presentacion_permitida(usuario, presentacion_id: int) -> str:
-    jurisdiccion = svc.jurisdiccion_de_la_presentacion(presentacion_id)
-    if not _es_suya(usuario, jurisdiccion):
+    jurisdiccion = alcance.jurisdiccion_de_la_presentacion(presentacion_id)
+    if not alcance.es_suya(usuario, jurisdiccion):
         raise NotFound("No existe esa presentación.")
     return jurisdiccion
 
 
 def _importacion_permitida(usuario, importacion_id: int) -> dict:
     imp = svc.importacion(importacion_id)
-    if not imp or not _es_suya(usuario, imp.get("jurisdiccion")):
+    if not imp or not alcance.es_suya(usuario, imp.get("jurisdiccion")):
         raise NotFound("No existe esa importación.")
     return imp
 
@@ -708,7 +707,7 @@ class ResponderView(APIView):
     @extend_schema(request=s.RespuestaSerializer, responses=s.MensajeSerializer)
     def post(self, request, observacion_id):
         _exigir(request.user, "resultado")
-        presentacion_id = svc.presentacion_de_la_observacion(observacion_id)
+        presentacion_id = alcance.presentacion_de_la_observacion(observacion_id)
         if presentacion_id is None:
             raise NotFound("No existe esa observación.")
         _presentacion_permitida(request.user, presentacion_id)

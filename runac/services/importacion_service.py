@@ -571,29 +571,6 @@ def errores_del_archivo(importacion_id: int, limite: int = 200) -> list[dict]:
         return _fila_a_dict(cur)
 
 
-def jurisdiccion_de_la_presentacion(presentacion_id: int) -> str | None:
-    """De quién es una presentación: es lo que decide quién puede tocarla."""
-    with connection.cursor() as cur:
-        cur.execute(
-            """SELECT j.nombre FROM mir_c2_presentacion s
-                 JOIN mir_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
-                WHERE s.id = %s""",
-            [presentacion_id],
-        )
-        fila = cur.fetchone()
-    return fila[0] if fila else None
-
-
-def presentacion_de_la_observacion(observacion_id: int) -> int | None:
-    with connection.cursor() as cur:
-        cur.execute(
-            "SELECT presentacion_id FROM mir_c2_observacion WHERE id = %s",
-            [observacion_id],
-        )
-        fila = cur.fetchone()
-    return fila[0] if fila else None
-
-
 def resumen_de_hallazgos(importacion_id: int):
     with connection.cursor() as cur:
         cur.execute(

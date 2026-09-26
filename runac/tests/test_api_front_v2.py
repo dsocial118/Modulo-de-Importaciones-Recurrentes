@@ -219,14 +219,14 @@ def test_lo_propio_se_ve(mocker):
 
 def test_el_nacional_ve_cualquier_jurisdiccion(mocker):
     mocker.patch.object(
-        api_views.svc, "jurisdiccion_de_la_presentacion", return_value="Chaco"
+        api_views.alcance, "jurisdiccion_de_la_presentacion", return_value="Chaco"
     )
     assert api_views._presentacion_permitida(REVISOR, 6) == "Chaco"
 
 
 def test_una_accion_sobre_otra_jurisdiccion_no_se_ejecuta(mocker):
     mocker.patch.object(
-        api_views.svc, "jurisdiccion_de_la_presentacion", return_value="Chaco"
+        api_views.alcance, "jurisdiccion_de_la_presentacion", return_value="Chaco"
     )
     ejecutar = mocker.patch.object(api_views.circuito, "ejecutar")
     pedido = APIRequestFactory().post(
