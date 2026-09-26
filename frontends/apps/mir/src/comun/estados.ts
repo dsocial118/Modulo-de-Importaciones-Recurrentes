@@ -7,7 +7,7 @@ type Forma = { texto: string; tono: Tono };
 export const ESTADO_DEL_ARCHIVO: Record<string, Forma> = {
   SIN_CARGAR: { texto: 'Sin cargar', tono: 'pending' },
   VALIDA: { texto: 'Importado', tono: 'info' },
-  FALLIDA: { texto: 'Con errores', tono: 'attention' },
+  FALLIDA: { texto: 'Con errores', tono: 'critical' },
   ANULADA: { texto: 'Reemplazado', tono: 'pending' },
 };
 
@@ -23,8 +23,8 @@ export const tonoDeLaPresentacion = (estado: string): Tono =>
   A_LA_JURISDICCION.has(estado) ? 'attention' : estado === 'EN_CARGA' ? 'pending' : 'info';
 
 export const SEVERIDAD: Record<string, Forma> = {
-  BLOQUEANTE: { texto: 'Bloqueante', tono: 'attention' },
-  ADVERTENCIA: { texto: 'Advertencia', tono: 'info' },
+  BLOQUEANTE: { texto: 'Bloqueante', tono: 'critical' },
+  ADVERTENCIA: { texto: 'Advertencia', tono: 'attention' },
 };
 
 export const formaDe = (tabla: Record<string, Forma>, codigo: string): Forma =>

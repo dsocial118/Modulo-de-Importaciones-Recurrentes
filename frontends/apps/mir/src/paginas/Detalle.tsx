@@ -120,7 +120,7 @@ export function Detalle() {
         )}
 
         {imp.estado === 'FALLIDA' && (
-          <Alert severity="warning">
+          <Alert severity="error">
             <strong>El archivo no se importó.</strong> La importación es restrictiva: no se incorporó ninguna de sus
             filas.
           </Alert>

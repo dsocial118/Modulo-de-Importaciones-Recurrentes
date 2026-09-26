@@ -13,6 +13,7 @@ import {
   LinearProgress,
   Stack,
   Typography,
+  useTheme,
 } from '@mui/material';
 import {
   mensajeDeError,
@@ -21,7 +22,7 @@ import {
   type ArchivoACargar,
   type ResultadoDeImportar,
 } from '@mir/api';
-import { EtiquetaDeEstado, Titulo, useAvisar, useConfirmar } from '@mir/ui';
+import { EtiquetaDeEstado, Titulo, coloresDe, useAvisar, useConfirmar, type Tono } from '@mir/ui';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ESTADO_DEL_ARCHIVO, formaDe } from '../comun/estados';
@@ -83,8 +84,11 @@ function FilaDeCarga({
 
   return (
     <Box sx={{ py: 2, borderTop: 1, borderColor: 'divider' }}>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: { md: 'center' } }}>
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+      {/* El texto no se estira: con flexGrow empujaba los botones a la otra
+          punta y dejaba el medio en blanco. Con el mismo ancho base en todas
+          las filas, los botones quedan cerca y encolumnados. */}
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} sx={{ alignItems: { md: 'center' } }}>
+        <Box sx={{ flex: { md: '0 1 720px' }, minWidth: 0 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
             <Typography sx={{ fontWeight: 500 }}>{a.codigo}</Typography>
             <EtiquetaDeEstado tono={e.tono} texto={e.texto} />
@@ -94,13 +98,16 @@ function FilaDeCarga({
               </Typography>
             )}
           </Stack>
-          <Typography variant="body2" color="text.secondary">
-            {a.nombre}
-            {a.obligatorio ? ' · obligatorio' : ''}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" component="div">
-            Nombre requerido: <Box component="span" sx={{ fontFamily: 'monospace' }}>{a.nombre_sugerido}</Box>
-          </Typography>
+          {/* En un renglón mientras entre; si no entra, el nombre requerido baja. */}
+          <Stack direction="row" sx={{ flexWrap: 'wrap', alignItems: 'baseline', columnGap: 1.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              {a.nombre}
+              {a.obligatorio ? ' · obligatorio' : ''}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Nombre requerido: <Box component="span" sx={{ fontFamily: 'monospace' }}>{a.nombre_sugerido}</Box>
+            </Typography>
+          </Stack>
           {/* Se dice SIEMPRE, no sólo cuando traba: así se sabe antes de intentar. */}
           {a.necesita.length > 0 && (
             <Typography variant="caption" color="text.secondary" component="div">
@@ -109,7 +116,7 @@ function FilaDeCarga({
           )}
         </Box>
 
-        <Box sx={{ minWidth: { md: 280 } }}>
+        <Box sx={{ minWidth: { md: 280 }, flexShrink: 0 }}>
           {progreso !== null ? (
             <Avance porcentaje={progreso} />
           ) : a.bloqueado_por.length > 0 ? (
@@ -173,13 +180,21 @@ function FilaDeCarga({
 }
 
 function ResultadoDelArchivo({ r, alCerrar, alVer }: { r: Recien | null; alCerrar: () => void; alVer: () => void }) {
+  const { palette } = useTheme();
   if (!r) return null;
   const entro = !r.rechazado && r.estado === 'VALIDA';
   const hayQueCorregir = !!r.importacion_id && (r.bloqueantes > 0 || r.advertencias > 0);
+  // El color dice cómo le fue antes de leer: rojo si no entró, ámbar si entró
+  // con advertencias, azul si entró limpio.
+  const tono: Tono = !entro ? 'critical' : r.advertencias > 0 ? 'attention' : 'info';
+  const c = coloresDe(tono, palette.mode);
   return (
     <Dialog open onClose={alCerrar} maxWidth="sm" fullWidth>
-      <DialogTitle>{entro ? 'Importación correcta' : 'No se pudo importar'}</DialogTitle>
+      <DialogTitle>
+        {!entro ? 'No se pudo importar' : r.advertencias > 0 ? 'Importado, con advertencias' : 'Importación correcta'}
+      </DialogTitle>
       <DialogContent>
+        <Box sx={{ bgcolor: c.surface, color: c.text, borderLeft: `4px solid ${c.border}`, borderRadius: 1, p: 2 }}>
         <Typography gutterBottom>
           Archivo <strong>{r.codigo}</strong>.
         </Typography>
@@ -206,6 +221,7 @@ function ResultadoDelArchivo({ r, alCerrar, alVer }: { r: Recien | null; alCerra
             <Typography>No se incorporó ningún registro de este archivo.</Typography>
           </>
         )}
+        </Box>
         {hayQueCorregir && (
           <Stack spacing={1} sx={{ mt: 2 }}>
             <Button variant="contained" href={`/api/mir/importaciones/${r.importacion_id}/marcado.xlsx`}>

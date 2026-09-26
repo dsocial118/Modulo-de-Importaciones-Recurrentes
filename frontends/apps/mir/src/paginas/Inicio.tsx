@@ -40,7 +40,7 @@ import { conFiltros } from '../comun/filtros';
 const ESTADO_DEL_ARCHIVO: Record<string, { texto: string; tono: Tono }> = {
   SIN_CARGAR: { texto: 'Sin cargar', tono: 'pending' },
   VALIDA: { texto: 'Importado', tono: 'info' },
-  FALLIDA: { texto: 'Con errores', tono: 'attention' },
+  FALLIDA: { texto: 'Con errores', tono: 'critical' },
   ANULADA: { texto: 'Reemplazado', tono: 'pending' },
 };
 
@@ -89,8 +89,8 @@ function Filas({ a, alinear = 'flex-end' }: { a: ArchivoDelPeriodo; alinear?: 'f
   return (
     <Stack direction="row" spacing={1} sx={{ justifyContent: alinear, alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
       <span>{a.filas} filas</span>
-      {a.bloqueantes > 0 && <EtiquetaDeEstado tono="attention" texto={`${a.bloqueantes} bloqueantes`} />}
-      {a.advertencias > 0 && <EtiquetaDeEstado tono="info" texto={`${a.advertencias} advertencias`} />}
+      {a.bloqueantes > 0 && <EtiquetaDeEstado tono="critical" texto={`${a.bloqueantes} bloqueantes`} />}
+      {a.advertencias > 0 && <EtiquetaDeEstado tono="attention" texto={`${a.advertencias} advertencias`} />}
     </Stack>
   );
 }

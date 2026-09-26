@@ -37,7 +37,7 @@ export function Avisos({ children }: { children: ReactNode }) {
   };
 
   // Neutrales, como pide el diseño: un aviso bueno no se pinta de verde.
-  const tono = coloresDe(aviso?.error ? 'attention' : 'info', theme.palette.mode);
+  const tono = coloresDe(aviso?.error ? 'critical' : 'info', theme.palette.mode);
   const falta = !!pregunta?.campo?.obligatorio && !valor.trim();
 
   return (

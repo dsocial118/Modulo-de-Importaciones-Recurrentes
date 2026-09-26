@@ -34,7 +34,7 @@ function Techo({
   texto,
 }: {
   etiqueta: string;
-  tono: 'info' | 'attention';
+  tono: 'attention' | 'critical';
   valor: [string, string];
   editable: boolean;
   alCambiar: (v: [string, string]) => void;
@@ -170,7 +170,7 @@ function Campo({
           <Stack spacing={1} sx={{ mt: 1 }}>
             <Techo
               etiqueta="advierte"
-              tono="info"
+              tono="attention"
               valor={avisa}
               editable={editable}
               texto={c.rangos.avisa?.texto}
@@ -178,7 +178,7 @@ function Campo({
             />
             <Techo
               etiqueta="bloquea"
-              tono="attention"
+              tono="critical"
               valor={frena}
               editable={editable}
               texto={c.rangos.frena?.texto}
