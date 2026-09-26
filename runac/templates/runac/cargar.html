@@ -77,7 +77,8 @@
                                           action="{% url 'runac:cargar_archivo' a.codigo %}"
                                           enctype="multipart/form-data"
                                           class="d-flex flex-wrap gap-2 align-items-center"
-                                          {% if a.importada %}onsubmit="return confirm('Si la nueva importación entra, reemplaza a la anterior y se pierden las correcciones hechas sobre ella. ¿Continuar?')"{% endif %}>
+                                          data-reemplaza="{% if a.importada %}1{% endif %}"
+                                          onsubmit="return alImportar(this)">
                                         {% csrf_token %}
                                         <input type="hidden" name="periodo" value="{{ periodo_elegido }}" />
                                         <input type="hidden" name="jurisdiccion" value="{{ jurisdiccion }}" />
@@ -139,6 +140,36 @@
     </div>
 
     <script>
+      // Mientras se importa, se dice. Antes, al apretar Importar la pantalla
+      // quedaba quieta hasta que el servidor terminaba, y no se sabía si estaba
+      // haciendo algo. El formulario común no informa cuánto subió: se dice que
+      // está en curso, y se traban los demás botones para no mandar dos a la vez.
+      function alImportar(formulario) {
+          if (formulario.dataset.reemplaza &&
+              !confirm("Si la nueva importación entra, reemplaza a la anterior y se pierden las correcciones hechas sobre ella. ¿Continuar?")) {
+              return false;
+          }
+          document.querySelectorAll("[data-importar], [data-elegir]").forEach(function (b) {
+              if (formulario.contains(b) && b.tagName === "BUTTON") return;
+              b.classList.add("disabled");
+              b.setAttribute("aria-disabled", "true");
+              if (b.tagName === "BUTTON") b.disabled = true;
+          });
+          // El botón se cambia después de que el navegador tomó el envío: si se
+          // deshabilita antes, hay navegadores que no mandan el formulario.
+          var boton = formulario.querySelector("[data-importar]");
+          setTimeout(function () {
+              boton.disabled = true;
+              boton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Importando…';
+          }, 0);
+          var aviso = document.createElement("div");
+          aviso.className = "ayuda w-100";
+          aviso.setAttribute("role", "status");
+          aviso.textContent = "Subiendo y revisando el archivo. Con archivos grandes puede tardar: no cierres la página.";
+          formulario.appendChild(aviso);
+          return true;
+      }
+
       // Un solo control para los dos pasos: elegir e importar. Mientras no haya
       // archivo, «Importar» no existe —no está deshabilitado, no está—, así que
       // no se puede apretar algo que todavía no corresponde.
