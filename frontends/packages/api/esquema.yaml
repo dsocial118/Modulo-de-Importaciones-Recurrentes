@@ -655,6 +655,11 @@ components:
         filas:
           type: integer
           nullable: true
+        advertencias:
+          type: integer
+          nullable: true
+        correcciones:
+          type: integer
         necesita:
           type: array
           items:
@@ -666,8 +671,10 @@ components:
         nombre_sugerido:
           type: string
       required:
+      - advertencias
       - bloqueado_por
       - codigo
+      - correcciones
       - estado
       - filas
       - importada

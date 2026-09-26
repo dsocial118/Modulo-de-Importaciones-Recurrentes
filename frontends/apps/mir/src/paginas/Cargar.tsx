@@ -1,4 +1,5 @@
 import LockOutlined from '@mui/icons-material/LockOutlined';
+import SwapHorizOutlined from '@mui/icons-material/SwapHorizOutlined';
 import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
 import {
   Alert,
@@ -32,10 +33,6 @@ import { conFiltros, useFiltros } from '../comun/filtros';
 
 type Recien = ResultadoDeImportar & { codigo: string };
 
-/**
- * Una fila por archivo. Un solo botón que cambia en el mismo lugar: primero
- * «Seleccionar archivo», y con el archivo elegido pasa a ser «Importar».
- */
 /**
  * Mientras se importa, la fila lo dice y dice en qué va: primero sube el
  * archivo, con porcentaje, y después el sistema lo revisa, que con un archivo
@@ -79,8 +76,8 @@ function FilaDeCarga({
   alImportar: (a: ArchivoACargar, archivo: File) => Promise<void>;
 }) {
   const campo = useRef<HTMLInputElement>(null);
-  const [elegido, setElegido] = useState<File | null>(null);
   const e = formaDe(ESTADO_DEL_ARCHIVO, a.estado);
+  const atencion = coloresDe('attention', useTheme().palette.mode);
 
   return (
     <Box sx={{ py: 2, borderTop: 1, borderColor: 'divider' }}>
@@ -133,40 +130,39 @@ function FilaDeCarga({
                 type="file"
                 accept=".xlsx,.xlsm"
                 hidden
-                onChange={(ev) => setElegido(ev.target.files?.[0] ?? null)}
+                onChange={async (ev) => {
+                  const archivo = ev.target.files?.[0];
+                  // Se vacía ya: así elegir el mismo archivo otra vez vuelve a disparar.
+                  ev.target.value = '';
+                  if (archivo) await alImportar(a, archivo);
+                }}
               />
-              {elegido ? (
-                <>
-                  {/* El nombre vuelve a abrir el selector: así se cambia de archivo sin otro botón. */}
-                  <Button
-                    size="small"
-                    onClick={() => campo.current?.click()}
-                    sx={{ fontFamily: 'monospace', textTransform: 'none', maxWidth: 220 }}
-                    title="Elegir otro archivo"
-                  >
-                    <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {elegido.name}
-                    </Box>
-                  </Button>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    disabled={ocupado}
-                    startIcon={<UploadFileOutlined />}
-                    onClick={async () => {
-                      // El archivo elegido se suelta recién al terminar: si se
-                      // soltaba antes, desaparecía el botón y no se veía nada.
-                      await alImportar(a, elegido);
-                      setElegido(null);
-                      if (campo.current) campo.current.value = '';
-                    }}
-                  >
-                    {a.importada ? 'Reemplazar' : 'Importar'}
-                  </Button>
-                </>
+              {/* El botón dice lo que va a pasar. Antes decía «Seleccionar
+                  archivo» también en lo ya importado, y parecía que faltaba
+                  hacer algo. Reemplazar va en ámbar: pisa lo que ya estaba. */}
+              {a.importada ? (
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  size="small"
+                  disabled={ocupado}
+                  startIcon={<SwapHorizOutlined />}
+                  // El texto va en el tono oscuro de «atención»: el ámbar
+                  // sobre blanco no llega al contraste AA.
+                  sx={{ color: atencion.text, borderColor: atencion.border, '&:hover': { bgcolor: atencion.surface } }}
+                  onClick={() => campo.current?.click()}
+                >
+                  Reemplazar
+                </Button>
               ) : (
-                <Button variant="outlined" size="small" disabled={ocupado} onClick={() => campo.current?.click()}>
-                  Seleccionar archivo
+                <Button
+                  variant="contained"
+                  size="small"
+                  disabled={ocupado}
+                  startIcon={<UploadFileOutlined />}
+                  onClick={() => campo.current?.click()}
+                >
+                  Importar
                 </Button>
               )}
             </Stack>
@@ -267,12 +263,47 @@ export function Cargar() {
   const habilitada = d.carga_abierta && d.puede_cargar && d.periodo?.estado === 'ABIERTO';
 
   const importar = async (a: ArchivoACargar, archivo: File) => {
+    // Sólo se pregunta al reemplazar: es lo único que pisa algo. Importar por
+    // primera vez no necesita confirmación, porque un archivo con errores se
+    // rechaza entero y no deja nada a medias.
     if (a.importada) {
+      const hoy = [
+        a.filas != null ? plural(a.filas, 'fila', 'filas') : null,
+        a.advertencias ? plural(a.advertencias, 'advertencia', 'advertencias') : null,
+        a.correcciones ? plural(a.correcciones, 'corrección hecha', 'correcciones hechas') : null,
+      ].filter(Boolean);
       const ok = await confirmar({
         titulo: `Reemplazar ${a.codigo}`,
-        texto:
-          'Si la nueva importación entra, reemplaza a la anterior y se pierden las correcciones hechas sobre ella.',
+        texto: (
+          <>
+            <Typography gutterBottom>
+              Ya hay una importación de <strong>{a.codigo}</strong>
+              {hoy.length > 0 && <> ({hoy.join(', ')})</>}. Vas a subir{' '}
+              <Box component="span" sx={{ fontFamily: 'monospace' }}>
+                {archivo.name}
+              </Box>
+              .
+            </Typography>
+            <Typography>
+              Si el archivo nuevo entra, reemplaza al anterior
+              {a.correcciones ? (
+                <>
+                  {' '}
+                  y{' '}
+                  <strong>
+                    {a.correcciones === 1
+                      ? 'se pierde la corrección hecha'
+                      : `se pierden las ${a.correcciones} correcciones hechas`}
+                  </strong>{' '}
+                  dentro del sistema
+                </>
+              ) : null}
+              . Si tiene errores bloqueantes, no se incorpora y el anterior queda como estaba.
+            </Typography>
+          </>
+        ),
         confirmar: 'Reemplazar',
+        color: 'warning',
       });
       if (ok === null) return;
     }

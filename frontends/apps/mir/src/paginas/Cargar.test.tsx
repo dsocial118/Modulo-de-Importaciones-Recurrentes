@@ -16,6 +16,8 @@ function archivo(codigo: string, extra = {}) {
     estado: 'SIN_CARGAR',
     importada: false,
     filas: null,
+    advertencias: null,
+    correcciones: 0,
     necesita: [],
     bloqueado_por: [],
     nombre_sugerido: `${codigo}_2026_T1_Chubut.xlsx`,
@@ -55,25 +57,46 @@ describe('Cargar', () => {
     );
     mostrar(<Cargar />);
     expect(screen.getByText(/Primero hay que importar/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Seleccionar archivo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Importar|Reemplazar/ })).not.toBeInTheDocument();
   });
 
-  it('«Importar» aparece recién después de elegir el archivo', () => {
+  it('sin importar, el botón dice «Importar» y al elegir el archivo importa sin preguntar', async () => {
+    const subir = vi.fn(async () => ({}));
+    api.useCargarArchivo.mockReturnValue({ ...envio(), mutateAsync: subir });
     api.useCarga.mockReturnValue(resuelta(carga([archivo('MPI')])));
     const { container } = mostrar(<Cargar />);
-    expect(screen.queryByRole('button', { name: /Importar/ })).not.toBeInTheDocument();
-    const campo = container.querySelector('input[type=file]')!;
-    fireEvent.change(campo, { target: { files: [new File(['x'], 'MPI_2026_T1_Chubut.xlsx')] } });
     expect(screen.getByRole('button', { name: /Importar/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Reemplazar/ })).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.change(container.querySelector('input[type=file]')!, {
+        target: { files: [new File(['x'], 'MPI_2026_T1_Chubut.xlsx')] },
+      });
+    });
+    expect(screen.queryByRole('dialog', { name: /Reemplazar/ })).not.toBeInTheDocument();
+    expect(subir).toHaveBeenCalledTimes(1);
   });
 
-  it('un archivo ya importado se reemplaza, no se importa de nuevo', () => {
-    api.useCarga.mockReturnValue(resuelta(carga([archivo('MPI', { estado: 'VALIDA', importada: true, filas: 30 })])));
+  it('ya importado, dice «Reemplazar» y pregunta antes, con lo que se pierde', async () => {
+    // Antes decía «Seleccionar archivo» también acá, y parecía que faltaba algo.
+    const subir = vi.fn(async () => ({}));
+    api.useCargarArchivo.mockReturnValue({ ...envio(), mutateAsync: subir });
+    api.useCarga.mockReturnValue(
+      resuelta(
+        carga([archivo('MPI', { estado: 'VALIDA', importada: true, filas: 30, advertencias: 13, correcciones: 3 })]),
+      ),
+    );
     const { container } = mostrar(<Cargar />);
-    fireEvent.change(container.querySelector('input[type=file]')!, {
-      target: { files: [new File(['x'], 'MPI_2026_T1_Chubut.xlsx')] },
-    });
+    expect(screen.queryByRole('button', { name: /Importar/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Reemplazar/ })).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.change(container.querySelector('input[type=file]')!, {
+        target: { files: [new File(['x'], 'MPI_2026_T1_Chubut.xlsx')] },
+      });
+    });
+    const pregunta = await screen.findByRole('dialog', { name: 'Reemplazar MPI' });
+    expect(pregunta).toHaveTextContent('30 filas, 13 advertencias, 3 correcciones hechas');
+    expect(pregunta).toHaveTextContent('se pierden las 3 correcciones hechas');
+    expect(subir).not.toHaveBeenCalled();
   });
 
   it('mientras importa, la fila dice en qué va y no se puede importar otro', async () => {
@@ -88,14 +111,15 @@ describe('Cargar', () => {
     });
     api.useCarga.mockReturnValue(resuelta(carga([archivo('MPI'), archivo('MPE')])));
     const { container } = mostrar(<Cargar />);
-    fireEvent.change(container.querySelector('input[type=file]')!, {
-      target: { files: [new File(['x'], 'MPI_2026_T1_Chubut.xlsx')] },
+    await act(async () => {
+      fireEvent.change(container.querySelector('input[type=file]')!, {
+        target: { files: [new File(['x'], 'MPI_2026_T1_Chubut.xlsx')] },
+      });
     });
-    fireEvent.click(screen.getByRole('button', { name: /Importar/ }));
 
     await act(async () => avanzar(40));
     expect(screen.getByText('Subiendo el archivo… 40 %')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Seleccionar archivo' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Importar/ })).toBeDisabled();
 
     await act(async () => avanzar(100));
     expect(screen.getByText('Revisando el archivo…')).toBeInTheDocument();
@@ -107,6 +131,6 @@ describe('Cargar', () => {
     );
     mostrar(<Cargar />);
     expect(screen.getByText(/reabrir la carga/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Seleccionar archivo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Importar|Reemplazar/ })).not.toBeInTheDocument();
   });
 });

@@ -23,6 +23,9 @@ export type Pregunta = {
   titulo: string;
   texto: ReactNode;
   confirmar?: string;
+  // `warning` para lo que pisa algo que ya estaba, como reemplazar una
+  // importación: el botón sale en ámbar y no en el verde de marca.
+  color?: 'primary' | 'warning';
   // Si se pide, la confirmación trae un campo de texto —por ejemplo, el motivo
   // de una corrección— y su valor es lo que devuelve.
   campo?: { etiqueta: string; obligatorio?: boolean };

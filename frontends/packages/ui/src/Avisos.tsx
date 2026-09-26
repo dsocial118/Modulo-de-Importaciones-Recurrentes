@@ -39,6 +39,18 @@ export function Avisos({ children }: { children: ReactNode }) {
   // Neutrales, como pide el diseño: un aviso bueno no se pinta de verde.
   const tono = coloresDe(aviso?.error ? 'critical' : 'info', theme.palette.mode);
   const falta = !!pregunta?.campo?.obligatorio && !valor.trim();
+  // El ámbar del tema con texto blanco no llega al contraste AA: se usa el tono
+  // más oscuro de «atención» en claro, y el más claro en oscuro.
+  const claro = theme.palette.mode === 'light';
+  const atencion = coloresDe('attention', theme.palette.mode);
+  const ambar =
+    pregunta?.color === 'warning'
+      ? {
+          bgcolor: claro ? atencion.text : atencion.border,
+          color: claro ? '#FFFFFF' : '#1C1917',
+          '&:hover': { bgcolor: claro ? '#5E2D00' : atencion.text },
+        }
+      : undefined;
 
   return (
     <AvisoContext.Provider value={avisar}>
@@ -77,7 +89,13 @@ export function Avisos({ children }: { children: ReactNode }) {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => cerrar(null)}>Cancelar</Button>
-            <Button variant="contained" disabled={falta} onClick={() => cerrar(valor.trim())}>
+            <Button
+              variant="contained"
+              color={pregunta?.color ?? 'primary'}
+              sx={ambar}
+              disabled={falta}
+              onClick={() => cerrar(valor.trim())}
+            >
               {pregunta?.confirmar ?? 'Confirmar'}
             </Button>
           </DialogActions>

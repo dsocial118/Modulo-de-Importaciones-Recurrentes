@@ -444,6 +444,12 @@ class CargaView(APIView):
                         "estado": a["estado"],
                         "importada": bool(a.get("importada")),
                         "filas": imp.get("filas_incorporadas"),
+                        "advertencias": imp.get("advertencias"),
+                        "correcciones": (
+                            edicion.cantidad_de_correcciones(imp["id"])
+                            if a.get("importada")
+                            else 0
+                        ),
                         "necesita": svc.archivos_referenciados(a["codigo"], codigo),
                         "bloqueado_por": [f["codigo"] for f in faltan],
                         "nombre_sugerido": f'{a["codigo"]}_{codigo}_{jurisdiccion}.xlsx',

@@ -764,6 +764,19 @@ def editar(
     }
 
 
+def cantidad_de_correcciones(importacion_id: int) -> int:
+    """Cuántas correcciones se hicieron dentro del sistema sobre esta importación.
+
+    Es lo que se pierde si se la reemplaza, y por eso se dice antes de hacerlo.
+    """
+    with connection.cursor() as cur:
+        cur.execute(
+            "SELECT COUNT(*) FROM mir_c2_historial_cambios WHERE importacion_id = %s",
+            [importacion_id],
+        )
+        return cur.fetchone()[0]
+
+
 def historial_de(importacion_id: int, numero_fila: int | None = None) -> list[dict]:
     """Las correcciones hechas sobre esta importación."""
     sql = """

@@ -159,6 +159,10 @@ class ArchivoACargarSerializer(serializers.Serializer):
     estado = serializers.CharField()
     importada = serializers.BooleanField()
     filas = serializers.IntegerField(allow_null=True)
+    # De la importación vigente: es lo que se pierde al reemplazarla, y se dice
+    # en la confirmación.
+    advertencias = serializers.IntegerField(allow_null=True)
+    correcciones = serializers.IntegerField()
     # Lo que nombra, esté importado o no: se muestra siempre, para que se sepa
     # antes de intentar. Y lo que falta de eso, que es lo que traba.
     necesita = serializers.ListField(child=serializers.CharField())

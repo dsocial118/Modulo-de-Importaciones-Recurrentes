@@ -423,6 +423,8 @@ export interface components {
             estado: string;
             importada: boolean;
             filas: number | null;
+            advertencias: number | null;
+            correcciones: number;
             necesita: string[];
             bloqueado_por: string[];
             nombre_sugerido: string;
