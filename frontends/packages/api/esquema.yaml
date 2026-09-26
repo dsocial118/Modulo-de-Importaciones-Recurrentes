@@ -146,7 +146,7 @@ paths:
   /api/mir/importaciones/{importacion_id}/errores.xlsx:
     get:
       operationId: mir_importaciones_errores.xlsx_retrieve
-      description: Un Excel con los errores, una hoja por cada hoja del archivo.
+      description: 'El informe de la importación: cada problema, con su estado.'
       parameters:
       - in: path
         name: importacion_id
@@ -351,10 +351,39 @@ paths:
                 type: string
                 format: binary
           description: ''
+  /api/mir/plantillas/{periodo}/{codigo}/instructivo/:
+    get:
+      operationId: mir_instructivo_descargar
+      description: 'El instructivo de un archivo: una fila por campo. Se baja aparte
+        de la plantilla.'
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: periodo
+        schema:
+          type: string
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/mir/plantillas/{periodo}/todas/:
     get:
       operationId: mir_plantillas_todas_retrieve
-      description: Todas las plantillas del período en un solo zip.
+      description: Todas las plantillas del período en un solo zip, cada una con su
+        instructivo.
       parameters:
       - in: path
         name: periodo
@@ -1582,10 +1611,13 @@ components:
           type: boolean
         descarga:
           type: string
+        descarga_instructivo:
+          type: string
       required:
       - campos
       - codigo
       - descarga
+      - descarga_instructivo
       - hojas
       - nombre
       - obligatorio

@@ -1,3 +1,4 @@
+import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import {
   Alert,
@@ -75,8 +76,17 @@ export function Plantillas() {
                       {a.hojas} hojas · {a.campos} campos{a.obligatorio ? ' · obligatorio' : ''}
                     </Typography>
                   </Box>
-                  <Button size="small" variant="outlined" href={a.descarga} aria-label={`Descargar ${a.codigo}`}>
+                  <Button size="small" variant="outlined" href={a.descarga} aria-label={`Plantilla de ${a.codigo}`}>
                     <DownloadOutlined fontSize="small" />
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="inherit"
+                    href={a.descarga_instructivo}
+                    aria-label={`Instructivo de ${a.codigo}`}
+                  >
+                    <DescriptionOutlined fontSize="small" />
                   </Button>
                 </Stack>
               ))}
@@ -90,7 +100,7 @@ export function Plantillas() {
                     <TableCell align="right">Hojas</TableCell>
                     <TableCell align="right">Campos</TableCell>
                     <TableCell align="center">Obligatorio</TableCell>
-                    <TableCell align="right">Plantilla</TableCell>
+                    <TableCell align="right">Descargas</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -107,9 +117,20 @@ export function Plantillas() {
                       <TableCell align="right">{a.hojas}</TableCell>
                       <TableCell align="right">{a.campos}</TableCell>
                       <TableCell align="center">{a.obligatorio ? 'Sí' : '—'}</TableCell>
-                      <TableCell align="right">
+                      {/* Dos descargas: la plantilla, para completar, y el instructivo, una fila por campo, para leer. */}
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                         <Button size="small" variant="outlined" startIcon={<DownloadOutlined />} href={a.descarga}>
-                          Descargar
+                          Plantilla
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="inherit"
+                          startIcon={<DescriptionOutlined />}
+                          href={a.descarga_instructivo}
+                          sx={{ ml: 1 }}
+                        >
+                          Instructivo
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -122,8 +143,9 @@ export function Plantillas() {
       </Card>
 
       <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
-        Cada plantilla trae el título, los grupos de campos, las listas desplegables con los valores vigentes, los
-        campos obligatorios marcados con <strong>*</strong> y una hoja de instrucciones.{' '}
+        Cada plantilla trae el título, los grupos de campos, las listas desplegables con los valores vigentes y los
+        campos obligatorios marcados con <strong>*</strong>. Al pasar el mouse por un título se ve qué va; el{' '}
+        <strong>instructivo</strong> lo explica campo por campo y se descarga aparte.{' '}
         <strong>Se arma en el momento de descargarla</strong>, así que siempre corresponde a la definición vigente.
       </Typography>
     </>

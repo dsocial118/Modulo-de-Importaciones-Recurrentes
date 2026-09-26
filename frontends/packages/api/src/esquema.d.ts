@@ -80,7 +80,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Un Excel con los errores, una hoja por cada hoja del archivo. */
+        /** @description El informe de la importación: cada problema, con su estado. */
         get: operations["mir_importaciones_errores.xlsx_retrieve"];
         put?: never;
         post?: never;
@@ -208,6 +208,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mir/plantillas/{periodo}/{codigo}/instructivo/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description El instructivo de un archivo: una fila por campo. Se baja aparte de la plantilla. */
+        get: operations["mir_instructivo_descargar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mir/plantillas/{periodo}/todas/": {
         parameters: {
             query?: never;
@@ -215,7 +232,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Todas las plantillas del período en un solo zip. */
+        /** @description Todas las plantillas del período en un solo zip, cada una con su instructivo. */
         get: operations["mir_plantillas_todas_retrieve"];
         put?: never;
         post?: never;
@@ -733,6 +750,7 @@ export interface components {
             campos: number;
             obligatorio: boolean;
             descarga: string;
+            descarga_instructivo: string;
         };
         Plantillas: {
             periodos: components["schemas"]["Periodo"][];
@@ -1161,6 +1179,28 @@ export interface operations {
         };
     };
     mir_plantilla_descargar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                codigo: string;
+                periodo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+        };
+    };
+    mir_instructivo_descargar: {
         parameters: {
             query?: never;
             header?: never;

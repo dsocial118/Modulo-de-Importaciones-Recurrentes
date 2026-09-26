@@ -26,6 +26,11 @@ urlpatterns = [
         v.PlantillaView.as_view(),
         name="plantilla",
     ),
+    path(
+        "plantillas/<str:periodo>/<str:codigo>/instructivo/",
+        v.InstructivoView.as_view(),
+        name="instructivo",
+    ),
     # Carga
     path("carga/", v.CargaView.as_view(), name="carga"),
     path("carga/<str:codigo>/", v.CargarArchivoView.as_view(), name="cargar_archivo"),

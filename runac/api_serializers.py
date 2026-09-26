@@ -138,6 +138,7 @@ class PlantillaSerializer(serializers.Serializer):
     campos = serializers.IntegerField()
     obligatorio = serializers.BooleanField()
     descarga = serializers.CharField()
+    descarga_instructivo = serializers.CharField()
 
 
 class PlantillasSerializer(serializers.Serializer):

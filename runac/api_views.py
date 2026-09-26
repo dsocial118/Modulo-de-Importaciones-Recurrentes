@@ -59,6 +59,7 @@ from runac.services import circuito_service as circuito
 from runac.services import demo_service
 from runac.services import edicion_service as edicion
 from runac.services import importacion_service as svc
+from runac.services import instructivo_service as instructivos
 from runac.services import informe_errores_service as informes
 from runac.services import plantillas_service as plantillas
 from runac.services import reglas_service
@@ -368,6 +369,9 @@ class PlantillasView(APIView):
                         "descarga": reverse(
                             "api_mir:plantilla", args=[del_periodo, a["codigo"]]
                         ),
+                        "descarga_instructivo": reverse(
+                            "api_mir:instructivo", args=[del_periodo, a["codigo"]]
+                        ),
                     }
                 )
         datos = {
@@ -399,8 +403,24 @@ class PlantillaView(APIView):
         return _descarga(contenido, ruta.name)
 
 
+class InstructivoView(APIView):
+    """El instructivo de un archivo: una fila por campo. Se baja aparte de la plantilla."""
+
+    @extend_schema(
+        operation_id="mir_instructivo_descargar", responses={(200, XLSX): bytes}
+    )
+    def get(self, request, codigo, periodo):
+        _exigir(request.user, "plantillas")
+        if codigo not in {a["codigo"] for a in svc.archivos_esperados(periodo)}:
+            raise NotFound("Ese archivo no forma parte del período.")
+        return _descarga(
+            instructivos.generar(codigo, periodo),
+            instructivos.nombre_de_archivo(codigo, periodo),
+        )
+
+
 class PlantillasTodasView(APIView):
-    """Todas las plantillas del período en un solo zip."""
+    """Todas las plantillas del período en un solo zip, cada una con su instructivo."""
 
     @extend_schema(responses={(200, "application/zip"): bytes})
     def get(self, request, periodo):
@@ -411,6 +431,10 @@ class PlantillasTodasView(APIView):
                 ruta = Path(plantillas.generar(a["codigo"], periodo))
                 z.write(ruta, ruta.name)
                 shutil.rmtree(ruta.parent, ignore_errors=True)
+                z.writestr(
+                    instructivos.nombre_de_archivo(a["codigo"], periodo),
+                    instructivos.generar(a["codigo"], periodo),
+                )
         nombre = f"{settings.MIR_INSTANCIA}_plantillas_{periodo}.zip"
         return _descarga(buffer.getvalue(), nombre, "application/zip")
 
@@ -890,7 +914,7 @@ class HallazgosView(APIView):
 
 
 class ErroresXlsxView(APIView):
-    """Un Excel con los errores, una hoja por cada hoja del archivo."""
+    """El informe de la importación: cada problema, con su estado."""
 
     @extend_schema(responses={(200, XLSX): bytes})
     def get(self, request, importacion_id):
@@ -899,7 +923,7 @@ class ErroresXlsxView(APIView):
         contenido = informes.planilla_de_errores(importacion_id)
         if not contenido:
             raise NotFound("No existe esa importación.")
-        return _descarga(contenido, f"errores_importacion_{importacion_id}.xlsx")
+        return _descarga(contenido, informes.nombre_del_informe(importacion_id))
 
 
 class MarcadoXlsxView(APIView):
