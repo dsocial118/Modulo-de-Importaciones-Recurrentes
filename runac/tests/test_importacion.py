@@ -235,3 +235,18 @@ def test_el_aviso_de_la_pantalla_actual_lee_la_ultima():
     assert aviso["recien_estado"] == "FALLIDA"
     assert aviso["recien_bloqueantes"] == 18
     assert aviso["recien_importacion_id"] == 14
+
+
+def test_la_demostracion_encuentra_todos_sus_archivos(monkeypatch):
+    """El botón «Armar demostración» usaba una copia propia de los archivos, que
+    quedó de la definición anterior y se rechazaba (pendiente #84). Ahora usa
+    los archivos de prueba del repositorio, y cada archivo del período tiene
+    que estar ahí."""
+    from runac.services import demo_service
+
+    monkeypatch.setattr(svc, "archivos_esperados", lambda periodo: list(ARCHIVOS))
+    plan = demo_service.plan()
+
+    assert [codigo for codigo, _ in plan] == [a["codigo"] for a in ARCHIVOS]
+    for _, nombre in plan:
+        assert (demo_service.ARCHIVOS / nombre).exists(), nombre

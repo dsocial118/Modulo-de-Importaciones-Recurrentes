@@ -68,9 +68,10 @@ traer advertencias de rango —DISP_PENAL las trae—, y es lo esperado. Despué
 carpetas: `_con_advertencias` entra igual pero con avisos, `_con_errores` no
 entra.
 
-> El botón **«Armar demostración»** de la pantalla de inicio **hoy no sirve con
-> esta definición**: usa los Excel de `runac/demo/`, que son de la definición
-> anterior, y los rechaza por encabezados. Verificado el 25-09-2026.
+> El botón **«Armar demostración»** de la pantalla de inicio importa, en orden,
+> los archivos de `Chubut_con_advertencias` que pide el período, y deja hechas
+> unas correcciones para que el historial tenga contenido. **Borra antes todas
+> las importaciones**: no usarlo en una base con datos que se quieran conservar.
 
 ## Cuando algo no anda
 

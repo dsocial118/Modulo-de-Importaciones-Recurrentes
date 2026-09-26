@@ -18,28 +18,44 @@ from runac.services import circuito_service as circuito
 from runac.services import edicion_service as edicion
 from runac.services import importacion_service as svc
 
-ARCHIVOS = Path(__file__).resolve().parent.parent / "demo"
 JURISDICCION = "Chubut"
 PERIODO = "2026_T1"
 
-# Los CINCO archivos van con la variante que trae advertencias.
+# Los mismos archivos de prueba que se usan para verificar una instalación, en
+# la variante que trae advertencias. Hasta el 26-09-2026 la demostración tenía
+# su propia copia en `runac/demo/`: nadie la regeneraba, quedó de la definición
+# anterior y el sistema la rechazaba por encabezados (pendiente #84).
+ARCHIVOS = (
+    Path(__file__).resolve().parents[2]
+    / "entorno"
+    / "mir-v2"
+    / "archivos_de_prueba"
+    / f"{JURISDICCION}_con_advertencias"
+)
+
+# Todos los archivos van con advertencias.
 #
-# Antes sólo el MPI las traía y los otros cuatro entraban perfectos: la
-# presentación quedaba con una sola pantalla que mostrara algo, y las
-# advertencias que había eran todas del mismo tipo. Una presentación real no se
-# parece a eso —los problemas aparecen repartidos y de distinta clase—, y esta
-# demostración se usa justamente para mostrar cómo se ve una importación de
-# verdad.
+# Antes sólo el MPI las traía y los otros entraban perfectos: la presentación
+# quedaba con una sola pantalla que mostrara algo, y las advertencias que había
+# eran todas del mismo tipo. Una presentación real no se parece a eso —los
+# problemas aparecen repartidos y de distinta clase—, y esta demostración se
+# usa justamente para mostrar cómo se ve una importación de verdad.
 #
-# Los cinco entran igual: una advertencia observa, no rechaza. Que el archivo
-# entre CON problemas anotados es lo que hay que poder mostrar.
-PLAN = [
-    ("DISP_PENAL", "DISP_PENAL_2026_T1_Chubut_CON_ADVERTENCIAS.xlsx"),
-    ("DISP_SCP", "DISP_SCP_2026_T1_Chubut_CON_ADVERTENCIAS.xlsx"),
-    ("MPI", "MPI_2026_T1_Chubut_CON_ADVERTENCIAS.xlsx"),
-    ("MPE", "MPE_2026_T1_Chubut_CON_ADVERTENCIAS.xlsx"),
-    ("MPJ_DAE", "MPJ_DAE_2026_T1_Chubut_CON_ADVERTENCIAS.xlsx"),
-]
+# Todos entran igual: una advertencia observa, no rechaza. Que el archivo entre
+# CON problemas anotados es lo que hay que poder mostrar.
+
+
+def plan() -> list[tuple[str, str]]:
+    """Qué archivos se importan y en qué orden: los que pide el período.
+
+    Sale de la definición vigente y no de una lista escrita acá. La lista fija
+    no tenía el legajo, que se sumó después y va antes que las nóminas.
+    """
+    return [
+        (a["codigo"], f"{a['codigo']}_{PERIODO}_{JURISDICCION}_CON_ADVERTENCIAS.xlsx")
+        for a in svc.archivos_esperados(PERIODO)
+    ]
+
 
 # Cómo se corrige cada tipo de advertencia sembrada. Se toma la primera fila que
 # la tenga sin resolver y se la arregla.
@@ -97,7 +113,7 @@ def armar(borrar_antes: bool = True) -> dict:
     if borrar_antes:
         resumen["borrado"] = circuito.borrar_todas_las_importaciones()
 
-    for codigo, nombre in PLAN:
+    for codigo, nombre in plan():
         ruta = ARCHIVOS / nombre
         if not ruta.exists():
             raise FileNotFoundError(f"Falta el archivo de demostración: {ruta}")
