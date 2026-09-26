@@ -1,9 +1,9 @@
 -- Base inicial del MIR, implementación RUNAC. La genera entorno/exportar_base.sh: no editar a mano.
 -- origen: runac_v2
--- generada: 2026-09-25
+-- generada: 2026-09-26
 -- contenido: 6 archivos · 380 campos
 -- campos: 380
--- huella_capa1: 7ae7d28b144bac27
+-- huella_capa1: f33c69d38401f70a
 /*!50503 SET NAMES utf8mb4 */;
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `runac` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */;
 USE `runac`;
@@ -417,6 +417,7 @@ CREATE TABLE `mir_c1_archivo_version` (
   `creada_por` varchar(150) DEFAULT NULL COMMENT 'Usuario que la creó.',
   `copiada_de` bigint DEFAULT NULL COMMENT 'Versión anterior a partir de la cual se copió para su edición.',
   `nota` text COMMENT 'Qué cambió respecto de la versión anterior.',
+  `que_es_una_fila` varchar(80) DEFAULT NULL COMMENT 'Qué representa una fila del archivo, para titular la identificación en los informes.',
   PRIMARY KEY (`id`),
   UNIQUE KEY `runac_c1_archivo_version_unica` (`archivo_id`,`numero`),
   KEY `runac_c1_archivo_version_estado` (`archivo_id`,`estado`),
@@ -556,6 +557,7 @@ CREATE TABLE `mir_c1_hoja` (
   `orden_procesamiento` int NOT NULL COMMENT 'Orden en que debe procesarse dentro del archivo.',
   `fila_encabezados` int NOT NULL DEFAULT '1' COMMENT 'Fila donde se encuentran los nombres de los campos. Los datos comienzan en la fila siguiente.',
   `obligatoria` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Indica si la ausencia de la hoja impide continuar con la importación.',
+  `referencia` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Hoja de consulta: la plantilla la oculta y el importador no la valida.',
   PRIMARY KEY (`id`),
   UNIQUE KEY `runac_c1_hoja_index_0` (`archivo_version_id`,`nombre_esperado`),
   UNIQUE KEY `runac_c1_hoja_index_1` (`archivo_version_id`,`orden_procesamiento`),
@@ -2186,7 +2188,7 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-25 15:03:02
+-- Dump completed on 2026-09-26 17:25:33
 -- MySQL dump 10.13  Distrib 8.4.11, for Linux (x86_64)
 --
 -- Host: localhost    Database: runac_v2
@@ -2239,7 +2241,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `auth_user` WRITE;
 /*!40000 ALTER TABLE `auth_user` DISABLE KEYS */;
-INSERT INTO `auth_user` VALUES (1,'pbkdf2_sha256$1000000$0dMDK6IGbiK0Cd1vnJOrN7$nKV+1Hbh8orgVsZktsfJk+AT5t9eMS+u7T38TtL/xJU=','2026-09-24 14:12:35.796485',0,'operador','Operador provincial','','',0,1,'2026-09-08 01:22:55.505424'),(2,'pbkdf2_sha256$1000000$CqdXzP349pTA6W4WKyNDjw$7M1X9jKvglQ2y3MBuc4OKkOpatDd3Ai/uUOsHpRs/GY=','2026-09-12 14:35:52.204325',0,'responsable','Responsable provincial','','',0,1,'2026-09-08 01:22:55.892049'),(3,'pbkdf2_sha256$1000000$MZFLnHmOmqql5sh5Gg6n42$pi2O6LB18WuQZ7LTYdSA826+T7ru6JDxU0tKXQouy+U=','2026-09-12 14:35:52.574591',0,'revisor','Revisor técnico nacional','','',0,1,'2026-09-08 01:22:56.250835'),(4,'pbkdf2_sha256$1000000$5o2dtHSKhEg0C9N1gBcEH8$1iA5crQJvcQeH3/9+FInKXEp50AwtbBhqDAmR7OwoA4=','2026-09-24 14:02:11.181618',1,'admin','Administrador nacional','','',1,1,'2026-09-08 01:22:56.572629');
+INSERT INTO `auth_user` VALUES (1,'pbkdf2_sha256$1000000$Kc3sM7bvPpZceXOd2qbWsD$KdZ3Y5WCHuOYrsxwpnQVkHUmVpTa696sQl6eoKUWqs0=','2026-09-26 12:10:05.652388',0,'operador','Operador provincial','','',0,1,'2026-09-08 01:22:55.505424'),(2,'pbkdf2_sha256$1000000$y9f9fQxowtARzVJ4UOQr0l$wYF1cIyIE7SB1bWzxPoI4bBtdbVGvyzT6gMMfcWVQwQ=','2026-09-12 14:35:52.204325',0,'responsable','Responsable provincial','','',0,1,'2026-09-08 01:22:55.892049'),(3,'pbkdf2_sha256$1000000$TvKLtD1drjK7SyJfl875al$oKXXTQj6b2sY/mJ6RS4FodSumkSNzv38w8mcZdgJAuA=','2026-09-26 00:15:36.804921',0,'revisor','Revisor técnico nacional','','',0,1,'2026-09-08 01:22:56.250835'),(4,'pbkdf2_sha256$1000000$OHgXa5N0sTHWEUHs4iaQWW$WaEO8aE/CJFejadnXtCInmXkFzOzds6xrOsWT8E+n6o=','2026-09-24 14:02:11.181618',1,'admin','Administrador nacional','','',1,1,'2026-09-08 01:22:56.572629'),(5,'pbkdf2_sha256$1000000$tF4UcNuwhb9v96RhKKRZbr$wGFZkmqa8JJvNMsWBIGRzjt0sTTRDdfGtm3NsaeOK28=','2026-09-26 00:15:37.626230',0,'operador_chaco','Operador provincial','','',0,1,'2026-09-26 00:15:11.003001'),(6,'pbkdf2_sha256$1000000$H34eDPmqFtBYPwUKWxw4eq$ipVr6/dkxapq7KdTDRDD6kbw/FpG321SaA4U4VpVXGA=','2026-09-26 00:15:27.201966',0,'responsable_chaco','Responsable provincial','','',0,1,'2026-09-26 00:15:11.392822');
 /*!40000 ALTER TABLE `auth_user` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2249,7 +2251,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `auth_user_groups` WRITE;
 /*!40000 ALTER TABLE `auth_user_groups` DISABLE KEYS */;
-INSERT INTO `auth_user_groups` VALUES (7,1,1),(8,1,6),(9,2,2),(10,2,6),(11,3,3),(12,4,4);
+INSERT INTO `auth_user_groups` VALUES (13,1,1),(14,1,6),(15,2,2),(16,2,6),(21,3,3),(22,4,4),(17,5,1),(18,5,5),(19,6,2),(20,6,5);
 /*!40000 ALTER TABLE `auth_user_groups` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2370,7 +2372,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `mir_c1_archivo_version` WRITE;
 /*!40000 ALTER TABLE `mir_c1_archivo_version` DISABLE KEYS */;
-INSERT INTO `mir_c1_archivo_version` VALUES (1,1,1,'VIGENTE','Base dispositivos PENAL modelo 20260827 desproteg.xlsx','Listado de los dispositivos penales Centros de Régimen Cerrado. MODELO PARA COMPLETAR Y ADJUNTAR',NULL,1,1,'2026-09-07 23:42:51',NULL,NULL,'Generada automáticamente a partir del Excel relevado.'),(2,2,1,'VIGENTE','Base dispositivos SCP modelo 20260827 desproteg.xlsx','Listado de dispositivos de modalidad de cuidado residencial. MODELO PARA COMPLETAR Y ADJUNTAR',NULL,2,1,'2026-09-07 23:42:52',NULL,NULL,'Generada automáticamente a partir del Excel relevado.'),(3,3,1,'VIGENTE','MPI 20260828 desproteg.xlsx','Registro NyA con Medida de Protección Integral',NULL,4,1,'2026-09-07 23:42:53',NULL,NULL,'Generada automáticamente a partir del Excel relevado.'),(4,4,1,'HISTORICA','MPE 20260901 desproteg.xlsx','Registro NyA con Medida de Protección Excepcional',NULL,4,1,'2026-09-07 23:42:53',NULL,NULL,'Generada automáticamente a partir del Excel relevado.'),(5,5,1,'VIGENTE','MPJ DAE 20260827 desproteg.xlsx','Relevamiento Dispositivos Penales Juveniles',NULL,6,1,'2026-09-07 23:42:54',NULL,NULL,'Generada automáticamente a partir del Excel relevado.'),(7,9,1,'VIGENTE','Legajo NyA 2026 09 10.xlsx',NULL,NULL,3,1,'2026-09-12 11:01:37',NULL,NULL,'Generada automáticamente a partir del Excel relevado.'),(8,4,2,'VIGENTE','MPE para SISOC 2026 09 11 Monitoreo.xlsx',NULL,NULL,5,1,'2026-09-12 11:01:39',NULL,NULL,'Generada automáticamente a partir del Excel relevado.');
+INSERT INTO `mir_c1_archivo_version` VALUES (1,1,1,'VIGENTE','Base dispositivos PENAL modelo 20260827 desproteg.xlsx','Listado de los dispositivos penales Centros de Régimen Cerrado. MODELO PARA COMPLETAR Y ADJUNTAR',NULL,1,1,'2026-09-07 23:42:51',NULL,NULL,'Generada automáticamente a partir del Excel relevado.','Dispositivo'),(2,2,1,'VIGENTE','Base dispositivos SCP modelo 20260827 desproteg.xlsx','Listado de dispositivos de modalidad de cuidado residencial. MODELO PARA COMPLETAR Y ADJUNTAR',NULL,2,1,'2026-09-07 23:42:52',NULL,NULL,'Generada automáticamente a partir del Excel relevado.','Dispositivo'),(3,3,1,'VIGENTE','MPI 20260828 desproteg.xlsx','Registro NyA con Medida de Protección Integral',NULL,4,1,'2026-09-07 23:42:53',NULL,NULL,'Generada automáticamente a partir del Excel relevado.','Niña, niño o adolescente'),(4,4,1,'HISTORICA','MPE 20260901 desproteg.xlsx','Registro NyA con Medida de Protección Excepcional',NULL,4,1,'2026-09-07 23:42:53',NULL,NULL,'Generada automáticamente a partir del Excel relevado.','Niña, niño o adolescente'),(5,5,1,'VIGENTE','MPJ DAE 20260827 desproteg.xlsx','Relevamiento Dispositivos Penales Juveniles',NULL,6,1,'2026-09-07 23:42:54',NULL,NULL,'Generada automáticamente a partir del Excel relevado.','Niña, niño o adolescente'),(7,9,1,'VIGENTE','Legajo NyA 2026 09 10.xlsx',NULL,NULL,3,1,'2026-09-12 11:01:37',NULL,NULL,'Generada automáticamente a partir del Excel relevado.','Niña, niño o adolescente'),(8,4,2,'VIGENTE','MPE para SISOC 2026 09 11 Monitoreo.xlsx',NULL,NULL,5,1,'2026-09-12 11:01:39',NULL,NULL,'Generada automáticamente a partir del Excel relevado.','Niña, niño o adolescente');
 /*!40000 ALTER TABLE `mir_c1_archivo_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2430,7 +2432,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `mir_c1_hoja` WRITE;
 /*!40000 ALTER TABLE `mir_c1_hoja` DISABLE KEYS */;
-INSERT INTO `mir_c1_hoja` VALUES (7,2,'M Residencial','Listado de dispositivos de modalidad de cuidado residencial. MODELO PARA COMPLETAR Y ADJUNTAR',1,4,1),(8,3,'MPI','Registro NyA con Medida de Protección Integral',1,3,1),(9,4,'MPE','Registro NyA con Medida de Protección Excepcional',1,3,1),(12,1,'CRC','Listado de los dispositivos penales Centros de Régimen Cerrado. MODELO PARA COMPLETAR Y ADJUNTAR',1,3,1),(13,1,'CRSC','Listado de los dispositivos penales Centros de Régimen Semicerrado. MODELO PARA COMPLETAR Y ADJUNTAR',2,3,1),(14,1,'MPT','Listado de Dispositivos de Medidas Penales en Territorio. MODELO PARA COMPLETAR Y ADJUNTAR',3,3,1),(15,1,'CAD','Listado de Centro de Admisión y Derivación (CAD). MODELO PARA COMPLETAR Y ADJUNTAR',4,3,1),(16,1,'Guardia Comisaría','Listado de Equipos de guardia especializada en dependencias POLICIALES. MODELO PARA COMPLETAR Y ADJUNTAR',5,3,1),(18,7,'NyA',NULL,1,2,1),(19,7,'Prov_Dto_Localidad','NO la completa la provincia: es el nomenclador, que el sistema ya tiene cargado. Ver geo_asentamiento y geo_equivalencia. Queda declarada para poder leer los archivos que todavía la traigan.',2,1,0),(20,8,'MPE',NULL,1,3,1),(21,5,'MPJ','Relevamiento Dispositivos Penales Juveniles',1,3,1),(22,5,'DAE','Relevamiento CAD y Guardia en Comisaría',2,3,1);
+INSERT INTO `mir_c1_hoja` VALUES (7,2,'M Residencial','Listado de dispositivos de modalidad de cuidado residencial. MODELO PARA COMPLETAR Y ADJUNTAR',1,4,1,0),(8,3,'MPI','Registro NyA con Medida de Protección Integral',1,3,1,0),(9,4,'MPE','Registro NyA con Medida de Protección Excepcional',1,3,1,0),(12,1,'CRC','Listado de los dispositivos penales Centros de Régimen Cerrado. MODELO PARA COMPLETAR Y ADJUNTAR',1,3,1,0),(13,1,'CRSC','Listado de los dispositivos penales Centros de Régimen Semicerrado. MODELO PARA COMPLETAR Y ADJUNTAR',2,3,1,0),(14,1,'MPT','Listado de Dispositivos de Medidas Penales en Territorio. MODELO PARA COMPLETAR Y ADJUNTAR',3,3,1,0),(15,1,'CAD','Listado de Centro de Admisión y Derivación (CAD). MODELO PARA COMPLETAR Y ADJUNTAR',4,3,1,0),(16,1,'Guardia Comisaría','Listado de Equipos de guardia especializada en dependencias POLICIALES. MODELO PARA COMPLETAR Y ADJUNTAR',5,3,1,0),(18,7,'NyA',NULL,1,2,1,0),(19,7,'Prov_Dto_Localidad','NO la completa la provincia: es el nomenclador, que el sistema ya tiene cargado. Ver geo_asentamiento y geo_equivalencia. Queda declarada para poder leer los archivos que todavía la traigan.',2,1,0,1),(20,8,'MPE',NULL,1,3,1,0),(21,5,'MPJ','Relevamiento Dispositivos Penales Juveniles',1,3,1,0),(22,5,'DAE','Relevamiento CAD y Guardia en Comisaría',2,3,1,0);
 /*!40000 ALTER TABLE `mir_c1_hoja` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2503,4 +2505,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-25 15:03:03
+-- Dump completed on 2026-09-26 17:25:35

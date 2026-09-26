@@ -12,6 +12,11 @@ urlpatterns = [
     path("plantillas/", views.PlantillasView.as_view(), name="plantillas"),
     path("plantillas/<str:periodo>/todas/", descargar_todas, name="descargar_todas"),
     path(
+        "plantillas/<str:codigo>/<str:periodo>/instructivo/",
+        views.descargar_instructivo,
+        name="descargar_instructivo",
+    ),
+    path(
         "plantillas/<str:codigo>/<str:periodo>/",
         views.descargar_plantilla,
         name="descargar_plantilla",

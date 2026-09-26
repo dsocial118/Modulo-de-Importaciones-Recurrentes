@@ -6,7 +6,7 @@ esto se mude al repositorio sin reescribir la lógica.
 """
 
 from .inicio import InicioView, EntrarView, salir
-from .plantillas import PlantillasView, descargar_plantilla
+from .plantillas import PlantillasView, descargar_instructivo, descargar_plantilla
 from .carga import CargarView, CargarArchivoView, ResultadoView, DetalleView
 from .circuito import (
     ArmarDemoView,
@@ -35,6 +35,7 @@ __all__ = [
     "EntrarView",
     "salir",
     "PlantillasView",
+    "descargar_instructivo",
     "descargar_plantilla",
     "CargarView",
     "CargarArchivoView",
