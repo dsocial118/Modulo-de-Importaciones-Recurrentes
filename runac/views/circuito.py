@@ -205,7 +205,7 @@ class RevisionView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
 
 
 class PlanillaDeErroresView(SeccionPermitidaMixin, LoginRequiredMixin, View):
-    """Descarga un Excel con los errores, una hoja por cada hoja del archivo."""
+    """Descarga el informe de la importación: cada problema, con su estado."""
 
     seccion = "resultado"
 
@@ -214,7 +214,7 @@ class PlanillaDeErroresView(SeccionPermitidaMixin, LoginRequiredMixin, View):
         contenido = informes.planilla_de_errores(importacion_id)
         if not contenido:
             raise Http404("No existe esa importación.")
-        return _descarga(contenido, f"errores_importacion_{importacion_id}.xlsx")
+        return _descarga(contenido, informes.nombre_del_informe(importacion_id))
 
 
 class ArchivoMarcadoView(SeccionPermitidaMixin, LoginRequiredMixin, View):

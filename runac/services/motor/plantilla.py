@@ -14,7 +14,12 @@ Cada archivo sale con:
   - las listas desplegables cargadas con los valores vigentes;
   - la explicación de cada campo como comentario en la celda del título: al
     pasar el mouse por encima aparece el globo, sin ir a otra hoja;
-  - una hoja de listas con los catálogos, oculta.
+  - una hoja de listas con los catálogos, oculta;
+  - las hojas de referencia —el nomenclador del legajo—, ocultas.
+
+La explicación completa, una fila por campo, ya no va adentro: es el
+instructivo, que se descarga aparte (`runac/services/instructivo_service.py`).
+Desde el 26-09-2026; antes había una hoja INSTRUCCIONES en texto corrido.
 """
 
 from __future__ import annotations
@@ -31,6 +36,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from comun import titulo_sin_instrucciones
+import en_palabras
 
 CONEXION = dict(
     host=os.environ.get("RUNAC_DB_HOST", "mysql"),
@@ -44,23 +50,33 @@ CONEXION = dict(
 # validación. Por encima de eso, la lista tiene que vivir en otra hoja.
 LIMITE_LISTA_INLINE = 250
 
+# Sin mayúsculas, como el resto de las solapas (26-09-2026). Excel no distingue
+# mayúsculas en las referencias, así que los archivos que traen «LISTAS»
+# siguen andando.
+LISTAS = "Listas"
+
 AZUL = "1F4E79"
 AZUL_CLARO = "DDEBF7"
 GRIS = "F2F2F2"
 BORDE = Border(*[Side(style="thin", color="BFBFBF")] * 4)
 
 
-def leer_definicion(cur, codigo: str) -> dict:
+def leer_definicion(cur, codigo: str, version_id: int | None = None) -> dict:
+    """La definición de un archivo: la vigente, o la de una versión dada.
+
+    La versión dada es para el archivo para corregir: explica las columnas de
+    la versión con la que se importó, aunque después haya salido otra.
+    """
     cur.execute(
         """
         SELECT a.id, a.codigo, a.descripcion,
                av.id AS version_id, av.numero AS version,
                av.nombre_esperado, av.titulo, av.subtitulo
         FROM mir_c1_archivo a
-        JOIN mir_c1_archivo_version av ON av.archivo_id = a.id AND av.estado = 'VIGENTE'
-        WHERE a.codigo = %s
-    """,
-        (codigo,),
+        JOIN mir_c1_archivo_version av ON av.archivo_id = a.id
+        WHERE a.codigo = %s AND """
+        + ("av.id = %s" if version_id else "av.estado = 'VIGENTE'"),
+        (codigo, version_id) if version_id else (codigo,),
     )
     archivo = cur.fetchone()
     if not archivo:
@@ -70,7 +86,8 @@ def leer_definicion(cur, codigo: str) -> dict:
 
     cur.execute(
         """
-        SELECT id, nombre_esperado, descripcion, orden_procesamiento, fila_encabezados
+        SELECT id, nombre_esperado, descripcion, orden_procesamiento, fila_encabezados,
+               referencia
         FROM mir_c1_hoja WHERE archivo_version_id = %s ORDER BY orden_procesamiento
     """,
         (archivo["version_id"],),
@@ -124,44 +141,51 @@ def leer_definicion(cur, codigo: str) -> dict:
         )
         cat["valores"] = [r["valor_esperado"] for r in cur.fetchall()]
 
+    # Las reglas de cada campo: con ellas se explica qué controla el sistema.
+    cur.execute(
+        """
+        SELECT cr.campo_id, cr.severidad, cr.mensaje, tr.nombre AS tipo,
+               r.parametros, r.descripcion
+        FROM mir_c1_campo_regla cr
+        JOIN mir_c1_regla r ON r.id = cr.regla_id
+        JOIN mir_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+        JOIN mir_c1_campo c ON c.id = cr.campo_id
+        JOIN mir_c1_hoja h ON h.id = c.hoja_id
+        WHERE h.archivo_version_id = %s ORDER BY cr.id
+    """,
+        (archivo["version_id"],),
+    )
+    reglas = {}
+    for r in cur.fetchall():
+        reglas.setdefault(r["campo_id"], []).append(r)
+    valores = {cat["codigo"]: cat["valores"] for cat in catalogos}
+    titulos = {c["nombre"]: c["titulo_esperado"] for h in hojas for c in h["campos"]}
+    for h in hojas:
+        for c in h["campos"]:
+            c["reglas"] = reglas.get(c["id"], [])
+            c["opciones"] = valores.get(c["catalogo"], [])
+
     archivo["hojas"] = hojas
     archivo["catalogos"] = catalogos
+    archivo["titulos"] = titulos
     return archivo
 
 
-TIPOS_EN_CASTELLANO = {
-    "FECHA": "una fecha, con formato dd/mm/aaaa",
-    "HORA": "una hora, con formato hh:mm",
-    "ENTERO": "un número entero",
-    "DECIMAL": "un número, puede tener decimales",
-    "TEXTO": "texto",
-}
-
-
-def _comentario_del_campo(campo: dict) -> Comment:
+def _comentario_del_campo(campo: dict, titulos: dict | None = None) -> Comment:
     """El globo que aparece al pasar el mouse sobre el título de la columna.
 
-    Reúne todo lo que necesita saber quien completa la planilla: qué se espera,
-    de qué tipo, si es obligatorio y si hay que elegir de una lista.
+    Reúne todo lo que necesita saber quien completa la planilla: si es
+    obligatorio, qué va, qué valores admite, qué controla el sistema y para qué
+    sirve. Es lo mismo que dice el instructivo, con las mismas palabras.
     """
-    partes = [campo["titulo_esperado"], ""]
-
-    if campo["ayuda"]:
-        partes.append(campo["ayuda"])
-        partes.append("")
-
-    detalle = ["Qué se espera: " + TIPOS_EN_CASTELLANO.get(campo["tipo_dato"], "texto")]
-    if campo["tipo_dato"] == "TEXTO" and campo["longitud_maxima"]:
-        detalle.append(f'Máximo {campo["longitud_maxima"]} caracteres.')
-    if campo["catalogo_nombre"]:
-        detalle.append(f'Elegir de la lista "{campo["catalogo_nombre"]}".')
-    detalle.append(
-        "Campo obligatorio." if campo["obligatorio"] else "No es obligatorio."
+    texto = (
+        campo["titulo_esperado"]
+        + "\n\n"
+        + en_palabras.comentario_de_titulo(
+            campo, campo.get("reglas", []), campo.get("opciones", []), titulos or {}
+        )
     )
-    partes.extend(detalle)
-
-    texto = "\n".join(partes)
-    comentario = Comment(texto, "RUNAC")
+    comentario = Comment(texto, "MIR")
 
     # El globo se dimensiona según el largo del texto, para que se lea entero.
     #
@@ -184,7 +208,7 @@ def _comentario_del_campo(campo: dict) -> Comment:
 
 def escribir_hoja_listas(wb, catalogos) -> dict[str, str]:
     """Escribe una hoja con los catálogos y devuelve el rango de cada uno."""
-    ws = wb.create_sheet("LISTAS")
+    ws = wb.create_sheet(LISTAS)
     rangos = {}
     for i, cat in enumerate(catalogos, start=1):
         letra = get_column_letter(i)
@@ -197,7 +221,7 @@ def escribir_hoja_listas(wb, catalogos) -> dict[str, str]:
         ws.column_dimensions[letra].width = 28
         if cat["valores"]:
             rangos[cat["codigo"]] = (
-                f"LISTAS!${letra}$2:${letra}${len(cat['valores']) + 1}"
+                f"{LISTAS}!${letra}$2:${letra}${len(cat['valores']) + 1}"
             )
     ws.sheet_state = "visible"
     ws["A1"].comment = None
@@ -312,7 +336,7 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
 
         # La explicación va en la propia celda del título, como comentario: al
         # pasar el mouse por encima aparece el globo, sin tener que ir a otra hoja.
-        c.comment = _comentario_del_campo(campo)
+        c.comment = _comentario_del_campo(campo, archivo.get("titulos"))
 
         ancho = min(40, max(14, len(campo["titulo_esperado"]) // 2 + 8))
         ws.column_dimensions[get_column_letter(k)].width = ancho
@@ -358,53 +382,6 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
     return {"fila_encabezados": fila_enc, "filas": (primera_dato, ultima_dato)}
 
 
-def escribir_hoja_instrucciones(wb, archivo):
-    ws = wb.create_sheet("INSTRUCCIONES")
-    ws.column_dimensions["A"].width = 42
-    ws.column_dimensions["B"].width = 95
-    ws.cell(row=1, column=1, value="Campo").font = Font(bold=True, color="FFFFFF")
-    ws.cell(row=1, column=2, value="Indicación para el llenado").font = Font(
-        bold=True, color="FFFFFF"
-    )
-    for c in ("A1", "B1"):
-        ws[c].fill = PatternFill("solid", fgColor=AZUL)
-
-    f = 2
-    for hoja in archivo["hojas"]:
-        ws.cell(row=f, column=1, value=f'Hoja: {hoja["nombre_esperado"]}').font = Font(
-            bold=True, size=12
-        )
-        f += 1
-        dimension_actual = object()
-        for campo in hoja["campos"]:
-            if campo["dimension"] != dimension_actual:
-                dimension_actual = campo["dimension"]
-                if dimension_actual:
-                    c = ws.cell(row=f, column=1, value=dimension_actual)
-                    c.font = Font(bold=True)
-                    c.fill = PatternFill("solid", fgColor=AZUL_CLARO)
-                    f += 1
-            ws.cell(row=f, column=1, value=campo["titulo_esperado"])
-            partes = []
-            if campo["ayuda"]:
-                partes.append(campo["ayuda"])
-            if campo["obligatorio"]:
-                partes.append("Campo obligatorio.")
-            if campo["catalogo_nombre"]:
-                partes.append(
-                    f'Debe elegirse un valor de la lista "{campo["catalogo_nombre"]}".'
-                )
-            if campo["tipo_dato"] == "FECHA":
-                partes.append("Formato de fecha: dd/mm/aaaa.")
-            if campo["tipo_dato"] == "HORA":
-                partes.append("Formato de hora: hh:mm.")
-            ws.cell(row=f, column=2, value="\n".join(partes) or None).alignment = (
-                Alignment(wrap_text=True, vertical="top")
-            )
-            f += 1
-        f += 1
-
-
 def generar(
     cur, codigo: str, salida: str, filas_vacias: int, periodo: str | None
 ) -> str:
@@ -415,14 +392,17 @@ def generar(
     rangos = escribir_hoja_listas(wb, archivo["catalogos"])
     for hoja in archivo["hojas"]:
         escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias)
+        # Las hojas de referencia —el nomenclador del legajo— son de consulta:
+        # a la vista parecía que había que completarlas (pendiente #87).
+        if hoja.get("referencia"):
+            wb[hoja["nombre_esperado"][:31]].sheet_state = "hidden"
 
-    # Hoja con la ayuda de cada campo: es lo que le explica al operador que se
-    # espera en cada columna, sin tener que consultar el documento funcional.
-    escribir_hoja_instrucciones(wb, archivo)
+    # La explicación de cada campo ya no va en una hoja: está en el comentario
+    # de cada título y, completa, en el instructivo, que se baja aparte.
 
     # La hoja de listas va al final y oculta: ayuda al usuario sin estorbarlo.
-    wb.move_sheet("LISTAS", offset=len(wb.sheetnames))
-    wb["LISTAS"].sheet_state = "hidden"
+    wb.move_sheet(LISTAS, offset=len(wb.sheetnames))
+    wb[LISTAS].sheet_state = "hidden"
 
     wb.properties.title = archivo["titulo"] or codigo
     wb.properties.subject = f"RUNAC — plantilla {codigo}"

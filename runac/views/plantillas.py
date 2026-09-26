@@ -16,6 +16,7 @@ from django.views.generic import TemplateView
 from runac.permissions import SeccionPermitidaMixin
 
 from runac.services import importacion_service as svc
+from runac.services import instructivo_service as instructivos
 from runac.services import plantillas_service as plantillas
 
 
@@ -49,14 +50,29 @@ def descargar_plantilla(request, codigo, periodo):
     return respuesta
 
 
+def descargar_instructivo(request, codigo, periodo):
+    """El instructivo del archivo: una fila por campo. Se baja aparte de la plantilla."""
+    return HttpResponse(
+        instructivos.generar(codigo, periodo),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{instructivos.nombre_de_archivo(codigo, periodo)}"'
+        },
+    )
+
+
 def descargar_todas(request, periodo):
-    """Todas las plantillas del período en un solo zip."""
+    """Todas las plantillas del período en un solo zip, cada una con su instructivo."""
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as z:
         for a in svc.archivos_esperados(periodo):
             ruta = Path(plantillas.generar(a["codigo"], periodo))
             z.write(ruta, ruta.name)
             shutil.rmtree(ruta.parent, ignore_errors=True)
+            z.writestr(
+                instructivos.nombre_de_archivo(a["codigo"], periodo),
+                instructivos.generar(a["codigo"], periodo),
+            )
     buffer.seek(0)
     respuesta = HttpResponse(buffer.read(), content_type="application/zip")
     respuesta["Content-Disposition"] = (

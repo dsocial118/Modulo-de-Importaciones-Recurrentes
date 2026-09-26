@@ -442,7 +442,8 @@ def leer_configuracion(cur, periodo: str) -> list[dict]:
         a["id"] = a["archivo_id"]  # compatibilidad con el resto del script
         cur.execute(
             """
-            SELECT h.id, h.nombre_esperado, h.fila_encabezados, h.orden_procesamiento, h.obligatoria
+            SELECT h.id, h.nombre_esperado, h.fila_encabezados, h.orden_procesamiento,
+                   h.obligatoria, h.referencia
             FROM mir_c1_hoja h
             WHERE h.archivo_version_id = %s ORDER BY h.orden_procesamiento
         """,
@@ -455,6 +456,11 @@ def leer_configuracion(cur, periodo: str) -> list[dict]:
             h["tabla"] = nombre_tabla_receptora(
                 a["codigo"], h["nombre_esperado"], varias, a["version"]
             )
+        # Las hojas de referencia —el nomenclador que trae el legajo— no se
+        # validan ni se importan: no son datos de la provincia (pendiente #87).
+        # Se sacan DESPUÉS de deducir las tablas, porque el nombre de cada
+        # receptora depende de cuántas hojas tiene el archivo.
+        a["hojas"] = [h for h in a["hojas"] if not h["referencia"]]
         for h in a["hojas"]:
             cur.execute(
                 """

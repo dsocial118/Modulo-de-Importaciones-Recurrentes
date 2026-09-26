@@ -689,8 +689,10 @@ def leer_definicion(cur, codigo: str):
     if not archivo:
         raise SystemExit(f"No existe {codigo} con una versión vigente en la Capa 1.")
     cur.execute(
+        # Las hojas de referencia no llevan datos de la provincia: no se rellenan.
         """SELECT id, nombre_esperado, fila_encabezados, orden_procesamiento
-                   FROM mir_c1_hoja WHERE archivo_version_id=%s ORDER BY orden_procesamiento""",
+                   FROM mir_c1_hoja WHERE archivo_version_id=%s AND NOT referencia
+                   ORDER BY orden_procesamiento""",
         (archivo["version_id"],),
     )
     hojas = cur.fetchall()

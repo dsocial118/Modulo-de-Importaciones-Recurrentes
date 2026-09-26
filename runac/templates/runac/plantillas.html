@@ -41,7 +41,7 @@
                         <th style="width:5rem" class="text-end">Hojas</th>
                         <th style="width:6rem" class="text-end">Campos</th>
                         <th style="width:6rem" class="text-center">Obligatorio</th>
-                        <th style="width:9rem" class="text-end">Plantilla</th>
+                        <th style="width:14rem" class="text-end">Descargas</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -61,10 +61,15 @@
                                 {% endif %}
                             </td>
                             {% comment %} Ya no hay «sin generar»: se arma al pedirla, asi que siempre esta y siempre es la vigente. {% endcomment %}
-                            <td class="text-end" data-etiqueta="Plantilla">
+                            {% comment %} Dos descargas: la plantilla, para completar, y el instructivo, una fila por campo, para leer. {% endcomment %}
+                            <td class="text-end text-nowrap" data-etiqueta="Descargas">
                                 <a class="btn btn-outline-primary btn-sm"
                                    href="{% url 'runac:descargar_plantilla' a.codigo periodo_elegido %}">
-                                    <i class="bi bi-download"></i> Descargar
+                                    <i class="bi bi-download"></i> Plantilla
+                                </a>
+                                <a class="btn btn-outline-secondary btn-sm"
+                                   href="{% url 'runac:descargar_instructivo' a.codigo periodo_elegido %}">
+                                    <i class="bi bi-file-earmark-text"></i> Instructivo
                                 </a>
                             </td>
                         </tr>
@@ -76,7 +81,8 @@
 
     <p class="ayuda mt-3">
         Cada plantilla trae el título, los grupos de campos, las listas desplegables con los valores
-        vigentes, los campos obligatorios marcados con <strong>*</strong> y una hoja de instrucciones.
+        vigentes y los campos obligatorios marcados con <strong>*</strong>. Al pasar el mouse por un título se ve
+        qué va; el <strong>instructivo</strong> lo explica campo por campo y se descarga aparte.
         <strong>Se arma en el momento de descargarla</strong>, así que siempre corresponde a la
         definición vigente: no hay forma de bajar una desactualizada.
     </p>
