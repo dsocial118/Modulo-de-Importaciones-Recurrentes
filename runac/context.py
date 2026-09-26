@@ -15,6 +15,10 @@ def _jurisdiccion_en_curso(request, usuario) -> str:
     sistema y no se elige nada—, pero mientras exista tiene que ser una sola
     para todas las pantallas.
     """
+    # Un usuario provincial trabaja siempre sobre la suya: la sesión la escribe
+    # el selector, que desde el 25-09-2026 es sólo del nivel nacional.
+    if not es_nacional(usuario):
+        return jurisdiccion_de(usuario)
     elegida = getattr(request, "session", {}).get("jurisdiccion")
     return elegida or jurisdiccion_de(usuario)
 

@@ -15,6 +15,7 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from runac.permissions import SeccionPermitidaMixin, puede_editar_datos
+from runac.services import alcance_service as alcance
 from runac.services import edicion_service as edicion
 
 
@@ -27,6 +28,7 @@ class EdicionView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         importacion_id = int(kwargs["importacion_id"])
+        alcance.exigir_importacion(self.request.user, importacion_id)
         contexto = edicion.contexto_de(importacion_id)
         if not contexto:
             raise Http404("No existe esa importación.")
@@ -73,6 +75,7 @@ class EditarCampoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
     seccion = "resultado"
 
     def post(self, request, importacion_id):
+        alcance.exigir_importacion(request.user, importacion_id)
         if not puede_editar_datos(request.user):
             raise PermissionDenied(
                 "El nivel nacional no modifica datos provinciales: observa."
