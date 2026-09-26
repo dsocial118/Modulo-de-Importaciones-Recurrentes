@@ -79,7 +79,8 @@ def archivos_esperados(codigo_periodo: str):
             JOIN mir_c2_periodo_archivo pa ON pa.periodo_id = p.id
             JOIN mir_c1_archivo_version av ON av.id = pa.archivo_version_id
             JOIN mir_c1_archivo a ON a.id = av.archivo_id
-            LEFT JOIN mir_c1_hoja h ON h.archivo_version_id = av.id
+            -- Sin las hojas de referencia: no se completan, no cuentan (#87).
+            LEFT JOIN mir_c1_hoja h ON h.archivo_version_id = av.id AND NOT h.referencia
             LEFT JOIN mir_c1_campo c ON c.hoja_id = h.id
             LEFT JOIN mir_c1_campo_regla cr ON cr.campo_id = c.id
             WHERE p.codigo = %s
