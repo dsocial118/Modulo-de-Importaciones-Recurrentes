@@ -21,5 +21,18 @@ export default defineConfig({
     // Los paquetes compartidos están fuera de la carpeta de la app.
     fs: { allow: ['../..'] },
   },
-  build: { outDir: 'dist', sourcemap: true },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    // Las librerías, aparte de lo nuestro: casi nunca cambian, y con su propia
+    // huella el navegador las conserva de un despliegue al otro.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+          mui: ['@mui/material', '@emotion/react', '@emotion/styled'],
+        },
+      },
+    },
+  },
 });

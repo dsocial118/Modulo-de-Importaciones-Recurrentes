@@ -10,36 +10,9 @@ import {
   TextField,
   useTheme,
 } from '@mui/material';
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { AvisoContext, ConfirmarContext, type Aviso, type Pregunta } from './contextos';
 import { coloresDe } from './estados';
-
-// --- Avisos: qué pasó después de una acción ----------------------------------
-
-type Aviso = { texto: string; error?: boolean };
-
-const AvisoContext = createContext<(a: Aviso) => void>(() => {});
-
-/** Para avisar el resultado de una acción: `avisar({ texto, error })`. */
-export const useAvisar = () => useContext(AvisoContext);
-
-// --- Confirmar: antes de algo que no se deshace -------------------------------
-
-type Pregunta = {
-  titulo: string;
-  texto: ReactNode;
-  confirmar?: string;
-  // Si se pide, la confirmación trae un campo de texto —por ejemplo, el motivo
-  // de una corrección— y su valor es lo que devuelve.
-  campo?: { etiqueta: string; obligatorio?: boolean };
-};
-
-const ConfirmarContext = createContext<(p: Pregunta) => Promise<string | null>>(async () => null);
-
-/**
- * `await confirmar({...})`: devuelve el texto del campo (o '' si no hay), o
- * null si se canceló.
- */
-export const useConfirmar = () => useContext(ConfirmarContext);
 
 export function Avisos({ children }: { children: ReactNode }) {
   const theme = useTheme();

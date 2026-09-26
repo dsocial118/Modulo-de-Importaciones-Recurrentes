@@ -9,7 +9,7 @@ import { useSesion } from '@mir/api';
 import { Avisos, Layout, type ItemDeMenu } from '@mir/ui';
 import { useEffect, type ReactNode } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { conFiltros } from './comun/Selectores';
+import { conFiltros } from './comun/filtros';
 import { Cargar } from './paginas/Cargar';
 import { Comprobante } from './paginas/Comprobante';
 import { Datos } from './paginas/Datos';

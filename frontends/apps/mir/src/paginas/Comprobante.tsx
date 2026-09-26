@@ -19,7 +19,7 @@ import { useComprobante, useSesion } from '@mir/api';
 import type { ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fecha, fechaHora, numero } from '../comun/formato';
-import { conFiltros } from '../comun/Selectores';
+import { conFiltros } from '../comun/filtros';
 
 /** La constancia formal de la entrega. Se imprime sin el menú ni la barra. */
 export function Comprobante() {

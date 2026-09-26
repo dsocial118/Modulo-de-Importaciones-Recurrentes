@@ -37,7 +37,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ESTADO_DEL_ARCHIVO, SEVERIDAD, formaDe, tonoDeLaPresentacion } from '../comun/estados';
 import { fechaHora, numero, plural } from '../comun/formato';
-import { SelectorDeJurisdiccion, SelectorDePeriodo, conFiltros, useFiltros } from '../comun/Selectores';
+import { SelectorDeJurisdiccion, SelectorDePeriodo } from '../comun/Selectores';
+import { conFiltros, useFiltros } from '../comun/filtros';
 
 // Las acciones que no tienen vuelta atrás se confirman; el resto, no.
 const A_CONFIRMAR: Record<string, string> = {

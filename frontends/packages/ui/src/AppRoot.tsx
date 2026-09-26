@@ -1,12 +1,11 @@
 import { CssBaseline, ThemeProvider } from '@mui/material';
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { ModoContext, type Modo } from './contextos';
 import { buildTheme } from './theme';
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
-
-type Modo = 'light' | 'dark';
 
 // La preferencia es común a todas las apps de /v2/, porque comparten origen.
 const STORAGE_KEY = 'app.theme';
@@ -18,13 +17,6 @@ const leer = (): Modo => {
     return 'light';
   }
 };
-
-const ModoContext = createContext<{ modo: Modo; alternar: () => void }>({
-  modo: 'light',
-  alternar: () => {},
-});
-
-export const useModo = () => useContext(ModoContext);
 
 /** Monta el tema y recuerda si el usuario eligió el modo oscuro. */
 export function AppRoot({ children }: { children: ReactNode }) {

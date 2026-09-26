@@ -19,7 +19,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { useState, type MouseEvent, type ReactNode } from 'react';
-import { useModo } from './AppRoot';
+import { useModo } from './contextos';
 import { coloresDe } from './estados';
 
 export type ItemDeMenu = {

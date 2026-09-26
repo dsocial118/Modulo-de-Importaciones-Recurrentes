@@ -33,7 +33,7 @@ import {
 import { EtiquetaDeEstado, useAvisar, useConfirmar, type Tono } from '@mir/ui';
 import type { MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { conFiltros } from '../comun/Selectores';
+import { conFiltros } from '../comun/filtros';
 
 // Cómo se muestra el estado de un archivo. Neutral a propósito: un archivo
 // válido no se pinta de verde, porque el verde es de marca.

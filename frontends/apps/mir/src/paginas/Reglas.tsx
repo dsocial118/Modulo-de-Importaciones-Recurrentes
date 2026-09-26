@@ -19,7 +19,7 @@ import { mensajeDeError, useGuardarReglas, useReglas, type CampoDeReglas, type R
 import { EtiquetaDeEstado, Titulo, useAvisar } from '@mir/ui';
 import { useMemo, useState } from 'react';
 import { SEVERIDAD, formaDe } from '../comun/estados';
-import { useFiltros } from '../comun/Selectores';
+import { useFiltros } from '../comun/filtros';
 
 // Lo editado de un campo: sólo lo que se tocó. Los dos límites de cada techo
 // van juntos, o no van: si llegara uno solo, el otro se leería como «vaciado».

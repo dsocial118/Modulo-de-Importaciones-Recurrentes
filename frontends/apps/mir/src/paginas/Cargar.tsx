@@ -27,7 +27,8 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ESTADO_DEL_ARCHIVO, formaDe } from '../comun/estados';
 import { plural } from '../comun/formato';
-import { SelectorDeJurisdiccion, SelectorDePeriodo, conFiltros, useFiltros } from '../comun/Selectores';
+import { SelectorDeJurisdiccion, SelectorDePeriodo } from '../comun/Selectores';
+import { conFiltros, useFiltros } from '../comun/filtros';
 
 type Recien = ResultadoDeImportar & { codigo: string };
 

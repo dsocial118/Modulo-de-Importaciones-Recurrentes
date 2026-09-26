@@ -16,7 +16,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { tonoDeLaPresentacion } from '../comun/estados';
 import { fechaHora } from '../comun/formato';
-import { SelectorDePeriodo, conFiltros, useFiltros } from '../comun/Selectores';
+import { SelectorDePeriodo } from '../comun/Selectores';
+import { conFiltros, useFiltros } from '../comun/filtros';
 
 function Presentacion({ p, periodo }: { p: PresentacionEnRevision; periodo?: string }) {
   const navegar = useNavigate();

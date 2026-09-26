@@ -44,18 +44,51 @@ frontends/
 ## Cómo se trabaja
 
 Con el sistema levantado (`docker compose up -d`), la versión nueva se abre en
-**http://localhost:8100/v2/mir/**. Los cambios en `frontends/` se ven solos,
-sin recargar.
+**http://localhost:8100/v2/mir/**.
+
+### Dos modos
+
+| Modo | Qué levanta | Cuándo |
+|---|---|---|
+| **Producción** (por defecto) | La app compilada, servida por nginx. Los archivos con huella se guardan un año en el navegador | Para instalar, probar o mostrar |
+| **Desarrollo** | Vite con recarga en caliente: los cambios en `frontends/` se ven solos | Para programar |
+
+El modo lo elige la variable `FRONT_ETAPA` (`prod` o `dev`). Para desarrollar,
+se pone `FRONT_ETAPA=dev` en un `.env` en la raíz del repositorio —que no va a
+git— y se reconstruye:
+
+```bash
+docker compose up -d --build front_mir
+```
+
+Los comandos de la tabla que sigue corren en modo desarrollo.
 
 | Para | Comando |
 |---|---|
+| Correr las pruebas del front | `docker compose exec front_mir npm test` |
+| Revisar el código con ESLint | `docker compose exec front_mir npm run lint` |
+| Controlar los tipos | `docker compose exec front_mir npm run chequear` |
 | Regenerar el contrato de la API | `docker compose exec web python manage.py spectacular --file frontends/packages/api/esquema.yaml` |
 | Regenerar los tipos del front desde el contrato | `docker compose exec front_mir npm run tipos` |
-| Controlar los tipos | `docker compose exec front_mir npm run chequear` |
 | Compilar la versión de producción | `docker compose exec front_mir npm run build` |
 
 **Después de cambiar una respuesta de la API, se regeneran el contrato y los
 tipos en el mismo cambio.** Si no, el front compila contra una forma vieja.
+
+### Si hay que regenerar `package-lock.json`
+
+La npm que trae Node 22.14.0 (la 10.9.2) falla al **resolver** este conjunto de
+dependencias con un error interno: `Cannot read properties of null (reading
+'edgesOut')`. Con npm 11 no pasa, así que se usa npm 11 sólo para generar el
+archivo:
+
+```bash
+npx -y npm@11.6.2 install
+```
+
+**Instalar** a partir del archivo ya generado (`npm ci`, que es lo que hacen la
+imagen y cualquier despliegue) funciona con la npm oficial. Verificado el
+26-09-2026.
 
 ## Migrado
 
@@ -73,15 +106,29 @@ Todas con su API, en escritorio y en teléfono, en modo claro y oscuro.
 | Revisión | `/revision` | observar, habilitar |
 | Reglas | `/reglas` | cambiar un rango y deshacerlo, con el período en preparación |
 
+## Pruebas del front
+
+`vitest` con Testing Library, sobre un navegador simulado (jsdom). Prueban lo
+que ve y hace la persona:
+
+- que la jurisdicción esté siempre a la vista, y el aviso de datos de prueba;
+- que un archivo bloqueado por otro no se pueda subir, y se diga por qué;
+- que «Importar» aparezca recién con el archivo elegido, y «Reemplazar» si ya
+  estaba;
+- que las fechas no se muestren vacías al corregir datos —pasó el 25-09—, que
+  un cambio pida confirmación, y que el nivel nacional no pueda editar.
+
+Las pruebas del servidor, que incluyen las de la API, siguen en `runac/tests/`.
+
 ## Pendientes de la base
 
-Lo que la norma de SISOC incluye y todavía no se sumó, porque la primera
-pantalla no lo necesitaba:
+Lo que la norma de SISOC incluye y todavía no se sumó:
 
-- **Pruebas del front** (`vitest` y Testing Library). Al agregarlas, npm chocó
-  con una dependencia de Vite; se resuelve cuando se escriban las primeras.
-- **ESLint**, **Playwright**, **Sentry** y los formularios
-  (`react-hook-form` y `zod`): llegan con la primera pantalla que carga datos.
-- **La versión de producción servida en el compose.** Hoy el compose levanta
-  Vite en modo desarrollo; la etapa `prod` del Dockerfile está lista, pero
-  falta usarla en el despliegue.
+- **Playwright**, las pruebas de punta a punta en un navegador real, y
+  **Sentry**, el registro de errores.
+- **Los formularios con `react-hook-form` y `zod`.** Los de hoy son chicos
+  —una observación, un expediente, una respuesta— y no los necesitan; van a
+  hacer falta con las pantallas de administración que salgan del diseño de
+  roles y circuito.
+- **Un control automático en GitHub** que corra las pruebas y el control de
+  tipos en cada subida, como el que pide SISOC.

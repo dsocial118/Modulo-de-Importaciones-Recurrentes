@@ -1,7 +1,8 @@
 export { buildTheme } from './theme';
-export { AppRoot, useModo } from './AppRoot';
+export { AppRoot } from './AppRoot';
 export { Layout, type ItemDeMenu } from './Layout';
 export { EtiquetaDeEstado } from './EtiquetaDeEstado';
 export { coloresDe, type Tono } from './estados';
-export { Avisos, useAvisar, useConfirmar } from './Avisos';
+export { Avisos } from './Avisos';
+export { useAvisar, useConfirmar, useModo } from './contextos';
 export { Titulo } from './Titulo';

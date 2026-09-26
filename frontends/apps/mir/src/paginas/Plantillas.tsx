@@ -20,7 +20,8 @@ import {
 } from '@mui/material';
 import { usePlantillas } from '@mir/api';
 import { Titulo } from '@mir/ui';
-import { SelectorDePeriodo, useFiltros } from '../comun/Selectores';
+import { SelectorDePeriodo } from '../comun/Selectores';
+import { useFiltros } from '../comun/filtros';
 
 export function Plantillas() {
   const { periodo, cambiar } = useFiltros();

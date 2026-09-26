@@ -77,16 +77,21 @@ services:
     restart: unless-stopped
 
   # Front v2 (React). Se entra por Django, en http://localhost:8100/v2/mir/.
-  # El puerto propio es sólo para la recarga en caliente mientras se desarrolla.
+  #
+  # Por defecto, la versión compilada servida por nginx: es la que corresponde
+  # para quien instala y para mostrar. Para programar con recarga en caliente,
+  # FRONT_ETAPA=dev —por ejemplo en un .env propio—. Ver docs/mir/front-v2.md.
   front_mir:
     build:
       context: ./frontends
-      target: dev
+      target: ${FRONT_ETAPA:-prod}
       args:
         APP: mir
     depends_on:
       web:
         condition: service_healthy
+    # El código montado y el puerto propio sólo los usa la etapa dev, para la
+    # recarga en caliente. La compilada no los lee.
     volumes:
       - ./frontends:/frontends
       # Las dependencias quedan en el contenedor: las de Linux no sirven en
