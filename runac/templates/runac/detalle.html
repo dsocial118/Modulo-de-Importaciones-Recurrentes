@@ -172,7 +172,8 @@
                     <tr>
                         <th style="width:4rem" class="text-end">Fila</th>
                         {% comment %} De quien es la fila. Sin esto hay que ir a contar filas en el Excel para saber de quien hablan: lo marco la contraparte el 22-09. Los campos que identifican los declara la Capa 1. {% endcomment %}
-                        <th style="width:15rem">De quién</th>
+                        {% comment %} Según el archivo, no «De quién»: lo que es una fila de este archivo. {% endcomment %}
+                        <th style="width:15rem">{{ importacion.que_es_una_fila|default:"Registro" }}</th>
                         <th style="width:9rem">Hoja</th>
                         <th style="width:16rem">Campo</th>
                         {% if not severidad_unica %}<th style="width:8rem">Severidad</th>{% endif %}
@@ -184,7 +185,9 @@
                     {% for h in hallazgos %}
                         <tr>
                             <td class="fw-semibold text-end">{{ h.numero_fila|default:"—" }}</td>
-                            <td data-etiqueta="De quién">{{ h.identificador_registro|default:"—" }}</td>
+                            <td data-etiqueta="{{ importacion.que_es_una_fila|default:'Registro' }}">
+                                {{ h.identificador_registro|default:"—" }}
+                            </td>
                             <td class="ayuda" data-etiqueta="Hoja">{{ h.nombre_hoja|default:"—" }}</td>
                             <td data-etiqueta="Campo">{{ h.nombre_campo|default:"—" }}</td>
                             {% if not severidad_unica %}

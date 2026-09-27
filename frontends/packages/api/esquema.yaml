@@ -1254,6 +1254,8 @@ components:
       properties:
         numero_fila:
           type: integer
+        identificacion:
+          type: string
         estado:
           type: string
           nullable: true
@@ -1269,6 +1271,7 @@ components:
       - avisos
       - celdas
       - estado
+      - identificacion
       - numero_fila
     Hallazgo:
       type: object
@@ -1377,6 +1380,9 @@ components:
           type: string
           nullable: true
         periodo:
+          type: string
+          nullable: true
+        que_es_una_fila:
           type: string
           nullable: true
       required:

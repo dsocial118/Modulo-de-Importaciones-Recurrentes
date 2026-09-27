@@ -630,6 +630,7 @@ export interface components {
         };
         FilaDeDatos: {
             numero_fila: number;
+            identificacion: string;
             estado: string | null;
             avisos: components["schemas"]["AvisoDeFila"][];
             celdas: components["schemas"]["Celda"][];
@@ -671,6 +672,7 @@ export interface components {
             duracion_ms: number | null;
             jurisdiccion: string | null;
             periodo: string | null;
+            que_es_una_fila?: string | null;
         };
         ImportacionBreve: {
             id: number;

@@ -354,6 +354,9 @@ class ImportacionSerializer(serializers.Serializer):
     duracion_ms = serializers.IntegerField(allow_null=True)
     jurisdiccion = serializers.CharField(allow_null=True)
     periodo = serializers.CharField(allow_null=True)
+    # Qué es una fila de este archivo («Niño, niña o adolescente»,
+    # «Dispositivo»): titula la columna de identificación.
+    que_es_una_fila = serializers.CharField(allow_null=True, default=None)
 
 
 class ErrorDelArchivoSerializer(serializers.Serializer):

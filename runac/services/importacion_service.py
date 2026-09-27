@@ -541,7 +541,8 @@ def importacion(importacion_id: int) -> dict | None:
         cur.execute(
             """
             SELECT i.*, a.codigo AS archivo_codigo, av.titulo AS archivo_titulo,
-                   av.numero AS version, j.nombre AS jurisdiccion, p.codigo AS periodo
+                   av.numero AS version, av.que_es_una_fila,
+                   j.nombre AS jurisdiccion, p.codigo AS periodo
             FROM mir_c2_importacion i
             LEFT JOIN mir_c1_archivo a ON a.id = i.archivo_id
             LEFT JOIN mir_c1_archivo_version av ON av.id = i.archivo_version_id

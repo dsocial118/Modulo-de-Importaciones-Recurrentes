@@ -34,10 +34,25 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { tonoDeLaPresentacion } from '../comun/estados';
 import { fechaHora, plural } from '../comun/formato';
 
-type AlCorregir = (fila: number, celda: Celda, valor: string) => Promise<boolean>;
+// La fila entera, no sólo su número: la confirmación dice de quién es.
+type AlCorregir = (fila: FilaDeDatos, celda: Celda, valor: string) => Promise<boolean>;
+
+/** De quién es la fila y dónde está: «9 · Paz · Ana · fila 12 del Excel». */
+const quien = (f: FilaDeDatos) =>
+  f.identificacion ? `${f.identificacion} · fila ${f.numero_fila} del Excel` : `Fila ${f.numero_fila} del Excel`;
 
 /** Un dato. Se guarda al salir del campo —o al elegir, en una lista—, y sólo si cambió. */
-function CampoEditable({ fila, celda, editable, alCorregir }: { fila: number; celda: Celda; editable: boolean; alCorregir: AlCorregir }) {
+function CampoEditable({
+  fila,
+  celda,
+  editable,
+  alCorregir,
+}: {
+  fila: FilaDeDatos;
+  celda: Celda;
+  editable: boolean;
+  alCorregir: AlCorregir;
+}) {
   const [valor, setValor] = useState(celda.valor);
   const [original, setOriginal] = useState(celda.valor);
   const etiqueta = (
@@ -123,7 +138,8 @@ function Fila({ f, editable, alCorregir }: { f: FilaDeDatos; editable: boolean; 
       <AccordionSummary expandIcon={<ExpandMore />}>
         <Stack sx={{ width: '100%' }} spacing={0.5}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-            <Typography sx={{ fontWeight: 500 }}>Fila {f.numero_fila} del Excel</Typography>
+            {/* De quién es la fila, no sólo su número: pedido de la DNPYPI (#67). */}
+            <Typography sx={{ fontWeight: 500 }}>{quien(f)}</Typography>
             {f.estado === 'EDITADA' && <EtiquetaDeEstado tono="pending" texto="Editada" />}
             {f.avisos.length > 0 && (
               <EtiquetaDeEstado tono="attention" texto={plural(f.avisos.length, 'advertencia', 'advertencias')} />
@@ -139,7 +155,7 @@ function Fila({ f, editable, alCorregir }: { f: FilaDeDatos; editable: boolean; 
       <AccordionDetails>
         <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' } }}>
           {f.celdas.map((c) => (
-            <CampoEditable key={c.nombre} fila={f.numero_fila} celda={c} editable={editable} alCorregir={alCorregir} />
+            <CampoEditable key={c.nombre} fila={f} celda={c} editable={editable} alCorregir={alCorregir} />
           ))}
         </Box>
       </AccordionDetails>
@@ -177,8 +193,8 @@ export function Datos() {
       titulo: 'Confirmar el cambio',
       texto: (
         <>
-          Fila {fila}, <strong>{celda.titulo}</strong>: de «{celda.valor || '—'}» a «{valor || '—'}». El cambio queda
-          registrado con usuario, fecha y valor anterior.
+          {quien(fila)}, <strong>{celda.titulo}</strong>: de «{celda.valor || '—'}» a «{valor || '—'}». El cambio
+          queda registrado con usuario, fecha y valor anterior.
         </>
       ),
       confirmar: 'Guardar',
@@ -186,7 +202,13 @@ export function Datos() {
     });
     if (motivo === null) return false;
     try {
-      const r = await corregir.mutateAsync({ hoja_id: d.hoja.id, numero_fila: fila, campo: celda.nombre, valor, motivo });
+      const r = await corregir.mutateAsync({
+        hoja_id: d.hoja.id,
+        numero_fila: fila.numero_fila,
+        campo: celda.nombre,
+        valor,
+        motivo,
+      });
       // Guardar y quedar bien no son lo mismo: si el valor nuevo quedó
       // observado, se dice.
       if (r.sin_cambios) avisar({ texto: 'El valor era el mismo: no se registró un cambio.' });

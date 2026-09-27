@@ -267,7 +267,8 @@ export function Detalle() {
                     <TableHead>
                       <TableRow>
                         <TableCell align="right">Fila</TableCell>
-                        <TableCell>De quién</TableCell>
+                        {/* Según el archivo, no «De quién»: lo que es una fila de este archivo. */}
+                        <TableCell>{imp.que_es_una_fila ?? 'Registro'}</TableCell>
                         <TableCell>Hoja</TableCell>
                         <TableCell>Campo</TableCell>
                         {!d.severidad_unica && <TableCell>Severidad</TableCell>}

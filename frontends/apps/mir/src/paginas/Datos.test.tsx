@@ -28,6 +28,7 @@ function datos(extra = {}) {
     filas: [
       {
         numero_fila: 12,
+        identificacion: '9 · Paz · Ana',
         estado: 'VALIDA',
         avisos: [{ nombre_campo: 'Edad', severidad: 'ADVERTENCIA', descripcion: 'Es mayor que 17.' }],
         celdas: [
@@ -41,7 +42,7 @@ function datos(extra = {}) {
   };
 }
 
-const abrirLaFila = () => fireEvent.click(screen.getByText('Fila 12 del Excel'));
+const abrirLaFila = () => fireEvent.click(screen.getByText('9 · Paz · Ana · fila 12 del Excel'));
 
 describe('Corregir datos', () => {
   beforeEach(() => api.useCorregir.mockReturnValue(envio()));
@@ -64,6 +65,17 @@ describe('Corregir datos', () => {
     fireEvent.blur(edad);
     expect(screen.getByText('Confirmar el cambio')).toBeInTheDocument();
     expect(screen.getByText(/de «107» a «12»/)).toBeInTheDocument();
+  });
+
+  it('cada fila y la confirmación dicen de quién es, no sólo el número', () => {
+    // «Fila 5 del Excel» sola no le decía nada a quien corrige (#67).
+    api.useDatos.mockReturnValue(resuelta(datos()));
+    mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });
+    abrirLaFila();
+    const edad = screen.getByLabelText(/^Edad/);
+    fireEvent.change(edad, { target: { value: '12' } });
+    fireEvent.blur(edad);
+    expect(screen.getByRole('dialog')).toHaveTextContent('9 · Paz · Ana · fila 12 del Excel');
   });
 
   it('el nivel nacional ve los datos pero no los cambia', () => {
