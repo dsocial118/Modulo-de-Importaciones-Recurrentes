@@ -15,6 +15,7 @@ from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from runac import api_views
+from runac.services import importacion_service as svc
 from runac.views import front_v2
 
 
@@ -410,3 +411,18 @@ def test_esperando_revision_y_en_revision_son_el_mismo_paso():
             p["nombre"] for p in api_views._pasos_de_la_franja(estado) if p["actual"]
         ]
         assert actual == ["Revisión nacional"]
+
+
+@pytest.mark.parametrize(
+    "periodo, nombre",
+    [
+        ({"codigo": "2026_T1", "anio": 2026, "numero": 1}, "1.er trimestre 2026"),
+        ({"codigo": "2026_T2", "anio": 2026, "numero": 2}, "2.º trimestre 2026"),
+        ({"codigo": "2025_S2", "anio": 2025, "numero": 2}, "2.º semestre 2025"),
+        ({"codigo": "ESPECIAL", "anio": 2026, "numero": 1}, "ESPECIAL"),
+        (None, ""),
+    ],
+)
+def test_el_periodo_se_lee_con_su_nombre(periodo, nombre):
+    """«1.er trimestre 2026» y no «2026_T1» (pedido del responsable funcional, 27-09-2026)."""
+    assert svc.nombre_del_periodo(periodo) == nombre

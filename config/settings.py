@@ -175,4 +175,6 @@ RUNAC_INFORMES = BASE_DIR / "media" / "informes"
 MIR_INSTANCIA = os.getenv("MIR_INSTANCIA", "RUNAC")
 
 MIR_MOSTRAR_AVISO = True
-MIR_AVISO = "RUNAC · versión funcional · datos de prueba"
+# Desde el 27-09-2026 va al lado del nombre, en la barra, y no en una franja
+# aparte: a pedido del responsable funcional, para ganar lugar. Sigue a la vista.
+MIR_AVISO = "Versión 1.0 · funcional con datos de prueba"

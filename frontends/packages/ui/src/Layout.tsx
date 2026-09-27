@@ -111,9 +111,23 @@ export function Layout({ instancia, usuario, rol, entidad, aviso, menu, activa, 
             </IconButton>
           )}
           <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 1 }}>
-            <Typography variant="h6" component="div" sx={{ fontWeight: 700 }}>
-              {instancia}
+            <Typography variant="h6" component="div" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+              SISOC · {instancia}
             </Typography>
+            {/* Etiqueta de seguridad: que nadie confunda esto con un sistema con
+                datos reales, ni en persona ni en una captura que circule. Va al
+                lado del nombre y no en una franja aparte, para ganar lugar
+                (27-09-2026). */}
+            {aviso && (
+              <Typography
+                role="note"
+                variant="body2"
+                component="div"
+                sx={{ color: 'nav.accent', fontWeight: 500, display: { xs: 'none', md: 'block' }, whiteSpace: 'nowrap' }}
+              >
+                ({aviso})
+              </Typography>
+            )}
             {/* En el teléfono no entra el bloque de usuario: la entidad va acá. */}
             {entidad && (
               <Typography
@@ -149,11 +163,10 @@ export function Layout({ instancia, usuario, rol, entidad, aviso, menu, activa, 
           </Tooltip>
         </Toolbar>
         {aviso && (
-          // Etiqueta de seguridad: que nadie confunda esto con un sistema con
-          // datos reales, ni en persona ni en una captura que circule.
+          // En pantallas angostas no entra al lado del nombre: queda en su franja.
           <Box
             role="note"
-            sx={{ bgcolor: atencion.surface, color: atencion.text, px: 2, py: 0.5, fontSize: 13, fontWeight: 500, textAlign: 'center' }}
+            sx={{ display: { xs: 'block', md: 'none' }, bgcolor: atencion.surface, color: atencion.text, px: 2, py: 0.5, fontSize: 13, fontWeight: 500, textAlign: 'center' }}
           >
             {aviso}
           </Box>
@@ -167,13 +180,13 @@ export function Layout({ instancia, usuario, rol, entidad, aviso, menu, activa, 
         sx={{ width: ANCHO, flexShrink: 0, displayPrint: 'none', '& .MuiDrawer-paper': { width: ANCHO, boxSizing: 'border-box' } }}
       >
         <Toolbar />
-        {aviso && <Box sx={{ height: 28 }} />}
+        {aviso && <Box sx={{ height: 28, display: { xs: 'block', md: 'none' } }} />}
         {lista}
       </Drawer>
 
       <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 } }}>
         <Toolbar sx={{ displayPrint: 'none' }} />
-        {aviso && <Box sx={{ height: 28, displayPrint: 'none' }} />}
+        {aviso && <Box sx={{ height: 28, display: { xs: 'block', md: 'none' }, displayPrint: 'none' }} />}
         {children}
       </Box>
     </Box>

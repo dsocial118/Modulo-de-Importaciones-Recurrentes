@@ -23,7 +23,7 @@ export function SelectorDePeriodo({
     >
       {periodos.map((p) => (
         <MenuItem key={p.codigo} value={p.codigo}>
-          {p.codigo}
+          {p.nombre || p.codigo}
         </MenuItem>
       ))}
     </TextField>

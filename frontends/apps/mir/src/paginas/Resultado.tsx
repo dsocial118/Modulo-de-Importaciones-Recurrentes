@@ -29,7 +29,7 @@ import { EtiquetaDeEstado, Titulo, useAvisar, useConfirmar } from '@mir/ui';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ESTADO_DEL_ARCHIVO, SEVERIDAD, formaDe, tonoDeLaPresentacion } from '../comun/estados';
-import { filasEnPalabras, plural } from '../comun/formato';
+import { fecha, filasEnPalabras, plural } from '../comun/formato';
 import { SelectorDeJurisdiccion, SelectorDePeriodo } from '../comun/Selectores';
 import { conFiltros, useFiltros } from '../comun/filtros';
 import { TarjetaDeObservacion } from '../comun/Observaciones';
@@ -75,7 +75,7 @@ function Archivo({ a, puedeEditar }: { a: ArchivoDelResultado; puedeEditar: bool
                 aria-expanded={conResumen}
                 sx={{ ml: 1, py: 0, minWidth: 0, verticalAlign: 'baseline' }}
               >
-                {conResumen ? 'Ocultar resumen' : 'Ver resumen'}
+                {conResumen ? 'Ocultar reglas incumplidas' : 'Ver reglas incumplidas'}
               </Button>
             )}
           </Typography>
@@ -87,7 +87,7 @@ function Archivo({ a, puedeEditar }: { a: ArchivoDelResultado; puedeEditar: bool
                   key={`${r.codigo}-${r.severidad}`}
                   size="small"
                   variant="outlined"
-                  label={`${r.casos} · ${r.ejemplo ?? r.codigo}`}
+                  label={`${plural(r.casos, 'caso', 'casos')}: ${r.ejemplo ?? r.codigo}`}
                   title={`${formaDe(SEVERIDAD, r.severidad).texto}: ${r.ejemplo ?? ''}`}
                   sx={{ maxWidth: '100%' }}
                 />
@@ -164,14 +164,20 @@ export function Resultado() {
   return (
     <>
       <Titulo
-        titulo={d.jurisdiccion ? `${d.jurisdiccion} · ${d.periodo?.codigo ?? ''}` : 'Resultado'}
+        titulo={d.jurisdiccion ? `${d.jurisdiccion} · ${d.periodo?.nombre ?? ''}` : 'Resultado'}
         subtitulo={
           p ? (
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
+              {/* El período con sus fechas, de la base. «Versión 1» salió: todas
+                  las presentaciones son la 1, porque nada crea otra (27-09-2026). */}
+              {d.periodo && (
+                <span>
+                  Del {fecha(d.periodo.fecha_desde)} al {fecha(d.periodo.fecha_hasta)} ·
+                </span>
+              )}
               <EtiquetaDeEstado tono={tonoDeLaPresentacion(p.estado)} texto={p.estado_legible} />
-              <span>versión {p.version}</span>
+              <span>{p.estado_ayuda}</span>
               {p.expediente && <span>· expediente {p.expediente}</span>}
-              <span>· {p.estado_ayuda}</span>
             </Stack>
           ) : d.jurisdiccion ? (
             'La jurisdicción todavía no empezó a cargar este período.'
@@ -199,22 +205,11 @@ export function Resultado() {
               importación es restrictiva: <strong>no se incorporó ninguna fila</strong> de esos archivos. Se corrige el
               Excel y se vuelve a importar.
             </Alert>
-          ) : d.totales.advertencias > 0 ? (
-            <Alert severity="info">
-              No hay errores bloqueantes. Quedan <strong>{plural(d.totales.advertencias, 'advertencia', 'advertencias')}</strong>:
-              no impiden continuar, y se resuelven dentro del sistema editando el dato o justificándolo.
-            </Alert>
-          ) : d.totales.filas > 0 ? (
-            <Alert severity="info">Todos los archivos se importaron sin errores.</Alert>
           ) : null}
 
           <Card variant="outlined">
             <CardHeader
               title="Archivos"
-              subheader={
-                d.totales.filas > 0 &&
-                filasEnPalabras(d.totales.filas, d.totales.validas)
-              }
               slotProps={{ title: { variant: 'subtitle1', sx: { fontWeight: 500 } } }}
             />
             <CardContent sx={{ pt: 0, '&:last-child': { pb: 0 } }}>

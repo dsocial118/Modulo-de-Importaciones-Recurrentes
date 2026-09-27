@@ -1422,6 +1422,8 @@ components:
         periodo:
           type: string
           nullable: true
+        periodo_nombre:
+          type: string
         estado:
           type: string
           nullable: true
@@ -1453,6 +1455,7 @@ components:
       - observaciones_abiertas
       - pasos
       - periodo
+      - periodo_nombre
       - que_pasa
       - te_toca
     Hallazgo:
@@ -1775,6 +1778,9 @@ components:
       properties:
         codigo:
           type: string
+        nombre:
+          type: string
+          readOnly: true
         estado:
           type: string
         fecha_desde:
@@ -1788,6 +1794,7 @@ components:
       - estado
       - fecha_desde
       - fecha_hasta
+      - nombre
     PeriodoCambiado:
       type: object
       properties:

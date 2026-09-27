@@ -84,6 +84,28 @@ def en_palabras_comunes(
 # ---------------------------------------------------------------------------
 
 
+_ORDINALES = {1: "1.er", 2: "2.º", 3: "3.er", 4: "4.º"}
+_UNIDADES = {"T": "trimestre", "S": "semestre"}
+
+
+def nombre_del_periodo(p: dict | None) -> str:
+    """Cómo se lee un período: «1.er trimestre 2026» y no «2026_T1».
+
+    Sale del código, el año y el número que guarda la base. La unidad
+    —trimestre o semestre— la dice la letra del código, porque la base todavía
+    no la guarda aparte; es provisorio hasta que el diseño del circuito defina
+    la periodicidad de la instancia. Lo que no se reconoce queda con su código.
+    """
+    if not p:
+        return ""
+    codigo = p.get("codigo") or ""
+    m = re.fullmatch(r"\d{4}_([TS])\d+", codigo)
+    ordinal = _ORDINALES.get(p.get("numero"))
+    if not (m and ordinal and p.get("anio")):
+        return codigo
+    return f"{ordinal} {_UNIDADES[m[1]]} {p['anio']}"
+
+
 def periodos():
     with connection.cursor() as cur:
         cur.execute(

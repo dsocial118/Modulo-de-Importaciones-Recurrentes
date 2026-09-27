@@ -81,7 +81,7 @@ export function FranjaDelCircuito() {
     >
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-          {f.jurisdiccion} · {f.periodo}
+          {f.jurisdiccion} · {f.periodo_nombre || f.periodo}
         </Typography>
 
         {chico ? (

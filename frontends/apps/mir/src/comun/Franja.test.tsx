@@ -12,6 +12,7 @@ function franja(extra = {}) {
   return {
     jurisdiccion: 'Chubut',
     periodo: '2026_T1',
+    periodo_nombre: '1.er trimestre 2026',
     estado: 'OBSERVADA',
     estado_legible: 'Observada',
     que_pasa: 'Tiene observaciones y volvió a la jurisdicción.',

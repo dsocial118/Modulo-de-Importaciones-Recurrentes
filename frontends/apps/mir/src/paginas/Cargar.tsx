@@ -328,7 +328,9 @@ export function Cargar() {
     <>
       <Titulo
         titulo={d.jurisdiccion ? `Cargar archivos · ${d.jurisdiccion}` : "Cargar archivos"}
-        subtitulo="Los archivos se cargan de a uno y deben tener el nombre y la estructura indicada en la plantilla modelo."
+        // Una sola explicación, corta (27-09-2026): antes eran dos, una arriba y
+        // otra abajo de la lista.
+        subtitulo="De a uno, con el nombre y la estructura de la plantilla. Si un archivo tiene errores bloqueantes no entra ninguna fila: se corrige el Excel y se vuelve a importar. Las advertencias se resuelven en el sistema."
       >
         <SelectorDeJurisdiccion
           jurisdicciones={d.jurisdicciones}
@@ -392,11 +394,6 @@ export function Cargar() {
           </Typography>
         )}
       </Stack>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
-        La importación es <strong>restrictiva</strong>: si un archivo tiene errores bloqueantes, no se incorpora
-        ninguna de sus filas. Los bloqueantes se corrigen en el Excel y el archivo se vuelve a importar; las
-        advertencias se resuelven dentro del sistema.
-      </Typography>
 
       <ResultadoDelArchivo
         r={recien}

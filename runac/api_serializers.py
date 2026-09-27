@@ -15,6 +15,8 @@ tal como vienen.
 
 from rest_framework import serializers
 
+from runac.services import importacion_service as svc
+
 # ---------------------------------------------------------------------------
 # Comunes
 # ---------------------------------------------------------------------------
@@ -57,9 +59,14 @@ class SesionSerializer(serializers.Serializer):
 
 class PeriodoSerializer(serializers.Serializer):
     codigo = serializers.CharField()
+    # «1.er trimestre 2026»: el código queda para las direcciones y los archivos.
+    nombre = serializers.SerializerMethodField()
     estado = serializers.CharField()
     fecha_desde = serializers.DateField()
     fecha_hasta = serializers.DateField()
+
+    def get_nombre(self, p) -> str:
+        return svc.nombre_del_periodo(p)
 
 
 class MensajeSerializer(serializers.Serializer):
@@ -259,6 +266,7 @@ class FranjaSerializer(serializers.Serializer):
 
     jurisdiccion = serializers.CharField(allow_null=True)
     periodo = serializers.CharField(allow_null=True)
+    periodo_nombre = serializers.CharField(allow_blank=True)
     estado = serializers.CharField(allow_null=True)
     estado_legible = serializers.CharField(allow_null=True)
     que_pasa = serializers.CharField(allow_blank=True)

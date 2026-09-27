@@ -248,7 +248,7 @@ export function Detalle() {
             <CardContent sx={{ pt: 0 }}>
               {d.resumen.map((r) => (
                 <Stack key={`${r.codigo}-${r.severidad}`} direction="row" spacing={2} sx={{ py: 0.5, alignItems: 'baseline' }}>
-                  <Typography sx={{ fontWeight: 700, minWidth: 40, textAlign: 'right' }}>{r.casos}</Typography>
+                  <Typography sx={{ fontWeight: 700, minWidth: 72, textAlign: 'right' }}>{plural(r.casos, 'caso', 'casos')}</Typography>
                   <EtiquetaDeEstado tono={formaDe(SEVERIDAD, r.severidad).tono} texto={formaDe(SEVERIDAD, r.severidad).texto} />
                   <Typography variant="body2" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {r.ejemplo}

@@ -6,7 +6,7 @@ import { Cargar } from './Cargar';
 const api = vi.hoisted(() => ({ useCarga: vi.fn(), useCargarArchivo: vi.fn() }));
 vi.mock('@mir/api', () => ({ ...api, mensajeDeError: () => 'error' }));
 
-const PERIODO = { codigo: '2026_T1', estado: 'ABIERTO', fecha_desde: '2026-01-01', fecha_hasta: '2026-03-31' };
+const PERIODO = { codigo: '2026_T1', nombre: '1.er trimestre 2026', estado: 'ABIERTO', fecha_desde: '2026-01-01', fecha_hasta: '2026-03-31' };
 
 function archivo(codigo: string, extra = {}) {
   return {

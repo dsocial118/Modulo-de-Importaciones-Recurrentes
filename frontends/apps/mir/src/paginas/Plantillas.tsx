@@ -37,7 +37,7 @@ export function Plantillas() {
     <>
       <Titulo
         titulo="Plantillas"
-        subtitulo={`Modelos para completar y adjuntar — período ${d.periodo?.codigo ?? ''}`}
+        subtitulo={`Modelos para completar y adjuntar — ${d.periodo?.nombre ?? ''}`}
       >
         <SelectorDePeriodo periodos={d.periodos} valor={d.periodo?.codigo} alCambiar={(p) => cambiar({ periodo: p })} />
       </Titulo>

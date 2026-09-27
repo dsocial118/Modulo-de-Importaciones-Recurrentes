@@ -268,6 +268,7 @@ class FranjaView(APIView):
         vacia = {
             "jurisdiccion": jurisdiccion,
             "periodo": periodo["codigo"] if periodo else None,
+            "periodo_nombre": svc.nombre_del_periodo(periodo),
             "estado": None,
             "estado_legible": None,
             "que_pasa": "",

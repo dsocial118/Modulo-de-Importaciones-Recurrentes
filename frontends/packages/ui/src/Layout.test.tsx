@@ -41,7 +41,7 @@ describe('Layout', () => {
 
   it('muestra siempre el aviso de datos de prueba', () => {
     armar();
-    expect(screen.getByRole('note')).toHaveTextContent('datos de prueba');
+    expect(screen.getAllByRole('note')[0]).toHaveTextContent('datos de prueba');
   });
 
   it('marca la sección activa', () => {

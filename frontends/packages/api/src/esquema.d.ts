@@ -723,6 +723,7 @@ export interface components {
         Franja: {
             jurisdiccion: string | null;
             periodo: string | null;
+            periodo_nombre: string;
             estado: string | null;
             estado_legible: string | null;
             que_pasa: string;
@@ -835,6 +836,7 @@ export interface components {
         };
         Periodo: {
             codigo: string;
+            readonly nombre: string;
             estado: string;
             /** Format: date */
             fecha_desde: string;
