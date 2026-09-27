@@ -5,7 +5,7 @@ import RadioButtonUnchecked from '@mui/icons-material/RadioButtonUnchecked';
 import { Box, Link, Stack, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useFranja } from '@mir/api';
 import { EtiquetaDeEstado } from '@mir/ui';
-import { Fragment, useLayoutEffect, useState } from 'react';
+import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { conFiltros, useFiltros } from './filtros';
 import { plural } from './formato';
@@ -42,16 +42,9 @@ export function FranjaDelCircuito() {
   const consulta = useFranja(periodo, jurisdiccion);
   const navegar = useNavigate();
   const theme = useTheme();
-  const chico = useMediaQuery(theme.breakpoints.down('md'));
-  // Queda fija al bajar por la página, justo debajo de la barra (27-09-2026).
-  // La barra cambia de alto con el ancho y con el aviso de la instancia: se mide.
-  const [arriba, setArriba] = useState(64);
-  useLayoutEffect(() => {
-    const medir = () => setArriba(document.querySelector('header')?.getBoundingClientRect().height ?? 64);
-    medir();
-    window.addEventListener('resize', medir);
-    return () => window.removeEventListener('resize', medir);
-  }, []);
+  // Un solo renglón siempre: por debajo de 1200 px los cinco pasos no entran
+  // junto con lo demás y la franja se partía en tres; ahí se dice en cuál está.
+  const chico = useMediaQuery(theme.breakpoints.down('lg'));
   const f = consulta.data;
   if (!f || !f.estado || !f.pasos.length) return null;
 
@@ -63,15 +56,8 @@ export function FranjaDelCircuito() {
       component="nav"
       aria-label="Avance del circuito"
       sx={{
-        // De borde a borde del contenido y pegada a la barra: se come el margen
-        // del contenido, que está antes del espaciador de la barra fija.
-        mx: { xs: -2, md: -3 },
-        // Dos píxeles menos: no tapa la franja ámbar del borde de la barra.
-        mt: { xs: '-14px', md: '-22px' },
-        mb: 2,
-        position: 'sticky',
-        top: arriba,
-        zIndex: theme.zIndex.appBar - 1,
+        // Fuera del recuadro que se desplaza: queda siempre a la vista.
+        flexShrink: 0,
         px: { xs: 2, md: 3 },
         py: 0.75,
         borderBottom: 1,
@@ -79,13 +65,13 @@ export function FranjaDelCircuito() {
         bgcolor: 'background.paper',
       }}
     >
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'nowrap', overflow: 'hidden' }}>
+        <Typography variant="caption" color="text.secondary" noWrap sx={{ fontWeight: 500, flexShrink: 0 }}>
           {f.jurisdiccion} · {f.periodo_nombre || f.periodo}
         </Typography>
 
         {chico ? (
-          // En el teléfono, seis pasos no entran: se dice en cuál está.
+          // En pantallas angostas los pasos no entran: se dice en cuál está.
           <Tooltip describeChild title={f.que_pasa}>
             <Typography variant="caption">
               Paso {actual + 1} de {f.pasos.length}: <strong>{f.pasos[actual]?.nombre}</strong>
@@ -129,7 +115,7 @@ export function FranjaDelCircuito() {
           </Stack>
         )}
 
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', ml: { md: 'auto' }, flexWrap: 'wrap', rowGap: 0.5 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', ml: 'auto', flexWrap: 'nowrap', minWidth: 0, '& > *': { whiteSpace: 'nowrap' } }}>
           <Typography variant="caption" color="text.secondary">
             {archivosEnPalabras(f.estado, f.archivos_importados, f.archivos_esperados)}
           </Typography>

@@ -188,18 +188,25 @@ function useAltoDisponible() {
     const medir = () => {
       const el = ref.current;
       if (!el) return;
-      const arriba = el.getBoundingClientRect().top + window.scrollY;
-      // Debajo de lo que queda fijo arriba: la barra y la franja del circuito.
-      const fijo = [document.querySelector('header'), document.querySelector('nav[aria-label="Avance del circuito"]')];
+      // Lo que se desplaza es el recuadro de la pantalla, no la ventana.
+      const recuadro = document.getElementById('contenido');
+      const arriba = el.getBoundingClientRect().top + (recuadro?.scrollTop ?? window.scrollY);
+      // Debajo de lo que queda fijo arriba: la barra, la franja y el título.
+      const fijo = [
+        document.querySelector('header'),
+        document.querySelector('nav[aria-label="Avance del circuito"]'),
+        document.querySelector('[data-titulo]'),
+      ];
       const barra = Math.max(64, ...fijo.map((e) => (e ? e.getBoundingClientRect().bottom : 0)));
-      const queda = window.innerHeight - arriba - 16;
-      setAlto(Math.round(queda >= ALTO_MINIMO ? queda : Math.max(ALTO_MINIMO, window.innerHeight - barra - 16)));
+      // El margen de abajo del recuadro.
+      const queda = window.innerHeight - arriba - 28;
+      setAlto(Math.round(queda >= ALTO_MINIMO ? queda : Math.max(ALTO_MINIMO, window.innerHeight - barra - 28)));
     };
     medir();
     window.addEventListener('resize', medir);
     // Lo de arriba (avisos, observaciones) puede crecer o achicarse.
     const observador = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(medir);
-    observador?.observe(document.body);
+    observador?.observe(ref.current?.parentElement ?? document.body);
     return () => {
       window.removeEventListener('resize', medir);
       observador?.disconnect();

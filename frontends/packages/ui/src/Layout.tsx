@@ -184,9 +184,23 @@ export function Layout({ instancia, usuario, rol, entidad, aviso, menu, activa, 
         {lista}
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 } }}>
-        <Toolbar sx={{ displayPrint: 'none' }} />
-        {aviso && <Box sx={{ height: 28, display: { xs: 'block', md: 'none' }, displayPrint: 'none' }} />}
+      {/* La pantalla entra entera en la ventana: la página no se desplaza, se
+          desplaza su contenido, dentro de su propio recuadro (pedido del
+          responsable funcional, 27-09-2026). Al imprimir, todo corrido. */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          minWidth: 0,
+          height: '100dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          '@media print': { height: 'auto', display: 'block', overflow: 'visible' },
+        }}
+      >
+        <Toolbar sx={{ displayPrint: 'none', flexShrink: 0 }} />
+        {aviso && <Box sx={{ height: 28, flexShrink: 0, display: { xs: 'block', md: 'none' }, displayPrint: 'none' }} />}
         {children}
       </Box>
     </Box>

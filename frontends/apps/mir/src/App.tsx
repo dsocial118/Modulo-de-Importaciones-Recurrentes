@@ -1,15 +1,11 @@
-import ChecklistOutlined from '@mui/icons-material/ChecklistOutlined';
-import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
-import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined';
 import HomeOutlined from '@mui/icons-material/HomeOutlined';
-import ManageSearchOutlined from '@mui/icons-material/ManageSearchOutlined';
-import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
-import { Alert, Box, CircularProgress } from '@mui/material';
+import { Alert, Box, CircularProgress, GlobalStyles } from '@mui/material';
 import { useSesion } from '@mir/api';
 import { Avisos, Layout, type ItemDeMenu } from '@mir/ui';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { conFiltros } from './comun/filtros';
+import { ICONOS } from './comun/iconos';
 import { Cargar } from './paginas/Cargar';
 import { Comprobante } from './paginas/Comprobante';
 import { Datos } from './paginas/Datos';
@@ -22,15 +18,6 @@ import { Revision } from './paginas/Revision';
 import { FranjaDelCircuito } from './comun/Franja';
 
 // El ícono de cada sección. Las secciones y quién las ve las decide el back.
-const ICONOS: Record<string, ReactNode> = {
-  inicio: <HomeOutlined />,
-  plantillas: <DownloadOutlined />,
-  cargar: <UploadFileOutlined />,
-  resultado: <FactCheckOutlined />,
-  revision: <ManageSearchOutlined />,
-  estructura: <ChecklistOutlined />,
-};
-
 // Qué sección del menú queda marcada según la dirección: el detalle de una
 // importación y el comprobante son parte del resultado.
 const SECCION_DE: Record<string, string> = {
@@ -49,6 +36,12 @@ export function App() {
   const sesion = useSesion();
   const navegar = useNavigate();
   const { pathname, search } = useLocation();
+  // Al cambiar de pantalla, el recuadro arranca arriba: ya no es la ventana la
+  // que se desplaza, y sin esto quedaba donde había quedado la anterior.
+  const contenido = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    contenido.current?.scrollTo?.(0, 0);
+  }, [pathname]);
 
   useEffect(() => {
     if (sesion.data) document.title = sesion.data.instancia;
@@ -98,7 +91,32 @@ export function App() {
         salir={s.salir}
         alNavegar={(ruta) => navegar(ruta)}
       >
+        {/* Los títulos de las tablas, teñidos con el verde de marca: más color
+            sin inventar ninguno (27-09-2026). Tinte sólido, porque varios
+            quedan fijos al desplazarse y uno transparente dejaría ver debajo. */}
+        <GlobalStyles
+          styles={(t) => ({
+            '#contenido .MuiTableHead-root .MuiTableCell-head': {
+              backgroundColor: `color-mix(in srgb, ${t.palette.primary.main} ${t.palette.mode === 'light' ? 8 : 20}%, ${t.palette.background.paper})`,
+              color: t.palette.mode === 'light' ? t.palette.primary.dark : t.palette.text.primary,
+              fontWeight: 600,
+            },
+          })}
+        />
         <FranjaDelCircuito />
+        {/* El recuadro de cada pantalla: lo único que se desplaza (27-09-2026). */}
+        <Box
+          ref={contenido}
+          id="contenido"
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: 'auto',
+            px: { xs: 2, md: 3 },
+            pb: { xs: 2, md: 3 },
+            '@media print': { overflow: 'visible' },
+          }}
+        >
         <Routes>
           <Route path="/" element={<Inicio sesion={s} />} />
           <Route path="/plantillas" element={<Plantillas />} />
@@ -111,6 +129,7 @@ export function App() {
           <Route path="/reglas" element={<Reglas />} />
           <Route path="*" element={<Alert severity="info">Esa página no existe.</Alert>} />
         </Routes>
+        </Box>
       </Layout>
     </Avisos>
   );

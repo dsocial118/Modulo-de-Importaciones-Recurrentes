@@ -279,19 +279,6 @@ function Hoja({ d }: { d: TReglas }) {
         <strong>{d.campos.length}</strong> columnas · <strong>{obligatorias}</strong> obligatorias ·{' '}
         <strong>{conCondiciones}</strong> con condiciones propias
       </Typography>
-      {d.puede_editar && (
-        <Paper
-          variant="outlined"
-          sx={{ position: 'sticky', top: 104, zIndex: 2, p: 1.5, mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}
-        >
-          <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
-            {cuantos === 0 ? 'Sin cambios' : cuantos === 1 ? '1 cambio sin guardar' : `${cuantos} cambios sin guardar`}
-          </Typography>
-          <Button variant="contained" disabled={!cuantos || guardar.isPending} onClick={alGuardar}>
-            Guardar cambios
-          </Button>
-        </Paper>
-      )}
       <Card variant="outlined">
         <CardContent sx={{ pt: 0, '&:last-child': { pb: 0 } }}>
           {ancho && (
@@ -328,13 +315,28 @@ function Hoja({ d }: { d: TReglas }) {
           ))}
         </CardContent>
       </Card>
+      {d.puede_editar && (
+        <Paper
+          variant="outlined"
+          // Debajo de la lista y pegada al pie del recuadro mientras se recorre:
+          // arriba ya está fijo el título de la pantalla (27-09-2026).
+          sx={{ position: 'sticky', bottom: 0, zIndex: 2, p: 1.5, mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}
+        >
+          <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+            {cuantos === 0 ? 'Sin cambios' : cuantos === 1 ? '1 cambio sin guardar' : `${cuantos} cambios sin guardar`}
+          </Typography>
+          <Button variant="contained" disabled={!cuantos || guardar.isPending} onClick={alGuardar}>
+            Guardar cambios
+          </Button>
+        </Paper>
+      )}
       <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
         En <strong>Condiciones</strong> va lo que un rango no puede decir: obligatoriedad condicionada, relaciones
         entre columnas, o que un valor exista en otro archivo. Que la mayoría de las filas diga «—» es lo esperable.
         {d.puede_editar && (
           <>
             {' '}
-            <strong>Se cambia acá mismo</strong> y se guarda todo junto con el botón de arriba. Un casillero vacío que
+            <strong>Se cambia acá mismo</strong> y se guarda todo junto con el botón de abajo. Un casillero vacío que
             se completa crea la condición; uno que se vacía la quita.
           </>
         )}

@@ -30,10 +30,11 @@ import {
   type ArchivoDelPeriodo,
   type Sesion,
 } from '@mir/api';
-import { EtiquetaDeEstado, useAvisar, useConfirmar, type Tono } from '@mir/ui';
+import { EtiquetaDeEstado, Titulo, useAvisar, useConfirmar, type Tono } from '@mir/ui';
 import type { MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { conFiltros } from '../comun/filtros';
+import { ICONOS } from '../comun/iconos';
 
 // Cómo se muestra el estado de un archivo. Neutral a propósito: un archivo
 // válido no se pinta de verde, porque el verde es de marca.
@@ -221,11 +222,20 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
   const avance = d.avance.total ? Math.round((d.avance.cargados * 100) / d.avance.total) : 0;
 
   return (
-    <Stack spacing={3}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
-        <Typography variant="h5" component="h1" sx={{ fontWeight: 700, flexGrow: 1 }}>
-          Inicio
-        </Typography>
+    <Stack spacing={2}>
+      <Titulo
+        titulo="Inicio"
+        subtitulo={
+          periodo && estadoPeriodo ? (
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
+              <EtiquetaDeEstado tono={estadoPeriodo.tono} texto={estadoPeriodo.texto} />
+              <span>
+                {periodo.nombre} · del {fecha(periodo.fecha_desde)} al {fecha(periodo.fecha_hasta)}
+              </span>
+            </Stack>
+          ) : undefined
+        }
+      >
         {d.jurisdicciones.length > 0 && (
           <TextField
             select
@@ -255,24 +265,73 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
         >
           {d.periodos.map((p) => (
             <MenuItem key={p.codigo} value={p.codigo}>
-              {p.codigo}
+              {p.nombre || p.codigo}
             </MenuItem>
           ))}
         </TextField>
-      </Stack>
+      </Titulo>
 
-      {periodo && estadoPeriodo && (
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-          <EtiquetaDeEstado tono={estadoPeriodo.tono} texto={estadoPeriodo.texto} />
-          <Typography variant="body2" color="text.secondary">
-            Corte del {fecha(periodo.fecha_desde)} al {fecha(periodo.fecha_hasta)}
-          </Typography>
-        </Stack>
+      {/* Los accesos, todos en una misma fila y arriba: antes quedaban debajo
+          del estado y había que desplazarse para verlos (27-09-2026). */}
+      {accesos.length > 0 && (
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: `repeat(${accesos.length}, minmax(0, 1fr))` },
+          }}
+        >
+          {accesos.map((s) => (
+            <Card key={s.clave} variant="outlined" sx={{ borderTop: 3, borderTopColor: 'primary.main' }}>
+              {/* Se va con el mismo período y la misma jurisdicción. Lo que siga en la
+                  versión actual se abre allá. */}
+              <CardActionArea
+                href={s.en_v2 ? `/v2/mir${destino(s.ruta)}` : `${s.ruta}?periodo=${periodo?.codigo ?? ''}`}
+                onClick={(e: MouseEvent) => {
+                  if (!s.en_v2 || e.ctrlKey || e.metaKey) return;
+                  e.preventDefault();
+                  navegar(destino(s.ruta));
+                }}
+                sx={{ height: '100%' }}
+              >
+                {/* Más color con los tonos del tema, sin inventar ninguno: el
+                    ícono de la sección sobre el verde de marca (27-09-2026). */}
+                <CardContent sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                  <Box
+                    aria-hidden
+                    sx={{
+                      flexShrink: 0,
+                      display: 'grid',
+                      placeItems: 'center',
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                    }}
+                  >
+                    {ICONOS[s.clave]}
+                  </Box>
+                  <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontWeight: 500 }}>{s.etiqueta}</Typography>
+                      <ArrowForward fontSize="small" color="primary" />
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                      {s.detalle}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          ))}
+        </Box>
       )}
+
 
       {periodo && periodo.estado !== 'ABIERTO' && (
         <Alert severity="info">
-          El período {periodo.codigo} está {estadoPeriodo?.texto.toLowerCase()}.{' '}
+          El período {periodo.nombre || periodo.codigo} está {estadoPeriodo?.texto.toLowerCase()}.{' '}
           {periodo.estado === 'PREPARACION'
             ? 'Todavía no está habilitado para cargar, y la estructura se puede modificar.'
             : 'No se admiten más cargas.'}
@@ -368,36 +427,6 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
           )}
         </CardContent>
       </Card>
-
-      {accesos.length > 0 && (
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(3, 1fr)' } }}>
-          {accesos.map((s) => (
-            <Card key={s.clave} variant="outlined">
-              {/* Se va con el mismo período y la misma jurisdicción. Lo que siga en la
-                  versión actual se abre allá. */}
-              <CardActionArea
-                href={s.en_v2 ? `/v2/mir${destino(s.ruta)}` : `${s.ruta}?periodo=${periodo?.codigo ?? ''}`}
-                onClick={(e: MouseEvent) => {
-                  if (!s.en_v2 || e.ctrlKey || e.metaKey) return;
-                  e.preventDefault();
-                  navegar(destino(s.ruta));
-                }}
-                sx={{ height: '100%' }}
-              >
-                <CardContent>
-                  <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography sx={{ fontWeight: 500 }}>{s.etiqueta}</Typography>
-                    <ArrowForward fontSize="small" color="primary" />
-                  </Stack>
-                  <Typography variant="body2" color="text.secondary">
-                    {s.detalle}
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          ))}
-        </Box>
-      )}
     </Stack>
   );
 }
