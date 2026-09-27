@@ -6,7 +6,7 @@ import { FranjaDelCircuito } from './Franja';
 const api = vi.hoisted(() => ({ useFranja: vi.fn() }));
 vi.mock('@mir/api', () => api);
 
-const pasos = ['Carga', 'Cierre de carga', 'Revisión nacional', 'Subsanación', 'Presentación', 'Consolidación'];
+const pasos = ['Carga', 'Revisión nacional', 'Subsanación', 'Presentación', 'Consolidación'];
 
 function franja(extra = {}) {
   return {
@@ -15,7 +15,7 @@ function franja(extra = {}) {
     estado: 'OBSERVADA',
     estado_legible: 'Observada',
     que_pasa: 'Tiene observaciones y volvió a la jurisdicción.',
-    pasos: pasos.map((nombre, i) => ({ nombre, actual: i === 3, hecho: i < 3 })),
+    pasos: pasos.map((nombre, i) => ({ nombre, actual: i === 2, hecho: i < 2 })),
     te_toca: ['Cerrar la carga'],
     archivos_importados: 6,
     archivos_esperados: 6,
@@ -31,8 +31,20 @@ describe('Franja del avance del circuito', () => {
     expect(screen.getByRole('navigation', { name: 'Avance del circuito' })).toBeInTheDocument();
     expect(screen.getByText('Subsanación').closest('li')).toHaveAttribute('aria-current', 'step');
     expect(screen.getByText('2 observaciones sin resolver')).toBeInTheDocument();
-    expect(screen.getByText('6 de 6 archivos')).toBeInTheDocument();
+    expect(screen.getByText('6 archivos observados')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'cerrar la carga' })).toBeInTheDocument();
+  });
+
+  it('en la carga cuenta los importados; después dice en qué están', () => {
+    api.useFranja.mockReturnValue(resuelta(franja({ estado: 'EN_CARGA', archivos_importados: 5 })));
+    mostrar(<FranjaDelCircuito />);
+    expect(screen.getByText('5 de 6 archivos importados')).toBeInTheDocument();
+  });
+
+  it('esperando revisión, los archivos están en revisión', () => {
+    api.useFranja.mockReturnValue(resuelta(franja({ estado: 'CERRADA' })));
+    mostrar(<FranjaDelCircuito />);
+    expect(screen.getByText('6 archivos en revisión')).toBeInTheDocument();
   });
 
   it('sin jurisdicción elegida no se muestra', () => {

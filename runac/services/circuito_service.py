@@ -73,7 +73,11 @@ ESTADOS = {
         "La jurisdicción está cargando y corrigiendo.",
         "secondary",
     ),
-    "CERRADA": ("Carga cerrada", "Enviada a revisión nacional.", "info"),
+    "CERRADA": (
+        "Esperando revisión",
+        "La carga se cerró y se envió a revisión nacional; falta que el revisor la tome.",
+        "info",
+    ),
     "EN_REVISION": (
         "En revisión",
         "El revisor técnico nacional la está revisando.",

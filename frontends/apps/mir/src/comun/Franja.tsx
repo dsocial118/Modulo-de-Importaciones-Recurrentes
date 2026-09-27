@@ -10,6 +10,24 @@ import { useNavigate } from 'react-router-dom';
 import { conFiltros, useFiltros } from './filtros';
 import { plural } from './formato';
 
+// Los archivos dicen en qué están (27-09-2026). En la carga importa cuántos
+// faltan; después ya están todos, y lo que cambia es qué pasa con ellos.
+const QUE_PASA_CON_LOS_ARCHIVOS: Record<string, string> = {
+  CERRADA: 'en revisión',
+  EN_REVISION: 'en revisión',
+  OBSERVADA: 'observados',
+  SUBSANADA: 'subsanados',
+  HABILITADA: 'listos para presentar',
+  PRESENTADA: 'presentados',
+  CONSOLIDADA: 'consolidados',
+};
+
+function archivosEnPalabras(estado: string | null | undefined, importados: number, esperados: number) {
+  const que = estado ? QUE_PASA_CON_LOS_ARCHIVOS[estado] : undefined;
+  if (!que) return `${importados} de ${esperados} archivos importados`;
+  return `${importados} ${importados === 1 ? 'archivo' : 'archivos'} ${que}`;
+}
+
 /**
  * El avance del circuito, en un renglón fino arriba de todas las pantallas.
  *
@@ -113,7 +131,7 @@ export function FranjaDelCircuito() {
 
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', ml: { md: 'auto' }, flexWrap: 'wrap', rowGap: 0.5 }}>
           <Typography variant="caption" color="text.secondary">
-            {f.archivos_importados} de {f.archivos_esperados} archivos
+            {archivosEnPalabras(f.estado, f.archivos_importados, f.archivos_esperados)}
           </Typography>
           {f.observaciones_abiertas > 0 && (
             <EtiquetaDeEstado

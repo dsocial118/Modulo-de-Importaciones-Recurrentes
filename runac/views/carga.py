@@ -305,8 +305,9 @@ PASOS = [
     ("Carga", ("EN_CARGA",)),
     ("Validación", ("EN_CARGA",)),
     ("Corrección", ("EN_CARGA",)),
-    ("Cierre de carga", ("CERRADA",)),
-    ("Revisión nacional", ("EN_REVISION",)),
+    # Cerrar la carga es enviarla a revisión: para la jurisdicción es el mismo
+    # paso, esté o no tomada por el revisor (27-09-2026).
+    ("Revisión nacional", ("CERRADA", "EN_REVISION")),
     ("Subsanación", ("OBSERVADA", "SUBSANADA")),
     ("Presentación", ("HABILITADA", "PRESENTADA")),
     ("Consolidación", ("CONSOLIDADA",)),

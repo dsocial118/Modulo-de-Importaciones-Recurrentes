@@ -391,7 +391,6 @@ def test_la_franja_junta_los_pasos_que_son_el_mismo_momento():
     pasos = api_views._pasos_de_la_franja("OBSERVADA")
     assert [p["nombre"] for p in pasos] == [
         "Carga",
-        "Cierre de carga",
         "Revisión nacional",
         "Subsanación",
         "Presentación",
@@ -400,6 +399,14 @@ def test_la_franja_junta_los_pasos_que_son_el_mismo_momento():
     assert [p["nombre"] for p in pasos if p["actual"]] == ["Subsanación"]
     assert [p["nombre"] for p in pasos if p["hecho"]] == [
         "Carga",
-        "Cierre de carga",
         "Revisión nacional",
     ]
+
+
+def test_esperando_revision_y_en_revision_son_el_mismo_paso():
+    """Cerrar la carga es enviarla a revisión (27-09-2026)."""
+    for estado in ("CERRADA", "EN_REVISION"):
+        actual = [
+            p["nombre"] for p in api_views._pasos_de_la_franja(estado) if p["actual"]
+        ]
+        assert actual == ["Revisión nacional"]
