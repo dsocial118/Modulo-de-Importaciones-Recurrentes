@@ -218,7 +218,7 @@ export function Detalle() {
                   <TableBody>
                     {d.errores_archivo.map((x, i) => (
                       <TableRow key={i}>
-                        <TableCell sx={{ fontFamily: 'monospace' }}>{x.tipo}</TableCell>
+                        <TableCell>{x.tipo}</TableCell>
                         <TableCell>{x.hoja ?? '—'}</TableCell>
                         <TableCell align="right">{x.numero_fila ?? '—'}</TableCell>
                         <TableCell sx={{ fontFamily: 'monospace' }}>{x.esperado ?? '—'}</TableCell>
