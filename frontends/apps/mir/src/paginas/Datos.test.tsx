@@ -148,4 +148,27 @@ describe('Corregir datos', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Observar' })[1]);
     expect(screen.getByLabelText('Qué hay que revisar en este dato')).toBeInTheDocument();
   });
+
+  it('en grilla, los datos van en una tabla y se corrigen con doble clic, con la misma confirmación', () => {
+    api.useDatos.mockReturnValue(resuelta(datos()));
+    mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=grilla', patron: '/resultado/:id/datos' });
+    expect(screen.getByRole('columnheader', { name: /Fecha de nacimiento/ })).toBeInTheDocument();
+    expect(screen.getByRole('rowheader', { name: /9 · Paz · Ana/ })).toBeInTheDocument();
+    fireEvent.doubleClick(screen.getByText('107'));
+    const edad = screen.getByLabelText('Edad');
+    fireEvent.change(edad, { target: { value: '12' } });
+    fireEvent.keyDown(edad, { key: 'Enter' });
+    expect(screen.getByText('Confirmar el cambio')).toBeInTheDocument();
+  });
+
+  it('en grilla, quien no corrige elige el dato pero no lo edita', () => {
+    api.useDatos.mockReturnValue(resuelta(datos({ puede_editar: false, puede_observar: true, puede_responder: false })));
+    mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=grilla', patron: '/resultado/:id/datos' });
+    fireEvent.click(screen.getByText('107'));
+    // Después del clic el valor aparece dos veces: en la grilla y en el dato elegido.
+    fireEvent.doubleClick(screen.getAllByText('107')[0]);
+    expect(screen.queryByLabelText('Edad')).not.toBeInTheDocument();
+    expect(screen.getByText('Dato elegido')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Observar' })).toBeInTheDocument();
+  });
 });

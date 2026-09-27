@@ -1,5 +1,7 @@
 import ArrowBack from '@mui/icons-material/ArrowBack';
 import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import GridOnOutlined from '@mui/icons-material/GridOnOutlined';
+import ViewAgendaOutlined from '@mui/icons-material/ViewAgendaOutlined';
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
@@ -26,6 +28,8 @@ import {
   TableHead,
   TableRow,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -41,6 +45,7 @@ import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ObservacionDelDato, TarjetaDeObservacion } from '../comun/Observaciones';
 import { dondeEsta } from '../comun/ubicacion';
+import { Grilla, type Elegido } from '../comun/Grilla';
 import { tonoDeLaPresentacion } from '../comun/estados';
 import { fechaHora, plural } from '../comun/formato';
 
@@ -211,6 +216,42 @@ function Fila({
   );
 }
 
+/** Debajo de la grilla: el dato elegido, con sus advertencias y su observación. */
+function DatoElegido({ e, obs }: { e: NonNullable<Elegido>; obs: ParaObservar }) {
+  const avisos = e.fila.avisos.filter((a) => a.nombre_campo === e.celda.titulo);
+  return (
+    <Card variant="outlined">
+      <CardContent>
+        <Typography variant="overline" color="text.secondary">
+          Dato elegido
+        </Typography>
+        <Typography sx={{ fontWeight: 500 }}>
+          {quien(e.fila)} · {e.celda.titulo}
+        </Typography>
+        <Typography variant="body2" sx={{ mt: 0.5 }}>
+          Valor: <strong>{e.celda.valor || '—'}</strong>
+        </Typography>
+        {avisos.map((a, i) => (
+          <Typography key={i} variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            <WarningAmberOutlined fontSize="inherit" color="warning" sx={{ mr: 0.5, verticalAlign: 'text-bottom' }} />
+            {a.descripcion}
+          </Typography>
+        ))}
+        <ObservacionDelDato
+          observacion={e.celda.observacion}
+          permisos={obs.permisos}
+          ubicacion={{
+            presentacion: obs.presentacion,
+            importacion: obs.importacion,
+            numero_fila: e.fila.numero_fila,
+            campo_id: e.celda.campo_id,
+          }}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
 export function Datos() {
   const id = Number(useParams().id);
   const navegar = useNavigate();
@@ -220,6 +261,11 @@ export function Datos() {
   const filtros = { hoja: params.get('hoja'), pagina: params.get('pagina'), solo: params.get('solo') };
   const consulta = useDatos(id, filtros);
   const corregir = useCorregir(id);
+  // El dato elegido en la grilla: por fila y campo, así sigue elegido cuando
+  // los datos se vuelven a leer después de corregir.
+  const [elegida, setElegida] = useState<{ fila: number; campo: string } | null>(null);
+  // Fichas o grilla: queda en la dirección, así se puede compartir o volver.
+  const enGrilla = params.get('vista') === 'grilla';
 
   const poner = (cambios: Record<string, string>) => {
     const nuevos = new URLSearchParams(params);
@@ -235,6 +281,9 @@ export function Datos() {
   const d = consulta.data;
   const c = d.contexto;
   const abiertas = d.observaciones.filter((o) => o.estado === 'ABIERTA');
+  const filaElegida = elegida ? d.filas.find((f) => f.numero_fila === elegida.fila) : undefined;
+  const celdaElegida = filaElegida?.celdas.find((x) => x.nombre === elegida?.campo);
+  const elegido: Elegido = filaElegida && celdaElegida ? { fila: filaElegida, celda: celdaElegida } : null;
   const resueltas = d.observaciones.filter((o) => o.estado === 'RESPONDIDA' || o.estado === 'SUBSANADA');
   // Observa el nivel nacional; responde la jurisdicción, y sólo si la carga admite cambios.
   const paraObservar: ParaObservar = {
@@ -396,26 +445,63 @@ export function Datos() {
           <Typography variant="body2" color="text.secondary" sx={{ ml: { md: 'auto' } }}>
             {plural(d.total, 'fila', 'filas')} · página {d.pagina} de {d.paginas}
           </Typography>
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={enGrilla ? 'grilla' : 'fichas'}
+            onChange={(_, v) => v && poner({ vista: v === 'grilla' ? 'grilla' : '' })}
+            aria-label="Cómo ver los datos"
+          >
+            <Tooltip describeChild title="Una ficha por fila, con todos sus datos">
+              <ToggleButton value="fichas">
+                <ViewAgendaOutlined fontSize="small" sx={{ mr: 0.5 }} />
+                Fichas
+              </ToggleButton>
+            </Tooltip>
+            <Tooltip describeChild title="Como en el Excel: una fila por registro, con los títulos fijos">
+              <ToggleButton value="grilla">
+                <GridOnOutlined fontSize="small" sx={{ mr: 0.5 }} />
+                Grilla
+              </ToggleButton>
+            </Tooltip>
+          </ToggleButtonGroup>
         </Stack>
 
         {consulta.isFetching && <LinearProgress />}
-        <Box>
-          {d.filas.map((f) => (
-            // La clave incluye la página: al cambiar de página, los campos arrancan de cero.
-            <Fila
-              key={`${d.hoja.id}-${f.numero_fila}`}
-              f={f}
+        {d.filas.length > 0 && enGrilla ? (
+          <>
+            <Grilla
+              filas={d.filas}
               editable={d.puede_editar}
               alCorregir={alCorregir}
-              obs={paraObservar}
+              elegido={elegido}
+              alElegir={(e) => setElegida(e ? { fila: e.fila.numero_fila, campo: e.celda.nombre } : null)}
             />
-          ))}
-          {d.filas.length === 0 && (
-            <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-              {params.get('solo') === 'avisos' ? 'Ninguna fila de esta hoja tiene advertencias.' : 'Esta importación no incorporó filas.'}
+            <Typography variant="caption" color="text.secondary">
+              Un clic elige el dato y muestra abajo sus advertencias y su observación.
+              {d.puede_editar ? ' Doble clic, o Enter, para corregirlo.' : ''}
             </Typography>
-          )}
-        </Box>
+            {elegido && <DatoElegido e={elegido} obs={paraObservar} />}
+          </>
+        ) : (
+          <Box>
+            {d.filas.map((f) => (
+              // La clave incluye la página: al cambiar de página, los campos arrancan de cero.
+              <Fila
+                key={`${d.hoja.id}-${f.numero_fila}`}
+                f={f}
+                editable={d.puede_editar}
+                alCorregir={alCorregir}
+                obs={paraObservar}
+              />
+            ))}
+          </Box>
+        )}
+        {d.filas.length === 0 && (
+          <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+            {params.get('solo') === 'avisos' ? 'Ninguna fila de esta hoja tiene advertencias.' : 'Esta importación no incorporó filas.'}
+          </Typography>
+        )}
         {d.paginas > 1 && (
           <Pagination count={d.paginas} page={d.pagina} onChange={(_, n) => poner({ pagina: String(n) })} color="primary" />
         )}
