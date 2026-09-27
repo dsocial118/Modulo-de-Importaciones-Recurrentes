@@ -37,15 +37,15 @@ def nombre_de_archivo(codigo: str, periodo: str) -> str:
     return f"{codigo}_{periodo}_INSTRUCTIVO.xlsx"
 
 
-def generar(codigo: str, periodo: str) -> bytes:
+def generar(codigo: str, periodo: str, usuario: str = "") -> bytes:
     with connection.cursor() as cursor:
         archivo = plantilla.leer_definicion(
             plantillas_service._CursorConNombres(cursor), codigo
         )
-    return armar(archivo, periodo, datetime.now())
+    return armar(archivo, periodo, datetime.now(), usuario)
 
 
-def armar(archivo: dict, periodo: str, generado: datetime) -> bytes:
+def armar(archivo: dict, periodo: str, generado: datetime, usuario: str = "") -> bytes:
     """El libro, a partir de la definición ya leída. Separado para probarlo sin base."""
     hojas = [h for h in archivo["hojas"] if not h.get("referencia")]
     campos = [(h, c) for h in hojas for c in h["campos"]]
@@ -54,7 +54,7 @@ def armar(archivo: dict, periodo: str, generado: datetime) -> bytes:
     pie = f"MIR · Instructivo {codigo} · {periodo}"
 
     wb = Workbook()
-    _general(wb.active, archivo, periodo, generado, campos, titulos, pie)
+    _general(wb.active, archivo, periodo, generado, campos, titulos, pie, usuario)
 
     ws = wb.create_sheet("Campos")
     e.encabezado(
@@ -149,14 +149,15 @@ def armar(archivo: dict, periodo: str, generado: datetime) -> bytes:
     return buffer.getvalue()
 
 
-def _general(ws, archivo, periodo, generado, campos, titulos, pie):
+def _general(ws, archivo, periodo, generado, campos, titulos, pie, usuario=""):
     ws.title = "General"
     codigo = archivo["codigo"]
     e.portada(
         ws,
         f'Instructivo · {archivo.get("descripcion") or codigo}',
         f'{codigo} · período {periodo} · estructura v{archivo.get("version")} · '
-        f"generado el {e.ahora_legible(generado)}",
+        f"generado el {e.ahora_legible(generado)}"
+        + (f" por {usuario}" if usuario else ""),
         "",
         ancho=2,
     )

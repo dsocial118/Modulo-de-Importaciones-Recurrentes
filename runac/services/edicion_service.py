@@ -796,11 +796,17 @@ def cantidad_de_correcciones(importacion_id: int) -> int:
         return cur.fetchone()[0]
 
 
-def historial_de(importacion_id: int, numero_fila: int | None = None) -> list[dict]:
-    """Las correcciones hechas sobre esta importación."""
+def historial_de(
+    importacion_id: int, numero_fila: int | None = None, limite: int | None = 200
+) -> list[dict]:
+    """Las correcciones hechas sobre esta importación, la más reciente primero.
+
+    `limite=None` las trae todas: es lo que usa la descarga del historial.
+    """
     sql = """
         SELECT h.numero_fila, h.valor_anterior, h.valor_nuevo, h.motivo,
-               h.fecha, h.usuario, c.titulo_esperado AS campo
+               h.fecha, h.usuario, h.identificador_registro,
+               c.titulo_esperado AS campo
         FROM mir_c2_historial_cambios h
         LEFT JOIN mir_c1_campo c ON c.id = h.campo_id
         WHERE h.importacion_id = %s
@@ -809,7 +815,10 @@ def historial_de(importacion_id: int, numero_fila: int | None = None) -> list[di
     if numero_fila is not None:
         sql += " AND h.numero_fila = %s"
         parametros.append(numero_fila)
-    sql += " ORDER BY h.fecha DESC LIMIT 200"
+    sql += " ORDER BY h.fecha DESC, h.id DESC"
+    if limite:
+        sql += " LIMIT %s"
+        parametros.append(limite)
     with connection.cursor() as cur:
         cur.execute(sql, parametros)
         cambios = _filas(cur)

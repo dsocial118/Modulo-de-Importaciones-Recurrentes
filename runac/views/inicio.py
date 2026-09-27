@@ -4,6 +4,8 @@ from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import TemplateView
 
 from runac.services import importacion_service as svc
@@ -22,7 +24,19 @@ class EntrarView(LoginView):
 
 
 def salir(request):
+    """Cierra la sesión y vuelve a entrar por donde se vino.
+
+    Con `next`, el login vuelve ahí después de entrar: desde React se sale con
+    `?next=/v2/mir/`, y al volver a entrar se sigue en React y no en la versión
+    actual (26-09-2026). El login es el común, como pide la norma de SISOC para
+    el front nuevo (`docs/implementaciones/frontend_v2.md` §8).
+    """
     logout(request)
+    destino = request.GET.get("next", "")
+    if destino and url_has_allowed_host_and_scheme(
+        destino, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return redirect(f'{reverse("runac:entrar")}?{urlencode({"next": destino})}')
     return redirect("runac:entrar")
 
 

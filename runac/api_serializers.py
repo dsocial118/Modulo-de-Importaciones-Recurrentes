@@ -465,6 +465,7 @@ class DatosSerializer(serializers.Serializer):
     con_advertencia = serializers.IntegerField()
     filas = FilaDeDatosSerializer(many=True)
     historial = CambioSerializer(many=True)
+    descarga_historial = serializers.CharField()
 
 
 class CorreccionSerializer(serializers.Serializer):

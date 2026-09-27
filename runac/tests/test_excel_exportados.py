@@ -335,3 +335,51 @@ def test_el_instructivo_tiene_general_y_campos_y_las_listas_no_se_ven():
         dv.formula1.startswith("listas!")
         for dv in campos.data_validations.dataValidation
     )
+
+
+# ---------------------------------------------------------------------------
+# Historial de cambios y metadatos de las descargas (27-09-2026)
+# ---------------------------------------------------------------------------
+
+
+def test_el_historial_se_descarga_con_quien_lo_genero():
+    cambios = [
+        {
+            "fecha": datetime(2026, 9, 25, 20, 45),
+            "usuario": "operador",
+            "numero_fila": 12,
+            "identificador_registro": "9 · Paz · Ana",
+            "campo": "Edad",
+            "valor_anterior": "107",
+            "valor_nuevo": "12",
+            "motivo": "Se verificó con la partida",
+        },
+    ]
+    cab = _cabecera(generado_por="responsable")
+    wb = load_workbook(io.BytesIO(informes.armar_historial(cab, cambios, GENERADO)))
+    assert wb.sheetnames == ["Cambios", "Resumen"]
+    assert wb["Cambios"]["D1"].value == "Niño, niña o adolescente"
+    assert wb["Cambios"]["F2"].value == "107"
+    resumen = {
+        wb["Resumen"]
+        .cell(row=f, column=2)
+        .value: wb["Resumen"]
+        .cell(row=f, column=3)
+        .value
+        for f in range(7, 14)
+    }
+    assert resumen["Generado por"] == "responsable"
+    assert resumen["Generado el"] == "26/09/2026 11:40"
+
+
+def test_el_informe_dice_quien_lo_genero():
+    datos = {
+        "cabecera": _cabecera(generado_por="revisor"),
+        "reglas": [_regla()],
+        "archivo": [],
+        "cambios": {},
+        "opciones": {},
+    }
+    ws = _informe(datos)["Resumen"]
+    valores = [ws.cell(row=f, column=3).value for f in range(10, 17)]
+    assert "revisor" in valores

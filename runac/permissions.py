@@ -171,15 +171,20 @@ class SeccionPermitidaMixin:
 
 # --- Acciones concretas -----------------------------------------------------
 
+# Cargar, presentar y corregir datos son de la provincia, y de nadie más: el
+# análisis funcional pone la responsabilidad sobre los datos exclusivamente en
+# la jurisdicción. Por eso esas tres NO dejan pasar al superusuario, que en esta
+# instalación es el administrador nacional (27-09-2026). Las demás, sí.
+
 
 def puede_cargar(usuario) -> bool:
     """Importar archivos: es tarea del operador provincial."""
-    return rol_de(usuario) == "operador_provincial" or bool(usuario.is_superuser)
+    return rol_de(usuario) == "operador_provincial"
 
 
 def puede_presentar(usuario) -> bool:
     """Cerrar la carga y presentar: responde institucionalmente por los datos."""
-    return rol_de(usuario) == "responsable_provincial" or bool(usuario.is_superuser)
+    return rol_de(usuario) == "responsable_provincial"
 
 
 def puede_editar_datos(usuario) -> bool:
@@ -189,7 +194,7 @@ def puede_editar_datos(usuario) -> bool:
     puede hacer todo lo del operador. El nivel nacional NO edita datos
     provinciales: observa.
     """
-    return rol_de(usuario) in ES_PROVINCIAL or bool(usuario.is_superuser)
+    return rol_de(usuario) in ES_PROVINCIAL
 
 
 def puede_revisar(usuario) -> bool:

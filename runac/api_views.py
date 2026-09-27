@@ -190,7 +190,8 @@ class SesionView(APIView):
             # CSRF cambia según la base (config/settings.py), así que el front
             # no la busca: la recibe acá.
             "csrf_token": get_token(request),
-            "salir": reverse("runac:salir"),
+            # Se sale y se vuelve a entrar a React, no a la versión actual.
+            "salir": f'{reverse("runac:salir")}?next=/v2/mir/',
             # Etiqueta de seguridad, no decoración: ver MIR_AVISO en settings.
             "aviso": settings.MIR_AVISO if settings.MIR_MOSTRAR_AVISO else "",
         }
@@ -414,7 +415,7 @@ class InstructivoView(APIView):
         if codigo not in {a["codigo"] for a in svc.archivos_esperados(periodo)}:
             raise NotFound("Ese archivo no forma parte del período.")
         return _descarga(
-            instructivos.generar(codigo, periodo),
+            instructivos.generar(codigo, periodo, request.user.get_username()),
             instructivos.nombre_de_archivo(codigo, periodo),
         )
 
@@ -433,7 +434,9 @@ class PlantillasTodasView(APIView):
                 shutil.rmtree(ruta.parent, ignore_errors=True)
                 z.writestr(
                     instructivos.nombre_de_archivo(a["codigo"], periodo),
-                    instructivos.generar(a["codigo"], periodo),
+                    instructivos.generar(
+                        a["codigo"], periodo, request.user.get_username()
+                    ),
                 )
         nombre = f"{settings.MIR_INSTANCIA}_plantillas_{periodo}.zip"
         return _descarga(buffer.getvalue(), nombre, "application/zip")
@@ -920,7 +923,9 @@ class ErroresXlsxView(APIView):
     def get(self, request, importacion_id):
         _exigir(request.user, "resultado")
         _importacion_permitida(request.user, importacion_id)
-        contenido = informes.planilla_de_errores(importacion_id)
+        contenido = informes.planilla_de_errores(
+            importacion_id, usuario=request.user.get_username()
+        )
         if not contenido:
             raise NotFound("No existe esa importación.")
         return _descarga(contenido, informes.nombre_del_informe(importacion_id))
@@ -933,12 +938,29 @@ class MarcadoXlsxView(APIView):
     def get(self, request, importacion_id):
         _exigir(request.user, "resultado")
         _importacion_permitida(request.user, importacion_id)
-        contenido, nombre = informes.archivo_marcado(importacion_id)
+        contenido, nombre = informes.archivo_marcado(
+            importacion_id, usuario=request.user.get_username()
+        )
         if not contenido:
             raise NotFound(
                 "No se conserva el archivo original de esa importación. "
                 "Está disponible la lista de errores."
             )
+        return _descarga(contenido, nombre)
+
+
+class HistorialXlsxView(APIView):
+    """Las correcciones hechas en el sistema sobre una importación, en un Excel."""
+
+    @extend_schema(responses={(200, XLSX): bytes})
+    def get(self, request, importacion_id):
+        _exigir(request.user, "resultado")
+        _importacion_permitida(request.user, importacion_id)
+        contenido, nombre = informes.historial_de_cambios(
+            importacion_id, usuario=request.user.get_username()
+        )
+        if not contenido:
+            raise NotFound("No existe esa importación.")
         return _descarga(contenido, nombre)
 
 
@@ -1022,6 +1044,9 @@ class DatosView(APIView):
                 for f in datos["filas"]
             ],
             "historial": edicion.historial_de(importacion_id)[:50],
+            "descarga_historial": reverse(
+                "api_mir:historial_xlsx", args=[importacion_id]
+            ),
         }
         return Response(s.DatosSerializer(salida).data)
 

@@ -245,6 +245,7 @@ def _resumen(
         ("Importado el", e.ahora_legible(cab["iniciada_el"])),
         ("Importado por", cab.get("usuario")),
         ("Informe generado el", e.ahora_legible(generado)),
+        ("Informe generado por", cab.get("generado_por") or "—"),
     ]
     fila = 10
     for etiqueta, valor in datos:
@@ -320,11 +321,17 @@ def _ordenado(conteo: dict) -> list:
 # ---------------------------------------------------------------------------
 
 
-def planilla_de_errores(importacion_id: int, generado: datetime | None = None) -> bytes:
-    """El informe: un problema por fila, con su estado, y el resumen al final."""
+def planilla_de_errores(
+    importacion_id: int, generado: datetime | None = None, usuario: str = ""
+) -> bytes:
+    """El informe: un problema por fila, con su estado, y el resumen al final.
+
+    `usuario` es quien lo descarga: toda descarga dice cuándo y quién la generó.
+    """
     datos = datos_de_la_importacion(importacion_id)
     if not datos:
         return b""
+    datos["cabecera"]["generado_por"] = usuario
     return armar_informe(datos, generado or datetime.now())
 
 
@@ -499,13 +506,14 @@ def armar_informe(datos: dict, generado: datetime) -> bytes:
 
 
 def archivo_marcado(
-    importacion_id: int, generado: datetime | None = None
+    importacion_id: int, generado: datetime | None = None, usuario: str = ""
 ) -> tuple[bytes, str]:
     """El Excel que se subió, con los problemas marcados. (b"", "") si no se conserva."""
     datos = datos_de_la_importacion(importacion_id)
     if not datos:
         return b"", ""
     cab = datos["cabecera"]
+    cab["generado_por"] = usuario
     ruta = cab.get("ruta_archivo")
     if not ruta or not os.path.exists(ruta):
         return b"", ""
@@ -678,4 +686,103 @@ def armar_archivo_para_corregir(
 
     buffer = io.BytesIO()
     libro.save(buffer)
+    return buffer.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# 3. El historial de cambios
+# ---------------------------------------------------------------------------
+
+
+def historial_de_cambios(
+    importacion_id: int, generado: datetime | None = None, usuario: str = ""
+) -> tuple[bytes, str]:
+    """Cada corrección hecha en el sistema sobre esta importación, en un Excel.
+
+    Es la constancia de quién cambió qué: se descarga desde la pantalla de
+    datos (pedido del responsable funcional, 27-09-2026). Como toda descarga,
+    dice cuándo se generó y quién.
+    """
+    from runac.services import (
+        edicion_service,
+    )  # pylint: disable=import-outside-toplevel
+
+    datos = datos_de_la_importacion(importacion_id)
+    if not datos:
+        return b"", ""
+    cab = datos["cabecera"]
+    cab["generado_por"] = usuario
+    cambios = edicion_service.historial_de(importacion_id, limite=None)
+    contenido = armar_historial(cab, cambios, generado or datetime.now())
+    return contenido, f"{_base_del_nombre(cab)}_HISTORIAL.xlsx"
+
+
+def armar_historial(cab: dict, cambios: list[dict], generado: datetime) -> bytes:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Cambios"
+    fila_de = cab.get("que_es_una_fila") or "Registro"
+    e.encabezado(
+        ws,
+        ["Cuándo", "Quién", "Fila", fila_de, "Campo", "Antes", "Después", "Motivo"],
+        [17, 16, 6, 30, 30, 22, 22, 40],
+    )
+    for n, c in enumerate(cambios, start=2):
+        valores = [
+            e.ahora_legible(c["fecha"]),
+            c["usuario"],
+            c["numero_fila"],
+            c.get("identificador_registro") or "—",
+            c["campo"],
+            c["valor_anterior"] if c["valor_anterior"] not in (None, "") else "(vacío)",
+            c["valor_nuevo"] if c["valor_nuevo"] not in (None, "") else "(vacío)",
+            c["motivo"] or "—",
+        ]
+        for col, valor in enumerate(valores, start=1):
+            e.cuerpo(_celda(ws, n, col, valor))
+        ws.cell(row=n, column=3).alignment = Alignment(
+            horizontal="center", vertical="top"
+        )
+        e.alto_para(ws, n, [c["motivo"], c.get("identificador_registro")], 38)
+    ws.auto_filter.ref = f"A1:H{max(ws.max_row, 2)}"
+    e.para_imprimir(
+        ws,
+        f'MIR · Historial {cab["archivo_codigo"]} · {cab["jurisdiccion"]} · {cab["periodo"]}',
+        "1:1",
+    )
+
+    r = wb.create_sheet("Resumen")
+    r.column_dimensions["B"].width = 26
+    r.column_dimensions["C"].width = 60
+    e.portada(
+        r,
+        "Historial de cambios",
+        f'{cab["archivo_codigo"]} · {cab.get("archivo_nombre") or ""} · {cab["jurisdiccion"]} · {cab["periodo"]}',
+        "Cada corrección hecha dentro del sistema sobre esta importación, la más reciente primero.",
+        ancho=2,
+    )
+    quienes = sorted({c["usuario"] for c in cambios if c["usuario"]})
+    datos = [
+        ("Cambios", len(cambios)),
+        ("Hechos por", ", ".join(quienes) or "—"),
+        ("Nombre recibido", cab["nombre_archivo"]),
+        ("Importado el", e.ahora_legible(cab["iniciada_el"])),
+        ("Importado por", cab.get("usuario")),
+        ("Generado el", e.ahora_legible(generado)),
+        ("Generado por", cab.get("generado_por") or "—"),
+    ]
+    for fila, (etiqueta, valor) in enumerate(datos, start=7):
+        r.cell(row=fila, column=2, value=etiqueta).font = e.fuente(
+            size=10, color=e.TINTA2
+        )
+        _celda(r, fila, 3, valor).font = e.fuente(
+            size=10, color=e.TINTA, bold=etiqueta == "Cambios"
+        )
+    e.para_imprimir(
+        r,
+        f'MIR · Historial {cab["archivo_codigo"]} · {cab["jurisdiccion"]} · {cab["periodo"]}',
+    )
+    wb.active = 0
+    buffer = io.BytesIO()
+    wb.save(buffer)
     return buffer.getvalue()

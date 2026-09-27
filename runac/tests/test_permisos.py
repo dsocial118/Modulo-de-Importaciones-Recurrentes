@@ -160,3 +160,44 @@ def test_sin_sesion_no_se_bloquea_por_permisos():
     assert perm.rol_de(anonimo) is None
     assert perm.menu_de(anonimo) == []
     assert not perm.puede_entrar(anonimo, "inicio")
+
+
+def test_al_salir_desde_react_se_vuelve_a_entrar_a_react():
+    """«Salir» llevaba a la versión actual: el login volvía a / (27-09-2026)."""
+    from django.test import RequestFactory
+
+    from runac.views.inicio import salir
+
+    pedido = RequestFactory().get("/salir/", {"next": "/v2/mir/"})
+    pedido.session = type(
+        "S", (), {"flush": lambda self: None, "cycle_key": lambda self: None}
+    )()
+    pedido.user = type("U", (), {"is_authenticated": False})()
+    respuesta = salir(pedido)
+    assert respuesta["Location"] == "/entrar/?next=%2Fv2%2Fmir%2F"
+
+
+def test_salir_no_manda_a_otro_sitio():
+    from django.test import RequestFactory
+
+    from runac.views.inicio import salir
+
+    pedido = RequestFactory().get("/salir/", {"next": "https://otro.sitio/"})
+    pedido.session = type(
+        "S", (), {"flush": lambda self: None, "cycle_key": lambda self: None}
+    )()
+    pedido.user = type("U", (), {"is_authenticated": False})()
+    assert salir(pedido)["Location"] == "/entrar/"
+
+
+def test_el_administrador_no_carga_ni_presenta_ni_corrige_datos():
+    """La responsabilidad sobre los datos es de la provincia (27-09-2026).
+
+    El administrador de esta instalación es superusuario de Django, y eso lo
+    dejaba pasar en todo.
+    """
+    admin = _usuario(ADMIN, superusuario=True)
+    assert not perm.puede_cargar(admin)
+    assert not perm.puede_presentar(admin)
+    assert not perm.puede_editar_datos(admin)
+    assert perm.puede_administrar(admin)

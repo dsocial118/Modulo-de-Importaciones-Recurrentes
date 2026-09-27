@@ -53,7 +53,7 @@ def descargar_plantilla(request, codigo, periodo):
 def descargar_instructivo(request, codigo, periodo):
     """El instructivo del archivo: una fila por campo. Se baja aparte de la plantilla."""
     return HttpResponse(
-        instructivos.generar(codigo, periodo),
+        instructivos.generar(codigo, periodo, request.user.get_username()),
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
             "Content-Disposition": f'attachment; filename="{instructivos.nombre_de_archivo(codigo, periodo)}"'
@@ -71,7 +71,7 @@ def descargar_todas(request, periodo):
             shutil.rmtree(ruta.parent, ignore_errors=True)
             z.writestr(
                 instructivos.nombre_de_archivo(a["codigo"], periodo),
-                instructivos.generar(a["codigo"], periodo),
+                instructivos.generar(a["codigo"], periodo, request.user.get_username()),
             )
     buffer.seek(0)
     respuesta = HttpResponse(buffer.read(), content_type="application/zip")

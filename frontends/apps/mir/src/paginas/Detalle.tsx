@@ -1,4 +1,10 @@
 import ArrowBack from '@mui/icons-material/ArrowBack';
+import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
+import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
+import EditOutlined from '@mui/icons-material/EditOutlined';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import TableChartOutlined from '@mui/icons-material/TableChartOutlined';
+import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
 import {
   Alert,
   Box,
@@ -7,6 +13,9 @@ import {
   CardContent,
   CardHeader,
   LinearProgress,
+  ListItemIcon,
+  ListItemText,
+  Menu,
   MenuItem,
   Pagination,
   Stack,
@@ -17,6 +26,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -30,6 +40,53 @@ import { numero, plural } from '../comun/formato';
 import { conFiltros } from '../comun/filtros';
 
 const POR_PAGINA = 50;
+
+/**
+ * Las dos descargas de una importación, juntas en un botón «Descargar». Cada
+ * una dice en dos renglones para qué sirve: no hace falta leer un párrafo
+ * antes de elegir.
+ */
+function MenuDeDescargas({ marcado, informe }: { marcado: string; informe: string }) {
+  const [ancla, setAncla] = useState<HTMLElement | null>(null);
+  return (
+    <>
+      <Tooltip title="El archivo para corregir o el informe de la importación">
+        <Button
+          variant="outlined"
+          startIcon={<DownloadOutlined />}
+          endIcon={<ExpandMore />}
+          onClick={(e) => setAncla(e.currentTarget)}
+          aria-haspopup="menu"
+          aria-expanded={!!ancla}
+        >
+          Descargar
+        </Button>
+      </Tooltip>
+      <Menu anchorEl={ancla} open={!!ancla} onClose={() => setAncla(null)}>
+        <MenuItem component="a" href={marcado} onClick={() => setAncla(null)}>
+          <ListItemIcon>
+            <TableChartOutlined fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="Archivo para corregir"
+            secondary="El Excel que subiste, con cada problema marcado. Se corrige ahí y se vuelve a subir."
+            slotProps={{ secondary: { sx: { whiteSpace: 'normal', maxWidth: 320 } } }}
+          />
+        </MenuItem>
+        <MenuItem component="a" href={informe} onClick={() => setAncla(null)}>
+          <ListItemIcon>
+            <DescriptionOutlined fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="Informe de la importación"
+            secondary="Cada problema con su estado, para seguirlo y contarlo."
+            slotProps={{ secondary: { sx: { whiteSpace: 'normal', maxWidth: 320 } } }}
+          />
+        </MenuItem>
+      </Menu>
+    </>
+  );
+}
 
 export function Detalle() {
   const id = Number(useParams().id);
@@ -97,26 +154,30 @@ export function Detalle() {
       />
 
       <Stack spacing={3}>
+        {/* Textos cortos y el detalle al pasar el mouse: los botones largos
+            ensuciaban la pantalla (26-09-2026). Primero lo que se hace en el
+            sistema; las dos descargas, juntas en un solo botón. */}
         {hayHallazgos && (
-          <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1, flexWrap: 'wrap', alignItems: { sm: 'center' } }}>
-            <Button variant="contained" href={d.descargas.marcado}>
-              Descargar mi archivo con los errores marcados
-            </Button>
-            {d.puede_editar && (
-              <Button variant="outlined" onClick={() => navegar(`/resultado/${id}/datos`)}>
-                Corregir datos en el sistema
-              </Button>
+          <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+            {imp.estado === 'VALIDA' && (
+              <Tooltip
+                title={
+                  d.puede_editar
+                    ? 'Los datos que entraron, fila por fila: corregí las advertencias sin volver a subir el archivo.'
+                    : 'Los datos que entraron, fila por fila. Tu rol los ve pero no los cambia.'
+                }
+              >
+                <Button
+                  variant="contained"
+                  startIcon={d.puede_editar ? <EditOutlined /> : <VisibilityOutlined />}
+                  onClick={() => navegar(`/resultado/${id}/datos`)}
+                >
+                  {d.puede_editar ? 'Ver y corregir datos' : 'Ver datos'}
+                </Button>
+              </Tooltip>
             )}
-            <Button variant="outlined" href={d.descargas.errores}>
-              Descargar la lista de errores y advertencias
-            </Button>
+            <MenuDeDescargas marcado={d.descargas.marcado} informe={d.descargas.errores} />
           </Stack>
-        )}
-        {hayHallazgos && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: -1.5 }}>
-            El primero es el mismo Excel que subiste, con las celdas señaladas y la explicación en cada una. Es el que
-            conviene para corregir.
-          </Typography>
         )}
 
         {imp.estado === 'FALLIDA' && (

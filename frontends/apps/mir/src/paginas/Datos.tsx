@@ -1,4 +1,5 @@
 import ArrowBack from '@mui/icons-material/ArrowBack';
+import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
 import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
@@ -9,10 +10,6 @@ import {
   Alert,
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   LinearProgress,
   MenuItem,
@@ -22,9 +19,11 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { mensajeDeError, useCorregir, useDatos, type Celda, type FilaDeDatos } from '@mir/api';
@@ -167,7 +166,6 @@ export function Datos() {
   const id = Number(useParams().id);
   const navegar = useNavigate();
   const [params, setParams] = useSearchParams();
-  const [verHistorial, setVerHistorial] = useState(false);
   const avisar = useAvisar();
   const confirmar = useConfirmar();
   const filtros = { hoja: params.get('hoja'), pagina: params.get('pagina'), solo: params.get('solo') };
@@ -224,10 +222,10 @@ export function Datos() {
   return (
     <>
       <Titulo
-        titulo={`${c.archivo_codigo} · corregir datos`}
+        titulo={`${c.archivo_codigo} · ${d.puede_editar && c.editable ? 'ver y corregir datos' : 'ver datos'}`}
         volver={
           <Button size="small" startIcon={<ArrowBack />} onClick={() => navegar(`/resultado/${id}`)} sx={{ mb: 1, ml: -1 }}>
-            Volver al detalle de errores
+            Volver al detalle
           </Button>
         }
         subtitulo={
@@ -239,14 +237,18 @@ export function Datos() {
           </Stack>
         }
       >
-        <Button
-          variant="outlined"
-          startIcon={<HistoryOutlined />}
-          disabled={!d.historial.length}
-          onClick={() => setVerHistorial(true)}
-        >
-          Historial de cambios ({d.historial.length})
-        </Button>
+        <Tooltip title="Un Excel con cada corrección: quién, cuándo, antes, después y el motivo.">
+          <span>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadOutlined />}
+              disabled={!d.historial.length}
+              href={d.descarga_historial}
+            >
+              Historial
+            </Button>
+          </span>
+        </Tooltip>
       </Titulo>
 
       <Stack spacing={2}>
@@ -310,42 +312,53 @@ export function Datos() {
         {d.paginas > 1 && (
           <Pagination count={d.paginas} page={d.pagina} onChange={(_, n) => poner({ pagina: String(n) })} color="primary" />
         )}
-      </Stack>
 
-      <Dialog open={verHistorial} onClose={() => setVerHistorial(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>Historial de cambios</DialogTitle>
-        <DialogContent>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Cuándo</TableCell>
-                <TableCell>Quién</TableCell>
-                <TableCell align="right">Fila</TableCell>
-                <TableCell>Campo</TableCell>
-                <TableCell>Antes</TableCell>
-                <TableCell>Después</TableCell>
-                <TableCell>Motivo</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {d.historial.map((h, i) => (
-                <TableRow key={i}>
-                  <TableCell>{fechaHora(h.fecha)}</TableCell>
-                  <TableCell>{h.usuario}</TableCell>
-                  <TableCell align="right">{h.numero_fila}</TableCell>
-                  <TableCell>{h.campo}</TableCell>
-                  <TableCell>{h.valor_anterior || '—'}</TableCell>
-                  <TableCell>{h.valor_nuevo || '—'}</TableCell>
-                  <TableCell>{h.motivo || '—'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setVerHistorial(false)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
+        {/* En la página, no en una ventana: los modales quedan para confirmar
+            lo que pisa algo (26-09-2026). Cerrado de entrada, para no empujar
+            los datos hacia abajo. */}
+        <Accordion variant="outlined" disableGutters id="historial">
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <HistoryOutlined fontSize="small" color="action" />
+              <Typography sx={{ fontWeight: 500 }}>Historial de cambios ({d.historial.length})</Typography>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            {d.historial.length === 0 ? (
+              <Typography color="text.secondary">Todavía no se corrigió ningún dato de esta importación.</Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small" aria-label="Historial de cambios">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Cuándo</TableCell>
+                      <TableCell>Quién</TableCell>
+                      <TableCell align="right">Fila</TableCell>
+                      <TableCell>Campo</TableCell>
+                      <TableCell>Antes</TableCell>
+                      <TableCell>Después</TableCell>
+                      <TableCell>Motivo</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {d.historial.map((h, i) => (
+                      <TableRow key={i}>
+                        <TableCell>{fechaHora(h.fecha)}</TableCell>
+                        <TableCell>{h.usuario}</TableCell>
+                        <TableCell align="right">{h.numero_fila}</TableCell>
+                        <TableCell>{h.campo}</TableCell>
+                        <TableCell>{h.valor_anterior || '—'}</TableCell>
+                        <TableCell>{h.valor_nuevo || '—'}</TableCell>
+                        <TableCell>{h.motivo || '—'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </AccordionDetails>
+        </Accordion>
+      </Stack>
     </>
   );
 }

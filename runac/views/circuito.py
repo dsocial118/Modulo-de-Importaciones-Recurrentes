@@ -191,7 +191,9 @@ class PlanillaDeErroresView(SeccionPermitidaMixin, LoginRequiredMixin, View):
 
     def get(self, request, importacion_id):
         alcance.exigir_importacion(request.user, importacion_id)
-        contenido = informes.planilla_de_errores(importacion_id)
+        contenido = informes.planilla_de_errores(
+            importacion_id, usuario=request.user.get_username()
+        )
         if not contenido:
             raise Http404("No existe esa importación.")
         return _descarga(contenido, informes.nombre_del_informe(importacion_id))
@@ -208,7 +210,9 @@ class ArchivoMarcadoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
 
     def get(self, request, importacion_id):
         alcance.exigir_importacion(request.user, importacion_id)
-        contenido, nombre = informes.archivo_marcado(importacion_id)
+        contenido, nombre = informes.archivo_marcado(
+            importacion_id, usuario=request.user.get_username()
+        )
         if not contenido:
             messages.warning(
                 request,

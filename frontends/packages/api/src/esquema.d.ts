@@ -107,6 +107,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mir/importaciones/{importacion_id}/historial.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Las correcciones hechas en el sistema sobre una importación, en un Excel. */
+        get: operations["mir_importaciones_historial.xlsx_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mir/importaciones/{importacion_id}/marcado.xlsx": {
         parameters: {
             query?: never;
@@ -592,6 +609,7 @@ export interface components {
             con_advertencia: number;
             filas: components["schemas"]["FilaDeDatos"][];
             historial: components["schemas"]["Cambio"][];
+            descarga_historial: string;
         };
         Descargas: {
             errores: string;
@@ -1063,6 +1081,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginaDeHallazgos"];
+                };
+            };
+        };
+    };
+    "mir_importaciones_historial.xlsx_retrieve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
                 };
             };
         };

@@ -82,6 +82,11 @@ urlpatterns = [
         name="marcado_xlsx",
     ),
     path(
+        "importaciones/<int:importacion_id>/historial.xlsx",
+        v.HistorialXlsxView.as_view(),
+        name="historial_xlsx",
+    ),
+    path(
         "importaciones/<int:importacion_id>/datos/", v.DatosView.as_view(), name="datos"
     ),
     # Reglas
