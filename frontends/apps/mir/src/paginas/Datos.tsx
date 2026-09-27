@@ -32,6 +32,8 @@ import {
   ToggleButtonGroup,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   mensajeDeError,
@@ -265,7 +267,11 @@ export function Datos() {
   // los datos se vuelven a leer después de corregir.
   const [elegida, setElegida] = useState<{ fila: number; campo: string } | null>(null);
   // Fichas o grilla: queda en la dirección, así se puede compartir o volver.
-  const enGrilla = params.get('vista') === 'grilla';
+  // La grilla es la de entrada (27-09-2026), salvo en el teléfono: una tabla
+  // de 65 columnas no entra, y ahí las fichas se leen mejor.
+  const chico = useMediaQuery(useTheme().breakpoints.down('md'));
+  const vista = params.get('vista') ?? (chico ? 'fichas' : 'grilla');
+  const enGrilla = vista === 'grilla';
 
   const poner = (cambios: Record<string, string>) => {
     const nuevos = new URLSearchParams(params);
@@ -449,7 +455,7 @@ export function Datos() {
             size="small"
             exclusive
             value={enGrilla ? 'grilla' : 'fichas'}
-            onChange={(_, v) => v && poner({ vista: v === 'grilla' ? 'grilla' : '' })}
+            onChange={(_, v) => v && poner({ vista: v })}
             aria-label="Cómo ver los datos"
           >
             <Tooltip describeChild title="Una ficha por fila, con todos sus datos">

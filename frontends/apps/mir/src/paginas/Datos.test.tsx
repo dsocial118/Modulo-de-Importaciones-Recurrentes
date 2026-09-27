@@ -66,14 +66,14 @@ describe('Corregir datos', () => {
     // El campo de fecha del navegador sólo entiende 2014-10-27: mostraba vacío
     // un 27/10/2014, y pasar por el campo podía guardarlo vacío.
     api.useDatos.mockReturnValue(resuelta(datos()));
-    mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });
+    mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=fichas', patron: '/resultado/:id/datos' });
     abrirLaFila();
     expect(screen.getByLabelText(/Fecha de nacimiento/)).toHaveValue('27/10/2014');
   });
 
   it('cambiar un dato pide confirmación antes de guardarlo', () => {
     api.useDatos.mockReturnValue(resuelta(datos()));
-    mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });
+    mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=fichas', patron: '/resultado/:id/datos' });
     abrirLaFila();
     const edad = screen.getByLabelText(/^Edad/);
     fireEvent.change(edad, { target: { value: '12' } });
@@ -85,7 +85,7 @@ describe('Corregir datos', () => {
   it('cada fila y la confirmación dicen de quién es, no sólo el número', () => {
     // «Fila 5 del Excel» sola no le decía nada a quien corrige (#67).
     api.useDatos.mockReturnValue(resuelta(datos()));
-    mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });
+    mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=fichas', patron: '/resultado/:id/datos' });
     abrirLaFila();
     const edad = screen.getByLabelText(/^Edad/);
     fireEvent.change(edad, { target: { value: '12' } });
@@ -95,7 +95,7 @@ describe('Corregir datos', () => {
 
   it('el nivel nacional ve los datos pero no los cambia', () => {
     api.useDatos.mockReturnValue(resuelta(datos({ puede_editar: false })));
-    mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });
+    mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=fichas', patron: '/resultado/:id/datos' });
     expect(screen.getByText(/no modifica datos provinciales/)).toBeInTheDocument();
     abrirLaFila();
     expect(screen.getByLabelText(/^Edad/)).toHaveAttribute('readonly');
@@ -130,7 +130,7 @@ describe('Corregir datos', () => {
 
   it('la provincia ve las observaciones sin resolver arriba y puede responder que está bien así', () => {
     api.useDatos.mockReturnValue(resuelta(conObservacion()));
-    mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });
+    mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=fichas', patron: '/resultado/:id/datos' });
     expect(screen.getByText('Observaciones sin resolver: 1')).toBeInTheDocument();
     expect(screen.getByText('MPI · 9 · Paz · Ana · Edad')).toBeInTheDocument();
     // La fila observada arranca abierta y lo dice en su título.
@@ -141,7 +141,7 @@ describe('Corregir datos', () => {
 
   it('el revisor observa un dato, y no ve cómo corregirlo', () => {
     api.useDatos.mockReturnValue(resuelta(datos({ puede_editar: false, puede_observar: true, puede_responder: false })));
-    mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });
+    mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=fichas', patron: '/resultado/:id/datos' });
     abrirLaFila();
     expect(screen.getAllByRole('button', { name: 'Observar' })).toHaveLength(2);
     expect(screen.getByLabelText(/^Edad/)).toHaveAttribute('readonly');
@@ -170,5 +170,11 @@ describe('Corregir datos', () => {
     expect(screen.queryByLabelText('Edad')).not.toBeInTheDocument();
     expect(screen.getByText('Dato elegido')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Observar' })).toBeInTheDocument();
+  });
+
+  it('sin elegir vista, abre en grilla', () => {
+    api.useDatos.mockReturnValue(resuelta(datos()));
+    mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });
+    expect(screen.getByRole('columnheader', { name: /Fecha de nacimiento/ })).toBeInTheDocument();
   });
 });
