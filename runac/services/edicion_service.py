@@ -43,6 +43,7 @@ from importar import (  # noqa: E402  # pylint: disable=wrong-import-position
     ReglaInvalida,
     aplicar_regla,
     clave,
+    mensaje_para_quien_carga,
     norm,
     texto_a_numero,
 )
@@ -579,7 +580,7 @@ def hallazgos_de_la_fila(
                     campo,
                     regla["tipo_regla"],
                     regla["severidad"],
-                    regla.get("mensaje_configurado") or mensaje,
+                    mensaje_para_quien_carga(regla, valor, mensaje),
                     regla_id=regla["id"],
                     valor=norm(valor),
                 )

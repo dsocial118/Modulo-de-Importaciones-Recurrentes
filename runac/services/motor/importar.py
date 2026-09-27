@@ -231,6 +231,39 @@ def condicion_legible(par: dict) -> str:
     return operador if valor in (None, "") else f"{operador} «{valor}»"
 
 
+def mensaje_para_quien_carga(regla: dict, valor, mensaje: str) -> str:
+    """El mensaje que redactó la Capa 1 manda sobre el del motor, con una
+    excepción.
+
+    Los mensajes configurados de un rango con mínimo y máximo están escritos
+    para el máximo: «inusualmente alta», «son más de diez años». Por debajo del
+    mínimo decían lo contrario de lo que pasaba, y un 2 salía como «cantidad de
+    personal inusualmente alta» (lo marcó el responsable funcional, 27-09-2026).
+    Ahí se dice lo que pasa, sin cambiar la regla. El texto no dice «menor que
+    el mínimo esperado» a propósito: `en_palabras` lo traduciría a «puede
+    quedar», y eso no vale para un bloqueante.
+    """
+    configurado = regla.get("mensaje_configurado")
+    if not configurado:
+        return mensaje
+    par = regla.get("parametros") or {}
+    minimo, maximo = par.get("minimo"), par.get("maximo")
+    if (
+        regla.get("tipo_regla") == "RANGO"
+        and minimo is not None
+        and maximo is not None
+        and isinstance(valor, (int, float))
+        and valor < minimo
+    ):
+        que_hacer = (
+            "Hay que corregirlo en el Excel."
+            if regla.get("severidad") == "BLOQUEANTE"
+            else "Conviene revisar el dato."
+        )
+        return f"Es un valor más bajo que el mínimo esperado ({minimo}). {que_hacer}"
+    return configurado
+
+
 def aplicar_regla(regla: dict, valor, fila_valores: dict, contexto: dict) -> str | None:
     """Devuelve el mensaje de incumplimiento, o None si la regla se cumple."""
     tipo = regla["tipo_regla"]
@@ -897,8 +930,10 @@ def procesar_hoja(cur, ruta, hoja, importacion_id, contexto_global) -> dict:
                 # El mensaje que redactó la Capa 1 para esta combinación de campo
                 # y regla manda sobre el que arma el motor: es el que entiende
                 # quien carga, y por eso se puede configurar.
-                if mensaje and regla.get("mensaje_configurado"):
-                    mensaje = regla["mensaje_configurado"]
+                if mensaje:
+                    mensaje = mensaje_para_quien_carga(
+                        regla, valores_tipados.get(campo["nombre"]), mensaje
+                    )
                 if mensaje:
                     hallazgos.append(
                         dict(
