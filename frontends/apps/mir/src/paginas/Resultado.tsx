@@ -29,7 +29,7 @@ import { EtiquetaDeEstado, Titulo, useAvisar, useConfirmar } from '@mir/ui';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ESTADO_DEL_ARCHIVO, SEVERIDAD, formaDe, tonoDeLaPresentacion } from '../comun/estados';
-import { numero, plural } from '../comun/formato';
+import { filasEnPalabras, plural } from '../comun/formato';
 import { SelectorDeJurisdiccion, SelectorDePeriodo } from '../comun/Selectores';
 import { conFiltros, useFiltros } from '../comun/filtros';
 import { TarjetaDeObservacion } from '../comun/Observaciones';
@@ -48,6 +48,7 @@ function Archivo({ a, puedeEditar }: { a: ArchivoDelResultado; puedeEditar: bool
   const imp = a.importacion;
   const e = formaDe(ESTADO_DEL_ARCHIVO, a.estado);
   const hayHallazgos = !!imp && (imp.bloqueantes > 0 || imp.advertencias > 0);
+  const [conResumen, setConResumen] = useState(false);
   return (
     <Box sx={{ py: 2, borderTop: 1, borderColor: 'divider' }}>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: { md: 'flex-start' } }}>
@@ -56,17 +57,30 @@ function Archivo({ a, puedeEditar }: { a: ArchivoDelResultado; puedeEditar: bool
             <Typography sx={{ fontWeight: 500 }}>{a.codigo}</Typography>
             <EtiquetaDeEstado tono={e.tono} texto={e.texto} />
           </Stack>
+          {/* Nombre y cifras en un solo renglón (27-09-2026). */}
           <Typography variant="body2" color="text.secondary">
             {a.nombre}
+            {imp && (
+              <Box component="span" sx={{ color: 'text.primary' }}>
+                {' · '}
+                {filasEnPalabras(imp.filas_leidas, imp.filas_incorporadas)}
+                {imp.bloqueantes > 0 && <> · <strong>{plural(imp.bloqueantes, 'bloqueante', 'bloqueantes')}</strong></>}
+                {imp.advertencias > 0 && <> · {plural(imp.advertencias, 'advertencia', 'advertencias')}</>}
+              </Box>
+            )}
+            {a.resumen.length > 0 && (
+              <Button
+                size="small"
+                onClick={() => setConResumen((v) => !v)}
+                aria-expanded={conResumen}
+                sx={{ ml: 1, py: 0, minWidth: 0, verticalAlign: 'baseline' }}
+              >
+                {conResumen ? 'Ocultar resumen' : 'Ver resumen'}
+              </Button>
+            )}
           </Typography>
-          {imp && (
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              {numero(imp.filas_leidas)} leídas · {numero(imp.filas_incorporadas)} incorporadas
-              {imp.bloqueantes > 0 && <> · <strong>{plural(imp.bloqueantes, 'bloqueante', 'bloqueantes')}</strong></>}
-              {imp.advertencias > 0 && <> · {plural(imp.advertencias, 'advertencia', 'advertencias')}</>}
-            </Typography>
-          )}
-          {a.resumen.length > 0 && (
+          {/* El resumen por tipo de problema, plegado: se abre si se pide. */}
+          {conResumen && a.resumen.length > 0 && (
             <Stack direction="row" sx={{ mt: 1, flexWrap: 'wrap', gap: 0.75 }}>
               {a.resumen.map((r) => (
                 <Chip
@@ -199,7 +213,7 @@ export function Resultado() {
               title="Archivos"
               subheader={
                 d.totales.filas > 0 &&
-                `${numero(d.totales.filas)} filas leídas · ${numero(d.totales.validas)} incorporadas`
+                filasEnPalabras(d.totales.filas, d.totales.validas)
               }
               slotProps={{ title: { variant: 'subtitle1', sx: { fontWeight: 500 } } }}
             />

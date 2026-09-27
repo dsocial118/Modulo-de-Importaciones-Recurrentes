@@ -36,7 +36,7 @@ import { EtiquetaDeEstado, Titulo } from '@mir/ui';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ESTADO_DEL_ARCHIVO, SEVERIDAD, formaDe } from '../comun/estados';
-import { numero, plural } from '../comun/formato';
+import { filasEnPalabras, numero, plural } from '../comun/formato';
 import { conFiltros } from '../comun/filtros';
 
 const POR_PAGINA = 50;
@@ -146,7 +146,7 @@ export function Detalle() {
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
             <EtiquetaDeEstado tono={e.tono} texto={e.texto} />
             <span>
-              {numero(imp.filas_leidas)} filas · {numero(imp.filas_incorporadas)} incorporadas ·{' '}
+              {filasEnPalabras(imp.filas_leidas, imp.filas_incorporadas)} ·{' '}
               {numero(imp.bloqueantes)} bloqueantes · {numero(imp.advertencias)} advertencias
             </span>
           </Stack>

@@ -17,3 +17,11 @@ export const fechaHora = (iso?: string | null) =>
 export const numero = (n?: number | null) => (n == null ? '—' : n.toLocaleString('es-AR'));
 
 export const plural = (n: number, uno: string, varios: string) => `${n.toLocaleString('es-AR')} ${n === 1 ? uno : varios}`;
+
+// Las filas de una importación. Es todo o nada: si se incorporó, entraron todas
+// y alcanza con decir cuántas; leídas e incorporadas se separan sólo cuando
+// difieren, es decir, cuando se rechazó (27-09-2026).
+export const filasEnPalabras = (leidas?: number | null, incorporadas?: number | null) =>
+  (incorporadas ?? 0) === (leidas ?? 0)
+    ? plural(leidas ?? 0, 'fila', 'filas')
+    : `${numero(leidas)} leídas · ${incorporadas ? `${numero(incorporadas)} incorporadas` : 'ninguna incorporada'}`;
