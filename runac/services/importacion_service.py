@@ -525,10 +525,23 @@ def procesar(
     return resultado
 
 
+# Lo encontrado en una hoja de referencia no se muestra: esas hojas no se
+# validan desde el 26-09-2026 (#87), y las importaciones anteriores tienen
+# hallazgos guardados en ellas. Lleva el id de la importación como parámetro.
+_SIN_HOJAS_DE_REFERENCIA = """
+    AND COALESCE({columna}, '') NOT IN (
+        SELECT hr.nombre_esperado FROM mir_c1_hoja hr
+        JOIN mir_c2_importacion ir ON ir.archivo_version_id = hr.archivo_version_id
+        WHERE ir.id = %s AND hr.referencia)"""
+
+
 def _filtro_de_hallazgos(importacion_id, severidad, hoja, buscar):
     """El WHERE de los hallazgos, compartido por la lista y por su cuenta."""
-    sql = " FROM mir_c2_reglas_incumplidas h WHERE h.importacion_id = %s"
-    params: list = [importacion_id]
+    sql = (
+        " FROM mir_c2_reglas_incumplidas h WHERE h.importacion_id = %s"
+        + _SIN_HOJAS_DE_REFERENCIA.format(columna="h.nombre_hoja")
+    )
+    params: list = [importacion_id, importacion_id]
     if severidad:
         sql += " AND h.severidad = %s"
         params.append(severidad)
@@ -603,8 +616,9 @@ def hojas_con_hallazgos(importacion_id: int) -> list[str]:
     with connection.cursor() as cur:
         cur.execute(
             """SELECT DISTINCT nombre_hoja FROM mir_c2_reglas_incumplidas
-                       WHERE importacion_id = %s AND nombre_hoja IS NOT NULL""",
-            [importacion_id],
+                       WHERE importacion_id = %s AND nombre_hoja IS NOT NULL"""
+            + _SIN_HOJAS_DE_REFERENCIA.format(columna="nombre_hoja"),
+            [importacion_id, importacion_id],
         )
         return [r[0] for r in cur.fetchall()]
 
@@ -615,10 +629,17 @@ def errores_del_archivo(importacion_id: int, limite: int = 200) -> list[dict]:
         cur.execute(
             """SELECT tipo, hoja, numero_fila, esperado, encontrado, descripcion
                        FROM mir_c2_errores_de_importacion
-                       WHERE importacion_id = %s ORDER BY id LIMIT %s""",
-            [importacion_id, limite],
+                       WHERE importacion_id = %s"""
+            + _SIN_HOJAS_DE_REFERENCIA.format(columna="hoja")
+            + " ORDER BY id LIMIT %s",
+            [importacion_id, importacion_id, limite],
         )
-        return en_palabras_comunes(_fila_a_dict(cur), clave_codigo="tipo")
+        filas = en_palabras_comunes(_fila_a_dict(cur), clave_codigo="tipo")
+    # El tipo, en palabras: no «FILA_VACIA_INTERCALADA». El código queda aparte.
+    for f in filas:
+        f["tipo_tecnico"] = f["tipo"]
+        f["tipo"] = en_palabras.tipo_de_problema(f["descripcion"])
+    return filas
 
 
 def resumen_de_hallazgos(importacion_id: int):
@@ -627,9 +648,10 @@ def resumen_de_hallazgos(importacion_id: int):
             """
             SELECT codigo, severidad, COUNT(*) AS casos, MIN(descripcion) AS ejemplo
             FROM mir_c2_reglas_incumplidas WHERE importacion_id = %s
-            GROUP BY codigo, severidad ORDER BY casos DESC
-        """,
-            [importacion_id],
+        """
+            + _SIN_HOJAS_DE_REFERENCIA.format(columna="nombre_hoja")
+            + " GROUP BY codigo, severidad ORDER BY casos DESC",
+            [importacion_id, importacion_id],
         )
         return en_palabras_comunes(_fila_a_dict(cur), clave_texto="ejemplo")
 

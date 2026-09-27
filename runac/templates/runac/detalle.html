@@ -75,7 +75,7 @@
                     <tbody>
                         {% for e in errores_archivo %}
                             <tr>
-                                <td class="mono">{{ e.tipo }}</td>
+                                <td>{{ e.tipo }}</td>
                                 <td data-etiqueta="Hoja">{{ e.hoja|default:"—" }}</td>
                                 <td class="text-end" data-etiqueta="Fila">{{ e.numero_fila|default:"—" }}</td>
                                 <td class="mono" data-etiqueta="Se esperaba">{{ e.esperado|default:"—" }}</td>
