@@ -38,6 +38,7 @@ if str(_MOTOR) not in sys.path:
 from comun import (  # noqa: E402  # pylint: disable=wrong-import-position
     nombre_tabla_receptora,
 )
+import en_palabras  # noqa: E402  # pylint: disable=wrong-import-position
 from importar import (  # noqa: E402  # pylint: disable=wrong-import-position
     ReglaInvalida,
     aplicar_regla,
@@ -300,7 +301,8 @@ def datos_de_la_hoja(
         # Las advertencias de esta hoja, agrupadas por fila y por campo.
         cur.execute(
             """
-            SELECT numero_fila, nombre_campo, severidad, descripcion, valor_encontrado
+            SELECT numero_fila, nombre_campo, severidad, descripcion, valor_encontrado,
+                   codigo
             FROM mir_c2_reglas_incumplidas
             WHERE importacion_id = %s AND nombre_hoja = %s AND resuelta = 0
             """,
@@ -308,6 +310,10 @@ def datos_de_la_hoja(
         )
         avisos: dict[int, list[dict]] = {}
         for aviso in _filas(cur):
+            # En palabras, como en los Excel: no «debe ser menor igual hoy».
+            aviso["descripcion"] = en_palabras.problema_en_palabras(
+                aviso["codigo"], aviso["descripcion"]
+            )
             avisos.setdefault(aviso["numero_fila"], []).append(aviso)
 
         filtro = ""
@@ -848,7 +854,9 @@ def editar(
         # total de la fila confundía: se corregía el dato y el número no bajaba,
         # porque contaba también las observaciones de los otros campos.
         "observaciones": [
-            h["descripcion"] for h in hallazgos if h["campo_id"] == campo["id"]
+            en_palabras.problema_en_palabras(h.get("codigo"), h["descripcion"])
+            for h in hallazgos
+            if h["campo_id"] == campo["id"]
         ],
     }
 

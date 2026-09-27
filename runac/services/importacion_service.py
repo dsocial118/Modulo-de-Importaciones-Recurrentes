@@ -31,11 +31,52 @@ import importar as motor_importar  # noqa: E402  # pylint: disable=wrong-import-
 from comun import (  # noqa: E402  # pylint: disable=wrong-import-position
     titulo_sin_instrucciones,
 )
+import en_palabras  # noqa: E402  # pylint: disable=wrong-import-position
 
 
 def _fila_a_dict(cursor):
     columnas = [c[0] for c in cursor.description]
     return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+
+
+def en_palabras_comunes(
+    filas: list[dict], clave_codigo: str = "codigo", clave_texto: str = "descripcion"
+) -> list[dict]:
+    """Los mensajes del motor, como los diría una persona, en las pantallas.
+
+    Son las mismas palabras que los Excel (`motor/en_palabras.py`): antes la
+    pantalla mostraba «debe ser menor igual hoy» y el Excel «Fecha posterior a
+    hoy: tiene que ser de hoy o anterior» (27-09-2026). El texto del motor queda
+    en `<clave>_tecnica`, por si hace falta.
+
+    Si la fila trae `campo_id`, un valor fuera de la lista dice cuáles se
+    admiten.
+    """
+    campos = {
+        f["campo_id"]
+        for f in filas
+        if f.get("campo_id") and f.get(clave_codigo) == "FUERA_DE_CATALOGO"
+    }
+    opciones: dict[int, list[str]] = {}
+    if campos:
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT c.id, o.valor_esperado FROM mir_c1_campo c "
+                "JOIN mir_c1_catalogo_opcion o ON o.catalogo_id = c.catalogo_id AND o.activo = 1 "
+                "WHERE c.id IN ("
+                + ",".join(["%s"] * len(campos))
+                + ") ORDER BY c.id, o.orden, o.id",
+                list(campos),
+            )
+            for campo_id, valor in cur.fetchall():
+                opciones.setdefault(campo_id, []).append(valor)
+    for f in filas:
+        tecnico = f.get(clave_texto)
+        f[f"{clave_texto}_tecnica"] = tecnico
+        f[clave_texto] = en_palabras.problema_en_palabras(
+            f.get(clave_codigo), tecnico, opciones.get(f.get("campo_id"))
+        )
+    return filas
 
 
 # ---------------------------------------------------------------------------
@@ -513,13 +554,14 @@ def hallazgos_de(  # pylint: disable=too-many-arguments  # son los filtros de la
     filtro, params = _filtro_de_hallazgos(importacion_id, severidad, hoja, buscar)
     sql = (
         """SELECT h.numero_fila, h.nombre_hoja, h.columna, h.nombre_campo, h.severidad,
-               h.codigo, h.valor_encontrado, h.descripcion, h.identificador_registro"""
+               h.codigo, h.valor_encontrado, h.descripcion, h.identificador_registro,
+               h.campo_id"""
         + filtro
         + " ORDER BY h.numero_fila, h.severidad DESC LIMIT %s OFFSET %s"
     )
     with connection.cursor() as cur:
         cur.execute(sql, params + [limite, desde])
-        return _fila_a_dict(cur)
+        return en_palabras_comunes(_fila_a_dict(cur))
 
 
 def contar_hallazgos(
@@ -576,7 +618,7 @@ def errores_del_archivo(importacion_id: int, limite: int = 200) -> list[dict]:
                        WHERE importacion_id = %s ORDER BY id LIMIT %s""",
             [importacion_id, limite],
         )
-        return _fila_a_dict(cur)
+        return en_palabras_comunes(_fila_a_dict(cur), clave_codigo="tipo")
 
 
 def resumen_de_hallazgos(importacion_id: int):
@@ -589,7 +631,7 @@ def resumen_de_hallazgos(importacion_id: int):
         """,
             [importacion_id],
         )
-        return _fila_a_dict(cur)
+        return en_palabras_comunes(_fila_a_dict(cur), clave_texto="ejemplo")
 
 
 # ---------------------------------------------------------------------------

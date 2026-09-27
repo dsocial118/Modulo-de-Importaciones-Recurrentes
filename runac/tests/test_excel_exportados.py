@@ -383,3 +383,21 @@ def test_el_informe_dice_quien_lo_genero():
     ws = _informe(datos)["Resumen"]
     valores = [ws.cell(row=f, column=3).value for f in range(10, 17)]
     assert "revisor" in valores
+
+
+def test_las_pantallas_dicen_lo_mismo_que_los_excel():
+    """El mismo texto en pantalla y en Excel; el del motor queda guardado aparte."""
+    from runac.services import importacion_service as svc
+
+    filas = [
+        {
+            "codigo": "COMPARAR_VALOR",
+            "descripcion": "El valor no cumple la condición: debe ser menor igual hoy.",
+        }
+    ]
+    svc.en_palabras_comunes(filas)
+    assert (
+        filas[0]["descripcion"]
+        == "Fecha posterior a hoy: tiene que ser de hoy o anterior."
+    )
+    assert filas[0]["descripcion_tecnica"].endswith("menor igual hoy.")
