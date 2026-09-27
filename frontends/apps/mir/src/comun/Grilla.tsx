@@ -189,7 +189,9 @@ function useAltoDisponible() {
       const el = ref.current;
       if (!el) return;
       const arriba = el.getBoundingClientRect().top + window.scrollY;
-      const barra = document.querySelector('header')?.getBoundingClientRect().bottom ?? 64;
+      // Debajo de lo que queda fijo arriba: la barra y la franja del circuito.
+      const fijo = [document.querySelector('header'), document.querySelector('nav[aria-label="Avance del circuito"]')];
+      const barra = Math.max(64, ...fijo.map((e) => (e ? e.getBoundingClientRect().bottom : 0)));
       const queda = window.innerHeight - arriba - 16;
       setAlto(Math.round(queda >= ALTO_MINIMO ? queda : Math.max(ALTO_MINIMO, window.innerHeight - barra - 16)));
     };

@@ -5,7 +5,7 @@ import RadioButtonUnchecked from '@mui/icons-material/RadioButtonUnchecked';
 import { Box, Link, Stack, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useFranja } from '@mir/api';
 import { EtiquetaDeEstado } from '@mir/ui';
-import { Fragment } from 'react';
+import { Fragment, useLayoutEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { conFiltros, useFiltros } from './filtros';
 import { plural } from './formato';
@@ -25,6 +25,15 @@ export function FranjaDelCircuito() {
   const navegar = useNavigate();
   const theme = useTheme();
   const chico = useMediaQuery(theme.breakpoints.down('md'));
+  // Queda fija al bajar por la página, justo debajo de la barra (27-09-2026).
+  // La barra cambia de alto con el ancho y con el aviso de la instancia: se mide.
+  const [arriba, setArriba] = useState(64);
+  useLayoutEffect(() => {
+    const medir = () => setArriba(document.querySelector('header')?.getBoundingClientRect().height ?? 64);
+    medir();
+    window.addEventListener('resize', medir);
+    return () => window.removeEventListener('resize', medir);
+  }, []);
   const f = consulta.data;
   if (!f || !f.estado || !f.pasos.length) return null;
 
@@ -42,6 +51,9 @@ export function FranjaDelCircuito() {
         // Dos píxeles menos: no tapa la franja ámbar del borde de la barra.
         mt: { xs: '-14px', md: '-22px' },
         mb: 2,
+        position: 'sticky',
+        top: arriba,
+        zIndex: theme.zIndex.appBar - 1,
         px: { xs: 2, md: 3 },
         py: 0.75,
         borderBottom: 1,
