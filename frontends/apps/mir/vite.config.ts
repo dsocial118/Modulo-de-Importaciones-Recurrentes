@@ -26,11 +26,23 @@ export default defineConfig({
     sourcemap: true,
     // Las librerías, aparte de lo nuestro: casi nunca cambian, y con su propia
     // huella el navegador las conserva de un despliegue al otro.
+    //
+    // En UN solo paquete. Estaban en dos —react y mui— y se necesitan entre
+    // sí: la versión compilada cargaba en blanco con «Cannot access 'tr'
+    // before initialization», según qué paquete arrancara primero. En modo
+    // desarrollo no se nota, porque ahí no se arman paquetes (27-09-2026).
     rollupOptions: {
       output: {
         manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
-          mui: ['@mui/material', '@emotion/react', '@emotion/styled'],
+          librerias: [
+            'react',
+            'react-dom',
+            'react-router-dom',
+            '@tanstack/react-query',
+            '@mui/material',
+            '@emotion/react',
+            '@emotion/styled',
+          ],
         },
       },
     },
