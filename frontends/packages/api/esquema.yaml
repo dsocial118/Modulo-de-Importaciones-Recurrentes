@@ -56,6 +56,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResultadoDeImportar'
           description: ''
+  /api/mir/franja/:
+    get:
+      operationId: mir_franja_retrieve
+      description: |-
+        El avance del circuito de una presentación, en un renglón.
+
+        Lo muestra una franja fina arriba de todas las pantallas: el avance les
+        gustó y estaba escondido en Resultado (pedido del responsable funcional,
+        27-09-2026). Sin jurisdicción —el nivel nacional que no eligió una— no hay
+        nada que mostrar.
+      parameters:
+      - in: query
+        name: jurisdiccion
+        schema:
+          type: string
+      - in: query
+        name: periodo
+        schema:
+          type: string
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Franja'
+          description: ''
   /api/mir/importaciones/{importacion_id}/:
     get:
       operationId: mir_importaciones_retrieve
@@ -1382,6 +1412,49 @@ components:
       - estado
       - identificacion
       - numero_fila
+    Franja:
+      type: object
+      description: El avance del circuito, para la franja de arriba de todas las pantallas.
+      properties:
+        jurisdiccion:
+          type: string
+          nullable: true
+        periodo:
+          type: string
+          nullable: true
+        estado:
+          type: string
+          nullable: true
+        estado_legible:
+          type: string
+          nullable: true
+        que_pasa:
+          type: string
+        pasos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PasoDeLaFranja'
+        te_toca:
+          type: array
+          items:
+            type: string
+        archivos_importados:
+          type: integer
+        archivos_esperados:
+          type: integer
+        observaciones_abiertas:
+          type: integer
+      required:
+      - archivos_esperados
+      - archivos_importados
+      - estado
+      - estado_legible
+      - jurisdiccion
+      - observaciones_abiertas
+      - pasos
+      - periodo
+      - que_pasa
+      - te_toca
     Hallazgo:
       type: object
       properties:
@@ -1683,6 +1756,19 @@ components:
           type: boolean
       required:
       - actual
+      - nombre
+    PasoDeLaFranja:
+      type: object
+      properties:
+        nombre:
+          type: string
+        actual:
+          type: boolean
+        hecho:
+          type: boolean
+      required:
+      - actual
+      - hecho
       - nombre
     Periodo:
       type: object

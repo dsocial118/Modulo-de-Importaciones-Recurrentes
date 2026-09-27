@@ -34,6 +34,7 @@ export type CambiosDeReglas = E['CambiosDeReglas'];
 export type ReglasGuardadas = E['ReglasGuardadas'];
 export type PeriodoCambiado = E['PeriodoCambiado'];
 export type Mensaje = E['Mensaje'];
+export type Franja = E['Franja'];
 
 type Parametros = Record<string, string | number | null | undefined>;
 
@@ -97,6 +98,10 @@ export function useSesion() {
     refetchOnWindowFocus: true,
   });
 }
+
+/** El avance del circuito, para la franja de arriba de todas las pantallas. */
+export const useFranja = (periodo: string | null, jurisdiccion: string | null) =>
+  useConsulta<Franja>('franja/', { periodo, jurisdiccion });
 
 export const useInicio = (periodo: string | null, jurisdiccion: string | null) =>
   useConsulta<Inicio>('inicio/', { periodo, jurisdiccion });

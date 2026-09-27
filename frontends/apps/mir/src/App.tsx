@@ -19,6 +19,7 @@ import { Plantillas } from './paginas/Plantillas';
 import { Reglas } from './paginas/Reglas';
 import { Resultado } from './paginas/Resultado';
 import { Revision } from './paginas/Revision';
+import { FranjaDelCircuito } from './comun/Franja';
 
 // El ícono de cada sección. Las secciones y quién las ve las decide el back.
 const ICONOS: Record<string, ReactNode> = {
@@ -97,6 +98,7 @@ export function App() {
         salir={s.salir}
         alNavegar={(ruta) => navegar(ruta)}
       >
+        <FranjaDelCircuito />
         <Routes>
           <Route path="/" element={<Inicio sesion={s} />} />
           <Route path="/plantillas" element={<Plantillas />} />

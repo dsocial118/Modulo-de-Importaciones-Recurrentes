@@ -248,6 +248,27 @@ class PasoSerializer(serializers.Serializer):
     actual = serializers.BooleanField()
 
 
+class PasoDeLaFranjaSerializer(serializers.Serializer):
+    nombre = serializers.CharField()
+    actual = serializers.BooleanField()
+    hecho = serializers.BooleanField()
+
+
+class FranjaSerializer(serializers.Serializer):
+    """El avance del circuito, para la franja de arriba de todas las pantallas."""
+
+    jurisdiccion = serializers.CharField(allow_null=True)
+    periodo = serializers.CharField(allow_null=True)
+    estado = serializers.CharField(allow_null=True)
+    estado_legible = serializers.CharField(allow_null=True)
+    que_pasa = serializers.CharField(allow_blank=True)
+    pasos = PasoDeLaFranjaSerializer(many=True)
+    te_toca = serializers.ListField(child=serializers.CharField())
+    archivos_importados = serializers.IntegerField()
+    archivos_esperados = serializers.IntegerField()
+    observaciones_abiertas = serializers.IntegerField()
+
+
 class PresentacionDelResultadoSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     estado = serializers.CharField()

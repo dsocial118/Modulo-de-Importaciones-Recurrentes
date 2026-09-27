@@ -9,6 +9,7 @@ app_name = "api_mir"
 urlpatterns = [
     path("sesion/", v.SesionView.as_view(), name="sesion"),
     path("inicio/", v.InicioView.as_view(), name="inicio"),
+    path("franja/", v.FranjaView.as_view(), name="franja"),
     path(
         "periodos/<str:codigo>/estado/",
         v.EstadoDelPeriodoView.as_view(),

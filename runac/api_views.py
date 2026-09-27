@@ -231,6 +231,86 @@ def _estado_de(jurisdiccion, codigo_periodo):
     }
 
 
+# Los pasos de la franja: los del circuito, sin repetir los que comparten
+# estado. Carga, validación y corrección son el mismo momento —EN_CARGA—, y en
+# una franja de un renglón tres pasos iguales no dicen nada.
+def _pasos_de_la_franja(estado: str) -> list[dict]:
+    grupos: list[tuple[str, tuple]] = []
+    for nombre, estados in PASOS:
+        if not grupos or grupos[-1][1] != estados:
+            grupos.append((nombre, estados))
+    actual = next((i for i, (_, estados) in enumerate(grupos) if estado in estados), 0)
+    return [
+        {"nombre": nombre, "actual": i == actual, "hecho": i < actual}
+        for i, (nombre, _) in enumerate(grupos)
+    ]
+
+
+class FranjaView(APIView):
+    """El avance del circuito de una presentación, en un renglón.
+
+    Lo muestra una franja fina arriba de todas las pantallas: el avance les
+    gustó y estaba escondido en Resultado (pedido del responsable funcional,
+    27-09-2026). Sin jurisdicción —el nivel nacional que no eligió una— no hay
+    nada que mostrar.
+    """
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("periodo", str),
+            OpenApiParameter("jurisdiccion", str),
+        ],
+        responses=s.FranjaSerializer,
+    )
+    def get(self, request):
+        _, periodo = _periodos_y_elegido(request)
+        jurisdiccion = jurisdiccion_permitida(request)
+        vacia = {
+            "jurisdiccion": jurisdiccion,
+            "periodo": periodo["codigo"] if periodo else None,
+            "estado": None,
+            "estado_legible": None,
+            "que_pasa": "",
+            "pasos": [],
+            "te_toca": [],
+            "archivos_importados": 0,
+            "archivos_esperados": 0,
+            "observaciones_abiertas": 0,
+        }
+        if not (periodo and jurisdiccion):
+            return Response(s.FranjaSerializer(vacia).data)
+        estado_pres = svc.estado_de_la_presentacion(jurisdiccion, periodo["codigo"])
+        pres = estado_pres["presentacion"]
+        estado = pres["estado"] if pres else "EN_CARGA"
+        abiertas = 0
+        if pres:
+            abiertas = sum(
+                1
+                for o in circuito.observaciones_de(pres["id"])
+                if o["estado"] == "ABIERTA"
+            )
+        datos = {
+            **vacia,
+            "estado": estado,
+            "estado_legible": circuito.estado_legible(estado),
+            "que_pasa": circuito.ESTADOS.get(estado, ("", ""))[1],
+            "pasos": _pasos_de_la_franja(estado),
+            # Lo que este usuario puede hacer ahora: «Te toca: cerrar la carga».
+            "te_toca": [
+                a["etiqueta"]
+                for a in circuito.acciones_disponibles(
+                    pres, request.user, estado_pres["listo"]
+                )
+            ],
+            "archivos_importados": sum(
+                1 for a in estado_pres["archivos"] if a.get("importada")
+            ),
+            "archivos_esperados": len(estado_pres["archivos"]),
+            "observaciones_abiertas": abiertas,
+        }
+        return Response(s.FranjaSerializer(datos).data)
+
+
 class InicioView(APIView):
     """El período, y cómo viene la presentación de la jurisdicción."""
 

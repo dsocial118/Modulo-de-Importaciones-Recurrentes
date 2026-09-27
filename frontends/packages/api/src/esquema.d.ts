@@ -38,6 +38,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mir/franja/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description El avance del circuito de una presentación, en un renglón.
+         *
+         *     Lo muestra una franja fina arriba de todas las pantallas: el avance les
+         *     gustó y estaba escondido en Resultado (pedido del responsable funcional,
+         *     27-09-2026). Sin jurisdicción —el nivel nacional que no eligió una— no hay
+         *     nada que mostrar.
+         */
+        get: operations["mir_franja_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mir/importaciones/{importacion_id}/": {
         parameters: {
             query?: never;
@@ -695,6 +719,19 @@ export interface components {
             avisos: components["schemas"]["AvisoDeFila"][];
             celdas: components["schemas"]["Celda"][];
         };
+        /** @description El avance del circuito, para la franja de arriba de todas las pantallas. */
+        Franja: {
+            jurisdiccion: string | null;
+            periodo: string | null;
+            estado: string | null;
+            estado_legible: string | null;
+            que_pasa: string;
+            pasos: components["schemas"]["PasoDeLaFranja"][];
+            te_toca: string[];
+            archivos_importados: number;
+            archivos_esperados: number;
+            observaciones_abiertas: number;
+        };
         Hallazgo: {
             numero_fila: number | null;
             nombre_hoja: string | null;
@@ -790,6 +827,11 @@ export interface components {
         Paso: {
             nombre: string;
             actual: boolean;
+        };
+        PasoDeLaFranja: {
+            nombre: string;
+            actual: boolean;
+            hecho: boolean;
         };
         Periodo: {
             codigo: string;
@@ -1007,6 +1049,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultadoDeImportar"];
+                };
+            };
+        };
+    };
+    mir_franja_retrieve: {
+        parameters: {
+            query?: {
+                jurisdiccion?: string;
+                periodo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Franja"];
                 };
             };
         };

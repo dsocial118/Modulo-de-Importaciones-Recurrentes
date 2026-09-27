@@ -384,3 +384,22 @@ def test_los_archivos_con_huella_se_guardan_y_la_pagina_no(mocker):
     assert "immutable" in activo["Cache-Control"]
     assert activo["Content-Type"] == "text/javascript"
     assert pagina["Cache-Control"] == "no-cache"
+
+
+def test_la_franja_junta_los_pasos_que_son_el_mismo_momento():
+    """Carga, validación y corrección son EN_CARGA: en la franja van como uno."""
+    pasos = api_views._pasos_de_la_franja("OBSERVADA")
+    assert [p["nombre"] for p in pasos] == [
+        "Carga",
+        "Cierre de carga",
+        "Revisión nacional",
+        "Subsanación",
+        "Presentación",
+        "Consolidación",
+    ]
+    assert [p["nombre"] for p in pasos if p["actual"]] == ["Subsanación"]
+    assert [p["nombre"] for p in pasos if p["hecho"]] == [
+        "Carga",
+        "Cierre de carga",
+        "Revisión nacional",
+    ]
