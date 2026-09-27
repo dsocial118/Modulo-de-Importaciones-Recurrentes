@@ -87,6 +87,8 @@
         <div class="card mb-2">
             <div class="card-header d-flex justify-content-between align-items-center py-2">
                 <span>
+                    {% comment %} De quién es la fila, no sólo su número: pedido de la DNPYPI (#67). {% endcomment %}
+                    {% if fila.identificacion %}<strong>{{ fila.identificacion }}</strong> ·{% endif %}
                     Fila {{ fila.numero_fila }} del Excel
                     {% if fila.estado == 'EDITADA' %}
                         <span class="estado e-ANULADA ms-1">editada</span>

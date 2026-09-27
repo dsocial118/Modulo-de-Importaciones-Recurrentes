@@ -433,6 +433,8 @@ class CeldaSerializer(serializers.Serializer):
 
 class FilaDeDatosSerializer(serializers.Serializer):
     numero_fila = serializers.IntegerField()
+    # De quién es la fila: los campos identificatorios, como en el informe.
+    identificacion = serializers.CharField(allow_blank=True)
     estado = serializers.CharField(allow_null=True)
     avisos = AvisoDeFilaSerializer(many=True)
     celdas = CeldaSerializer(many=True)

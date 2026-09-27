@@ -121,7 +121,7 @@ def campos_de_la_hoja(hoja_id: int) -> list[dict[str, Any]]:
         cur.execute(
             """
             SELECT c.id, c.nombre, c.titulo_esperado, c.orden, c.tipo_dato,
-                   c.longitud_maxima, c.obligatorio, cat.codigo AS catalogo
+                   c.longitud_maxima, c.obligatorio, c.identifica, cat.codigo AS catalogo
             FROM mir_c1_campo c
             LEFT JOIN mir_c1_catalogo cat ON cat.id = c.catalogo_id
             WHERE c.hoja_id = %s ORDER BY c.orden
@@ -194,6 +194,20 @@ def reglas_de_los_campos(campos: list[dict]) -> dict[int, list[dict]]:
             )
             por_campo.setdefault(regla["campo_id"], []).append(regla)
     return por_campo
+
+
+def identificacion_de_la_fila(campos: list[dict], fila: dict) -> str:
+    """«12 · Gómez · Martina · 90000137»: los valores de los campos identificatorios.
+
+    Es `identificar_fila` del motor, sobre los valores ya importados. Si no hay
+    ninguno cargado, queda vacía y la pantalla muestra sólo el número de fila.
+    """
+    partes = [
+        _texto_del_valor(fila.get(c["nombre"])).strip()
+        for c in campos
+        if c.get("identifica")
+    ]
+    return " · ".join(p for p in partes if p)[:255]
 
 
 def _texto_del_valor(valor) -> str:
@@ -283,6 +297,11 @@ def datos_de_la_hoja(
     }
 
     for fila in filas:
+        # De quién es la fila, como en el informe: «Fila 5» sola no le dice nada
+        # a quien corrige (pedido de la DNPYPI el 22-09, #67). Misma regla que
+        # el motor al importar: los campos que la Capa 1 marca como
+        # identificatorios, en su orden.
+        fila["identificacion"] = identificacion_de_la_fila(campos, fila)
         fila["avisos"] = avisos.get(fila["numero_fila"], [])
         con_aviso = {a["nombre_campo"] for a in fila["avisos"] if a["nombre_campo"]}
         # El template no puede resolver fila[campo]: las celdas se arman acá.

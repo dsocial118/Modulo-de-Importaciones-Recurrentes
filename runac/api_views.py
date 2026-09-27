@@ -1003,6 +1003,7 @@ class DatosView(APIView):
             "filas": [
                 {
                     "numero_fila": f["numero_fila"],
+                    "identificacion": f.get("identificacion") or "",
                     "estado": f.get("estado"),
                     "avisos": f["avisos"],
                     "celdas": [
