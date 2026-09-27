@@ -165,10 +165,10 @@ describe('Corregir datos', () => {
     api.useDatos.mockReturnValue(resuelta(datos({ puede_editar: false, puede_observar: true, puede_responder: false })));
     mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=grilla', patron: '/resultado/:id/datos' });
     fireEvent.click(screen.getByText('107'));
-    // Después del clic el valor aparece dos veces: en la grilla y en el dato elegido.
-    fireEvent.doubleClick(screen.getAllByText('107')[0]);
+    fireEvent.doubleClick(screen.getByText('107'));
     expect(screen.queryByLabelText('Edad')).not.toBeInTheDocument();
-    expect(screen.getByText('Dato elegido')).toBeInTheDocument();
+    // El dato elegido, en el renglón al pie de la grilla.
+    expect(screen.getByText(/«107»/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Observar' })).toBeInTheDocument();
   });
 

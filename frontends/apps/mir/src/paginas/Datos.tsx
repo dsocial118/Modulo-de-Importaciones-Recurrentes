@@ -47,7 +47,7 @@ import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ObservacionDelDato, TarjetaDeObservacion } from '../comun/Observaciones';
 import { dondeEsta } from '../comun/ubicacion';
-import { Grilla, type Elegido } from '../comun/Grilla';
+import { Grilla } from '../comun/Grilla';
 import { tonoDeLaPresentacion } from '../comun/estados';
 import { fechaHora, plural } from '../comun/formato';
 
@@ -218,39 +218,54 @@ function Fila({
   );
 }
 
-/** Debajo de la grilla: el dato elegido, con sus advertencias y su observación. */
-function DatoElegido({ e, obs }: { e: NonNullable<Elegido>; obs: ParaObservar }) {
-  const avisos = e.fila.avisos.filter((a) => a.nombre_campo === e.celda.titulo);
+/**
+ * Al pie de la grilla, en un renglón: el dato elegido, si tiene algo que
+ * mostrar —advertencia u observación— o si quien mira puede observarlo. Si no,
+ * cómo se usa la grilla. Reemplaza al panel «Dato elegido» (27-09-2026).
+ */
+function RenglonDelDato({
+  fila,
+  celda,
+  obs,
+  editable,
+}: {
+  fila?: FilaDeDatos;
+  celda?: Celda;
+  obs: ParaObservar;
+  editable: boolean;
+}) {
+  const avisos = fila && celda ? fila.avisos.filter((a) => a.nombre_campo === celda.titulo) : [];
+  const hayQueMostrar = !!celda && (avisos.length > 0 || !!celda.observacion || obs.permisos.puedeObservar);
+  if (!fila || !celda || !hayQueMostrar) {
+    return (
+      <Typography variant="caption" color="text.secondary">
+        Un clic elige el dato.{editable ? ' Doble clic, o Enter, para corregirlo.' : ''} Las celdas en ámbar tienen
+        advertencias; las marcadas en rojo, observaciones sin resolver.
+      </Typography>
+    );
+  }
   return (
-    <Card variant="outlined">
-      <CardContent>
-        <Typography variant="overline" color="text.secondary">
-          Dato elegido
-        </Typography>
-        <Typography sx={{ fontWeight: 500 }}>
-          {quien(e.fila)} · {e.celda.titulo}
-        </Typography>
-        <Typography variant="body2" sx={{ mt: 0.5 }}>
-          Valor: <strong>{e.celda.valor || '—'}</strong>
-        </Typography>
+    <Box>
+      <Typography variant="body2">
+        <strong>{celda.titulo}</strong> · {quien(fila)}: «{celda.valor || '—'}»
         {avisos.map((a, i) => (
-          <Typography key={i} variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          <Box component="span" key={i} sx={{ ml: 1.5, color: 'text.secondary' }}>
             <WarningAmberOutlined fontSize="inherit" color="warning" sx={{ mr: 0.5, verticalAlign: 'text-bottom' }} />
             {a.descripcion}
-          </Typography>
+          </Box>
         ))}
-        <ObservacionDelDato
-          observacion={e.celda.observacion}
-          permisos={obs.permisos}
-          ubicacion={{
-            presentacion: obs.presentacion,
-            importacion: obs.importacion,
-            numero_fila: e.fila.numero_fila,
-            campo_id: e.celda.campo_id,
-          }}
-        />
-      </CardContent>
-    </Card>
+      </Typography>
+      <ObservacionDelDato
+        observacion={celda.observacion}
+        permisos={obs.permisos}
+        ubicacion={{
+          presentacion: obs.presentacion,
+          importacion: obs.importacion,
+          numero_fila: fila.numero_fila,
+          campo_id: celda.campo_id,
+        }}
+      />
+    </Box>
   );
 }
 
@@ -289,7 +304,6 @@ export function Datos() {
   const abiertas = d.observaciones.filter((o) => o.estado === 'ABIERTA');
   const filaElegida = elegida ? d.filas.find((f) => f.numero_fila === elegida.fila) : undefined;
   const celdaElegida = filaElegida?.celdas.find((x) => x.nombre === elegida?.campo);
-  const elegido: Elegido = filaElegida && celdaElegida ? { fila: filaElegida, celda: celdaElegida } : null;
   const resueltas = d.observaciones.filter((o) => o.estado === 'RESPONDIDA' || o.estado === 'SUBSANADA');
   // Observa el nivel nacional; responde la jurisdicción, y sólo si la carga admite cambios.
   const paraObservar: ParaObservar = {
@@ -475,20 +489,34 @@ export function Datos() {
 
         {consulta.isFetching && <LinearProgress />}
         {d.filas.length > 0 && enGrilla ? (
-          <>
-            <Grilla
-              filas={d.filas}
-              editable={d.puede_editar}
-              alCorregir={alCorregir}
-              elegido={elegido}
-              alElegir={(e) => setElegida(e ? { fila: e.fila.numero_fila, campo: e.celda.nombre } : null)}
-            />
-            <Typography variant="caption" color="text.secondary">
-              Un clic elige el dato y muestra abajo sus advertencias y su observación.
-              {d.puede_editar ? ' Doble clic, o Enter, para corregirlo.' : ''}
-            </Typography>
-            {elegido && <DatoElegido e={elegido} obs={paraObservar} />}
-          </>
+          <Grilla
+            filas={d.filas}
+            editable={d.puede_editar}
+            alCorregir={alCorregir}
+            elegida={filaElegida && celdaElegida ? elegida : null}
+            alElegir={setElegida}
+            pie={
+              <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <RenglonDelDato
+                    fila={filaElegida}
+                    celda={celdaElegida}
+                    obs={paraObservar}
+                    editable={d.puede_editar}
+                  />
+                </Box>
+                {d.paginas > 1 && (
+                  <Pagination
+                    size="small"
+                    count={d.paginas}
+                    page={d.pagina}
+                    onChange={(_, n) => poner({ pagina: String(n) })}
+                    color="primary"
+                  />
+                )}
+              </Stack>
+            }
+          />
         ) : (
           <Box>
             {d.filas.map((f) => (
@@ -508,7 +536,7 @@ export function Datos() {
             {params.get('solo') === 'avisos' ? 'Ninguna fila de esta hoja tiene advertencias.' : 'Esta importación no incorporó filas.'}
           </Typography>
         )}
-        {d.paginas > 1 && (
+        {d.paginas > 1 && !(enGrilla && d.filas.length > 0) && (
           <Pagination count={d.paginas} page={d.pagina} onChange={(_, n) => poner({ pagina: String(n) })} color="primary" />
         )}
 

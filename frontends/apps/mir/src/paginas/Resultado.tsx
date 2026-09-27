@@ -13,14 +13,9 @@ import {
   Chip,
   LinearProgress,
   Stack,
-  Step,
-  StepLabel,
-  Stepper,
   TextField,
   Tooltip,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from '@mui/material';
 import {
   mensajeDeError,
@@ -130,7 +125,6 @@ export function Resultado() {
   const avisar = useAvisar();
   const confirmar = useConfirmar();
   const navegar = useNavigate();
-  const vertical = useMediaQuery(useTheme().breakpoints.down('md'));
   const [numeroGde, setNumeroGde] = useState('');
 
   if (consulta.isPending) return <LinearProgress aria-label="Cargando" />;
@@ -152,8 +146,6 @@ export function Resultado() {
       },
     );
   };
-
-  const paso = d.pasos.findIndex((x) => x.actual);
 
   return (
     <>
@@ -186,30 +178,6 @@ export function Resultado() {
         <Alert severity="info">Elegí una jurisdicción para ver su resultado.</Alert>
       ) : (
         <Stack spacing={3}>
-          {p && (
-            <Card variant="outlined">
-              <CardContent>
-                {vertical ? (
-                  // En pantalla chica, ocho pasos uno debajo del otro tapan todo: se dice
-                  // en qué paso está, y cuántos hay.
-                  <Typography variant="body2">
-                    Paso {paso + 1} de {d.pasos.length}:{' '}
-                    <strong>{d.pasos.filter((x) => x.actual).map((x) => x.nombre).join(' · ')}</strong>
-                  </Typography>
-                ) : (
-                  <Stepper activeStep={paso} alternativeLabel aria-label="Dónde está la presentación dentro del circuito">
-                    {d.pasos.map((x) => (
-                      // Carga, validación y corrección son el mismo estado: se marcan
-                      // los tres, no sólo el primero.
-                      <Step key={x.nombre} completed={false} active={x.actual}>
-                        <StepLabel>{x.nombre}</StepLabel>
-                      </Step>
-                    ))}
-                  </Stepper>
-                )}
-              </CardContent>
-            </Card>
-          )}
 
           {d.totales.bloqueantes > 0 ? (
             <Alert severity="warning">
