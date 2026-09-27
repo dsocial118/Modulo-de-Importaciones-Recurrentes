@@ -283,6 +283,30 @@ def campos_de_los_que_otro_depende(campos: list[dict]) -> set:
     }
 
 
+def campos_que_otro_archivo_mira(cur) -> dict[str, set]:
+    """Por archivo, los campos con los que otro archivo se cruza.
+
+    Son los de las reglas COINCIDE_CON_ARCHIVO y EXISTE_EN_ARCHIVO: el valor
+    se busca en otro archivo. Ensuciarlos rompe al otro, con un bloqueante.
+    """
+    cur.execute(
+        """SELECT r.parametros FROM mir_c1_regla r
+             JOIN mir_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+            WHERE tr.nombre IN ('COINCIDE_CON_ARCHIVO', 'EXISTE_EN_ARCHIVO')"""
+    )
+    salida: dict[str, set] = {}
+    for fila in cur.fetchall():
+        crudo = fila["parametros"]
+        if isinstance(crudo, (bytes, bytearray)):
+            crudo = crudo.decode("utf-8")
+        par = crudo if isinstance(crudo, dict) else json.loads(crudo or "{}")
+        if par.get("archivo"):
+            for campo in (par.get("campo"), par.get("clave")):
+                if campo:
+                    salida.setdefault(par["archivo"], set()).add(campo)
+    return salida
+
+
 # Cuando una regla OBLIGATORIO_SI exige un dato que quedó vacío, hay que poner
 # algo. Estos son casi siempre los campos «(especificar)»: si se declaró
 # pertenencia a un pueblo originario, la columna de al lado pide cuál, y
@@ -365,10 +389,49 @@ def valor_condicionado(
                     )
                 ]
                 rnd.shuffle(propuestos)
+            elif tipo == "EJECUTAR_FUNCION" and par.get("funcion") == "validar_mail":
+                # Como se equivoca una persona: sin dominio, sin punto, un
+                # espacio en lugar de la arroba.
+                propuestos = [
+                    "juan.perez@",
+                    "maria.gomez@gmail",
+                    "contacto hogar.org.ar",
+                    "referente@@correo.com",
+                ]
+                rnd.shuffle(propuestos)
+            elif tipo == "FORMATO" and candidato:
+                # El CUIL es válido pero está mal escrito: sin guiones, con
+                # espacios o con puntos. Los números no cambian, así que la
+                # regla bloqueante del dígito verificador sigue cumpliéndose.
+                d = re.sub(r"\D", "", str(candidato))
+                if len(d) == 11:
+                    propuestos = [
+                        d,
+                        f"{d[:2]} {d[2:10]} {d[10:]}",
+                        f"{d[:2]}.{d[2:10]}.{d[10:]}",
+                    ]
+                    rnd.shuffle(propuestos)
             for propuesto in propuestos:
                 if propuesto is None or rompe_algun_bloqueante(campo, propuesto, fila):
                     continue
                 return propuesto, regla["nombre"]
+
+        # Lo inventado respeta los rangos. Las cantidades salían de 1 a 25, y
+        # la hoja CRC pide al menos 10 en dos columnas de personal: el archivo
+        # «correcto» traía 17 advertencias (visto el 27-09-2026).
+        if (
+            tipo == "RANGO"
+            and isinstance(candidato, (int, float))
+            and not isinstance(candidato, bool)
+        ):
+            minimo, maximo = par.get("minimo"), par.get("maximo")
+            if (minimo is not None and candidato < minimo) or (
+                maximo is not None and candidato > maximo
+            ):
+                bajo = int(minimo if minimo is not None else 0)
+                alto = int(maximo if maximo is not None else bajo + 30)
+                candidato = rnd.randint(bajo, min(alto, bajo + 30))
+            continue
 
         if tipo not in ("PROHIBIDO_SI", "OBLIGATORIO_SI"):
             continue
@@ -562,11 +625,13 @@ def valor_inventado(
     # nombraba dispositivos que no existían en el archivo de dispositivos.
     if "nombre" in t and not es_de_dispositivo(t):
         return rnd.choice(NOMBRES)
-    if "dni" in t or "documento" in t:
-        return str(DOC_DESDE + i * 137 + rnd.randint(0, 90))
+    # El CUIL antes que el documento: «Cuil o documento de identidad», del MPE,
+    # caía en el documento y salía un DNI que no coincide con el CUIL del legajo.
     if "cuil" in t:
         diez = f"20{DOC_DESDE + i * 137}"[:10]
         return f"{diez[:2]}-{diez[2:]}-{digito_cuil(diez)}"
+    if "dni" in t or "documento" in t:
+        return str(DOC_DESDE + i * 137 + rnd.randint(0, 90))
     if "mail" in t or "correo" in t:
         return f"contacto{i}@ejemplo.gob.ar"
     if "telefono" in t or "teléfono" in t:
@@ -793,6 +858,7 @@ def main():
         raise SystemExit("Indicar --archivo CODIGO o --todos.")
 
     os.makedirs(args.salida, exist_ok=True)
+    mirados_desde_otro_archivo = campos_que_otro_archivo_mira(cur)
 
     for codigo in codigos:
         archivo = leer_definicion(cur, codigo)
@@ -842,14 +908,37 @@ def main():
             # Se calcula una vez por hoja: los campos que otro mira para
             # validarse no se ensucian, porque romperlos rompe al otro.
             intocables = campos_de_los_que_otro_depende(campos)
-            # Los campos que tienen alguna regla que avisa: son los únicos que
-            # se pueden ensuciar. Se calcula una vez por hoja.
-            ensuciables = [
+            # Y los que OTRO ARCHIVO mira para cruzarse con este: un CUIL mal
+            # escrito en el legajo hacía que el MPI no coincidiera con él, y el
+            # MPI se rechazaba.
+            intocables |= mirados_desde_otro_archivo.get(codigo, set())
+            # Y los que se cruzan con otro archivo desde acá: el CUIL del MPE
+            # tiene que ser el mismo del legajo, letra por letra.
+            intocables |= {
                 c["nombre"]
                 for c in campos
-                if c["nombre"] not in intocables
-                and any(r["severidad"] == "ADVERTENCIA" for r in (c["reglas"] or []))
-            ]
+                if any(
+                    r["tipo_regla"] == "COINCIDE_CON_ARCHIVO"
+                    for r in (c["reglas"] or [])
+                )
+            }
+            # Los campos que tienen alguna regla que avisa: son los únicos que
+            # se pueden ensuciar. Se calcula una vez por hoja.
+            # Agrupados por tipo de regla: si se sorteara entre columnas, casi
+            # todo saldría fuera de rango, porque hay muchas columnas de
+            # cantidades. Se sortea primero el tipo y después la columna, y así
+            # aparecen también correos mal escritos, CUIL sin guiones, fechas
+            # futuras o datos que faltan (pedido del responsable funcional,
+            # 27-09-2026).
+            ensuciables: dict[str, list[str]] = {}
+            for c in campos:
+                if c["nombre"] in intocables:
+                    continue
+                for r in c["reglas"] or []:
+                    if r["severidad"] == "ADVERTENCIA":
+                        ensuciables.setdefault(r["tipo_regla"], [])
+                        if c["nombre"] not in ensuciables[r["tipo_regla"]]:
+                            ensuciables[r["tipo_regla"]].append(c["nombre"])
             for i in range(1, args.filas + 1):
                 # Una de cada tres filas lleva advertencias: así el archivo
                 # tiene también filas correctas y se ve la diferencia.
@@ -861,8 +950,11 @@ def main():
                 # problemas y, de vez en cuando, tres.
                 elegidos: set = set()
                 if sembrar and ensuciables:
-                    cuantos = min(len(ensuciables), rnd.choice([1, 1, 1, 2, 2, 3]))
-                    elegidos = set(rnd.sample(ensuciables, cuantos))
+                    tipos = sorted(ensuciables)
+                    cuantos = min(len(tipos), rnd.choice([1, 1, 1, 2, 2, 3]))
+                    elegidos = {
+                        rnd.choice(ensuciables[t]) for t in rnd.sample(tipos, cuantos)
+                    }
                 generados: dict = {}
                 for k, campo in enumerate(campos, start=1):
                     v = valor_inventado(
