@@ -5,6 +5,7 @@ import {
   memo,
   useCallback,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -162,9 +163,16 @@ const Encabezado = memo(function Encabezado({ campos }: { campos: Celda[] }) {
               verticalAlign: 'bottom',
               bgcolor: 'background.paper',
             }}
+            title={c.titulo}
           >
-            {c.titulo}
-            {c.obligatorio && ' *'}
+            {/* Hasta tres renglones: hay títulos muy largos que se comían la
+                grilla. El texto completo, al pasar el mouse. */}
+            <Box
+              sx={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+            >
+              {c.titulo}
+              {c.obligatorio && ' *'}
+            </Box>
           </TableCell>
         ))}
       </TableRow>
@@ -243,14 +251,48 @@ export function Grilla({ filas, editable, alCorregir, elegida, alElegir, pie }: 
     if (editable) setEditando({ fila: u.fila, campo: u.campo });
   };
 
-  const celda = {
-    px: 1.5,
-    py: 0.75,
-    borderBottom: `1px solid ${palette.divider}`,
-    fontSize: typography.body2.fontSize,
-    lineHeight: 1.43,
-    textAlign: 'left',
-  } as const;
+  // Los estilos de todas las celdas se arman una sola vez: rearmarlos en cada
+  // clic también cuesta.
+  const estilos = useMemo(() => {
+    const celda = {
+      px: 1.5,
+      py: 0.75,
+      borderBottom: `1px solid ${palette.divider}`,
+      fontSize: typography.body2.fontSize,
+      lineHeight: 1.43,
+      textAlign: 'left',
+    } as const;
+    return {
+      borderCollapse: 'separate',
+      '& td.c': {
+        ...celda,
+        minWidth: 150,
+        maxWidth: 220,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        cursor: 'pointer',
+      },
+      '& tbody tr:hover td.c': { bgcolor: palette.action.hover },
+      '& td.aviso, & tbody tr:hover td.aviso': { bgcolor: aviso.surface },
+      '& td.obs': { boxShadow: `inset 3px 0 0 ${observado.border}` },
+      '& td.elegida': { outline: `2px solid ${palette.primary.main}`, outlineOffset: '-2px' },
+      '& td.c:focus-visible': { outline: `2px solid ${palette.primary.main}`, outlineOffset: '-2px' },
+      '& th.id': {
+        ...celda,
+        position: 'sticky',
+        left: 0,
+        zIndex: 1,
+        bgcolor: 'background.paper',
+        minWidth: ANCHO_IDENTIFICACION,
+        maxWidth: ANCHO_IDENTIFICACION,
+        borderRight: `1px solid ${palette.divider}`,
+        fontWeight: 400,
+      },
+      '& th.id .quien': { fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+      '& th.id .nro': { fontSize: typography.caption.fontSize, color: 'text.secondary' },
+    } as const;
+  }, [palette, typography, aviso.surface, observado.border]);
 
   return (
     <Box
@@ -276,36 +318,7 @@ export function Grilla({ filas, editable, alCorregir, elegida, alElegir, pie }: 
         <Table
           size="small"
           stickyHeader
-          sx={{
-            borderCollapse: 'separate',
-            '& td.c': {
-              ...celda,
-              minWidth: 150,
-              maxWidth: 220,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              cursor: 'pointer',
-            },
-            '& tbody tr:hover td.c': { bgcolor: palette.action.hover },
-            '& td.aviso, & tbody tr:hover td.aviso': { bgcolor: aviso.surface },
-            '& td.obs': { boxShadow: `inset 3px 0 0 ${observado.border}` },
-            '& td.elegida': { outline: `2px solid ${palette.primary.main}`, outlineOffset: '-2px' },
-            '& td.c:focus-visible': { outline: `2px solid ${palette.primary.main}`, outlineOffset: '-2px' },
-            '& th.id': {
-              ...celda,
-              position: 'sticky',
-              left: 0,
-              zIndex: 1,
-              bgcolor: 'background.paper',
-              minWidth: ANCHO_IDENTIFICACION,
-              maxWidth: ANCHO_IDENTIFICACION,
-              borderRight: `1px solid ${palette.divider}`,
-              fontWeight: 400,
-            },
-            '& th.id .quien': { fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-            '& th.id .nro': { fontSize: typography.caption.fontSize, color: 'text.secondary' },
-          }}
+          sx={estilos}
         >
           <Encabezado campos={campos} />
           <tbody onClick={alClic} onDoubleClick={alDobleClic} onKeyDown={alTeclear}>
