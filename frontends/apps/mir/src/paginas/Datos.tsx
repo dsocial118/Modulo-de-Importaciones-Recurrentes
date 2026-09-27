@@ -237,7 +237,7 @@ export function Datos() {
           </Stack>
         }
       >
-        <Tooltip title="Un Excel con cada corrección: quién, cuándo, antes, después y el motivo.">
+        <Tooltip describeChild title="Un Excel con cada corrección: quién, cuándo, antes, después y el motivo.">
           <span>
             <Button
               variant="outlined"

@@ -50,7 +50,7 @@ function MenuDeDescargas({ marcado, informe }: { marcado: string; informe: strin
   const [ancla, setAncla] = useState<HTMLElement | null>(null);
   return (
     <>
-      <Tooltip title="El archivo para corregir o el informe de la importación">
+      <Tooltip describeChild title="El archivo para corregir o el informe de la importación">
         <Button
           variant="outlined"
           startIcon={<DownloadOutlined />}
@@ -161,6 +161,7 @@ export function Detalle() {
           <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             {imp.estado === 'VALIDA' && (
               <Tooltip
+                describeChild
                 title={
                   d.puede_editar
                     ? 'Los datos que entraron, fila por fila: corregí las advertencias sin volver a subir el archivo.'
