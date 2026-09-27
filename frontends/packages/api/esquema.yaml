@@ -99,7 +99,8 @@ paths:
         name: solo
         schema:
           type: string
-        description: '«avisos»: sólo las filas con advertencia'
+        description: '«avisos»: las filas con advertencia; «observadas»: con observaciones
+          sin resolver'
       tags:
       - mir
       security:
@@ -265,6 +266,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Inicio'
+          description: ''
+  /api/mir/observaciones/{observacion_id}/desestimar/:
+    post:
+      operationId: mir_observaciones_desestimar_create
+      description: El revisor retira su observación.
+      parameters:
+      - in: path
+        name: observacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensaje'
+          description: ''
+  /api/mir/observaciones/{observacion_id}/reabrir/:
+    post:
+      operationId: mir_observaciones_reabrir_create
+      description: 'El revisor no acepta la respuesta: la observación vuelve a abrirse.'
+      parameters:
+      - in: path
+        name: observacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Respuesta'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Respuesta'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Respuesta'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensaje'
           description: ''
   /api/mir/observaciones/{observacion_id}/respuesta/:
     post:
@@ -1004,9 +1059,17 @@ components:
             type: string
         tiene_aviso:
           type: boolean
+        campo_id:
+          type: integer
+        observacion:
+          allOf:
+          - $ref: '#/components/schemas/Observacion'
+          nullable: true
       required:
+      - campo_id
       - nombre
       - obligatorio
+      - observacion
       - opciones
       - tiene_aviso
       - tipo_dato
@@ -1090,6 +1153,8 @@ components:
           type: string
         editable:
           type: boolean
+        presentacion_id:
+          type: integer
       required:
       - archivo_codigo
       - editable
@@ -1098,6 +1163,7 @@ components:
       - id
       - jurisdiccion
       - periodo
+      - presentacion_id
       - version
     Correccion:
       type: object
@@ -1168,6 +1234,14 @@ components:
             $ref: '#/components/schemas/Cambio'
         descarga_historial:
           type: string
+        puede_observar:
+          type: boolean
+        puede_responder:
+          type: boolean
+        observaciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Observacion'
       required:
       - con_advertencia
       - contexto
@@ -1176,9 +1250,12 @@ components:
       - historial
       - hoja
       - hojas
+      - observaciones
       - pagina
       - paginas
       - puede_editar
+      - puede_observar
+      - puede_responder
       - total
     Descargas:
       type: object
@@ -1212,6 +1289,10 @@ components:
           nullable: true
         puede_editar:
           type: boolean
+        puede_corregir:
+          type: boolean
+        observaciones_abiertas:
+          type: integer
         descargas:
           $ref: '#/components/schemas/Descargas'
       required:
@@ -1219,6 +1300,8 @@ components:
       - errores_archivo
       - hojas
       - importacion
+      - observaciones_abiertas
+      - puede_corregir
       - puede_editar
       - resumen
       - severidad_unica
@@ -1502,6 +1585,9 @@ components:
         numero_fila:
           type: integer
           nullable: true
+        campo_id:
+          type: integer
+          nullable: true
       required:
       - texto
     Observacion:
@@ -1526,6 +1612,21 @@ components:
         numero_fila:
           type: integer
           nullable: true
+        importacion_id:
+          type: integer
+          nullable: true
+        hoja:
+          type: string
+          nullable: true
+        campo:
+          type: string
+          nullable: true
+        campo_titulo:
+          type: string
+          nullable: true
+        identificador_registro:
+          type: string
+          nullable: true
         respuesta:
           type: string
           nullable: true
@@ -1538,9 +1639,14 @@ components:
           nullable: true
       required:
       - archivo_codigo
+      - campo
+      - campo_titulo
       - creada_el
       - estado
+      - hoja
       - id
+      - identificador_registro
+      - importacion_id
       - numero_fila
       - respondida_el
       - respuesta

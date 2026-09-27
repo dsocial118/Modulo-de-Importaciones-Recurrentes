@@ -157,3 +157,37 @@ def test_estado_legible_no_devuelve_el_codigo_crudo():
 
 def test_estado_desconocido_no_rompe():
     assert circuito.estado_legible("INVENTADO") == "INVENTADO"
+
+
+# ---------------------------------------------------------------------------
+# Observaciones por dato (27-09-2026)
+#
+# El flujo completo —observar, corregir y quedar subsanada, responder, reabrir,
+# desestimar, y no habilitar con observaciones abiertas— se probó contra la
+# base de la 8110 dentro de una transacción deshecha. Acá, las reglas que no
+# necesitan base.
+# ---------------------------------------------------------------------------
+
+
+def test_solo_el_revisor_observa_un_dato():
+    with pytest.raises(circuito.TransicionInvalida, match="revisor"):
+        circuito.crear_observacion(
+            1, _usuario("operador_provincial"), "x", {"campo_id": 3}
+        )
+
+
+def test_una_observacion_no_puede_estar_vacia():
+    with pytest.raises(circuito.TransicionInvalida, match="vacía"):
+        circuito.crear_observacion(1, _usuario("revisor_nacional"), "   ")
+
+
+def test_reabrir_y_desestimar_son_del_revisor():
+    with pytest.raises(circuito.TransicionInvalida, match="revisor"):
+        circuito.reabrir_observacion(1, _usuario("responsable_provincial"), "no")
+    with pytest.raises(circuito.TransicionInvalida, match="revisor"):
+        circuito.desestimar_observacion(1, _usuario("responsable_provincial"))
+
+
+def test_reabrir_pide_decir_por_que():
+    with pytest.raises(circuito.TransicionInvalida, match="por qué"):
+        circuito.reabrir_observacion(1, _usuario("revisor_nacional"), "")

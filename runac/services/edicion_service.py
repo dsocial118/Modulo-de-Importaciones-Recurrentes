@@ -28,6 +28,8 @@ from typing import Any
 
 from django.db import connection, transaction
 
+from runac.services import circuito_service as circuito
+
 _MOTOR = Path(__file__).resolve().parent / "motor"
 if str(_MOTOR) not in sys.path:
     sys.path.insert(0, str(_MOTOR))
@@ -104,7 +106,7 @@ def contexto_de(importacion_id: int) -> dict[str, Any]:
 
         cur.execute(
             """
-            SELECT id, nombre_esperado, orden_procesamiento
+            SELECT id, nombre_esperado, orden_procesamiento, referencia
             FROM mir_c1_hoja WHERE archivo_version_id = %s
             ORDER BY orden_procesamiento
             """,
@@ -196,6 +198,46 @@ def reglas_de_los_campos(campos: list[dict]) -> dict[int, list[dict]]:
     return por_campo
 
 
+def celda_observable(importacion_id: int, numero_fila: int, campo_id: int) -> str:
+    """Comprueba que el dato exista y devuelve de quién es su fila.
+
+    Para observar un dato: el campo tiene que ser de una hoja de esta
+    importación y la fila tiene que haber entrado. Si no, EdicionNoPermitida.
+    """
+    contexto = contexto_de(importacion_id)
+    if not contexto:
+        raise EdicionNoPermitida("No existe esa importación.")
+    hoja = None
+    for h in contexto["hojas"]:
+        campos = campos_de_la_hoja(h["id"])
+        if any(c["id"] == int(campo_id) for c in campos):
+            hoja = h
+            break
+    if not hoja or hoja.get("referencia"):
+        raise EdicionNoPermitida("Ese campo no es de esta importación.")
+    tabla = _identificador_seguro(
+        nombre_tabla_receptora(
+            contexto["archivo_codigo"],
+            hoja["nombre_esperado"],
+            len(contexto["hojas"]) > 1,
+            contexto["version"],
+        )
+    )
+    columnas = (
+        ", ".join(f"`{_identificador_seguro(c['nombre'])}`" for c in campos) or "1"
+    )
+    with connection.cursor() as cur:
+        cur.execute(
+            f"SELECT {columnas} FROM `{tabla}` WHERE importacion_id = %s AND numero_fila = %s",
+            [importacion_id, numero_fila],
+        )
+        valores = cur.fetchone()
+    if valores is None:
+        raise EdicionNoPermitida("Esa fila no está entre los datos importados.")
+    fila = dict(zip([c["nombre"] for c in campos], valores))
+    return identificacion_de_la_fila(campos, fila)
+
+
 def identificacion_de_la_fila(campos: list[dict], fila: dict) -> str:
     """«12 · Gómez · Martina · 90000137»: los valores de los campos identificatorios.
 
@@ -232,8 +274,13 @@ def datos_de_la_hoja(
     hoja: dict,
     pagina: int = 1,
     solo_con_advertencia: bool = False,
+    solo_filas: list[int] | None = None,
 ) -> dict[str, Any]:
-    """Las filas importadas de una hoja, con sus advertencias."""
+    """Las filas importadas de una hoja, con sus advertencias.
+
+    `solo_filas` acota a esas filas: por ejemplo, las que tienen observaciones
+    sin resolver.
+    """
     contexto = contexto_de(importacion_id)
     if not contexto:
         return {}
@@ -271,6 +318,13 @@ def datos_de_la_hoja(
             parametros += list(avisos)
         elif solo_con_advertencia:
             filtro = " AND 1 = 0"
+        if solo_filas is not None:
+            if solo_filas:
+                marcas = ", ".join(["%s"] * len(solo_filas))
+                filtro += f" AND numero_fila IN ({marcas})"
+                parametros += [int(n) for n in solo_filas]
+            else:
+                filtro += " AND 1 = 0"
 
         cur.execute(
             f"SELECT COUNT(*) FROM `{tabla}` WHERE importacion_id = %s{filtro}",
@@ -731,18 +785,34 @@ def editar(
             [valor, importacion_id, numero_fila],
         )
 
-        # La constancia: quién, cuándo, qué había y qué quedó.
+        # Si el dato estaba observado, corregirlo lo subsana: la jurisdicción
+        # no tiene que ir a responder aparte (27-09-2026). Con el mismo
+        # cursor, para que entren las dos cosas o ninguna.
+        observacion_id = circuito.subsanar_al_corregir(
+            cur,
+            importacion_id,
+            numero_fila,
+            campo["id"],
+            usuario,
+            valor_anterior,
+            valor,
+            motivo,
+        )
+
+        # La constancia: quién, cuándo, qué había y qué quedó, y a qué
+        # observación respondió, si respondió a alguna.
         cur.execute(
             """
             INSERT INTO mir_c2_historial_cambios
                 (importacion_id, numero_fila, campo_id, observacion_id,
                  valor_anterior, valor_nuevo, motivo, usuario)
-            VALUES (%s, %s, %s, NULL, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             [
                 importacion_id,
                 numero_fila,
                 campo["id"],
+                observacion_id,
                 None if valor_anterior is None else str(valor_anterior),
                 None if valor is None else str(valor),
                 (motivo or "").strip() or None,

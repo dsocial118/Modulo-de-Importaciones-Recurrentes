@@ -3,7 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { envio, mostrar, resuelta } from '../pruebas';
 import { Datos } from './Datos';
 
-const api = vi.hoisted(() => ({ useDatos: vi.fn(), useCorregir: vi.fn() }));
+const api = vi.hoisted(() => ({
+  useDatos: vi.fn(),
+  useCorregir: vi.fn(),
+  useObservarDato: vi.fn(),
+  useResponder: vi.fn(),
+  useReabrirObservacion: vi.fn(),
+  useDesestimarObservacion: vi.fn(),
+}));
 vi.mock('@mir/api', () => ({ ...api, mensajeDeError: () => 'error' }));
 
 function datos(extra = {}) {
@@ -17,6 +24,7 @@ function datos(extra = {}) {
       estado_presentacion: 'EN_CARGA',
       estado_legible: 'En carga',
       editable: true,
+      presentacion_id: 8,
     },
     hojas: [{ id: 1, nombre: 'MPI' }],
     hoja: { id: 1, nombre: 'MPI' },
@@ -32,12 +40,16 @@ function datos(extra = {}) {
         estado: 'VALIDA',
         avisos: [{ nombre_campo: 'Edad', severidad: 'ADVERTENCIA', descripcion: 'Es mayor que 17.' }],
         celdas: [
-          { nombre: 'fecha_de_nacimiento', titulo: 'Fecha de nacimiento', obligatorio: true, tipo_dato: 'FECHA', valor: '27/10/2014', opciones: [], tiene_aviso: false },
-          { nombre: 'edad', titulo: 'Edad', obligatorio: false, tipo_dato: 'ENTERO', valor: '107', opciones: [], tiene_aviso: true },
+          { nombre: 'fecha_de_nacimiento', titulo: 'Fecha de nacimiento', obligatorio: true, tipo_dato: 'FECHA', valor: '27/10/2014', opciones: [], tiene_aviso: false, campo_id: 1, observacion: null },
+          { nombre: 'edad', titulo: 'Edad', obligatorio: false, tipo_dato: 'ENTERO', valor: '107', opciones: [], tiene_aviso: true, campo_id: 2, observacion: null },
         ],
       },
     ],
     historial: [],
+    descarga_historial: '/api/mir/importaciones/11/historial.xlsx',
+    puede_observar: false,
+    puede_responder: true,
+    observaciones: [] as unknown[],
     ...extra,
   };
 }
@@ -45,7 +57,10 @@ function datos(extra = {}) {
 const abrirLaFila = () => fireEvent.click(screen.getByText('9 · Paz · Ana · fila 12 del Excel'));
 
 describe('Corregir datos', () => {
-  beforeEach(() => api.useCorregir.mockReturnValue(envio()));
+  beforeEach(() => {
+    for (const hook of [api.useCorregir, api.useObservarDato, api.useResponder, api.useReabrirObservacion, api.useDesestimarObservacion])
+      hook.mockReturnValue(envio());
+  });
 
   it('la fecha se ve tal como viene, no vacía', () => {
     // El campo de fecha del navegador sólo entiende 2014-10-27: mostraba vacío
@@ -84,5 +99,53 @@ describe('Corregir datos', () => {
     expect(screen.getByText(/no modifica datos provinciales/)).toBeInTheDocument();
     abrirLaFila();
     expect(screen.getByLabelText(/^Edad/)).toHaveAttribute('readonly');
+  });
+
+  const observacion = (extra = {}) => ({
+    id: 7,
+    estado: 'ABIERTA',
+    texto: 'La edad no coincide con la fecha de nacimiento.',
+    usuario_observa: 'revisor',
+    creada_el: '2026-09-27T10:00:00',
+    archivo_codigo: 'MPI',
+    numero_fila: 12,
+    importacion_id: 11,
+    hoja: 'MPI',
+    campo: 'edad',
+    campo_titulo: 'Edad',
+    identificador_registro: '9 · Paz · Ana',
+    respuesta: null,
+    usuario_responde: null,
+    respondida_el: null,
+    ...extra,
+  });
+
+  const conObservacion = (extra = {}) => {
+    const base = datos(extra);
+    const o = observacion();
+    base.observaciones = [o];
+    (base.filas[0].celdas[1] as { observacion: unknown }).observacion = o;
+    return base;
+  };
+
+  it('la provincia ve las observaciones sin resolver arriba y puede responder que está bien así', () => {
+    api.useDatos.mockReturnValue(resuelta(conObservacion()));
+    mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });
+    expect(screen.getByText('Observaciones sin resolver: 1')).toBeInTheDocument();
+    expect(screen.getByText('MPI · 9 · Paz · Ana · Edad')).toBeInTheDocument();
+    // La fila observada arranca abierta y lo dice en su título.
+    expect(screen.getByText('1 observación')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Está bien así' }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Observar' })).not.toBeInTheDocument();
+  });
+
+  it('el revisor observa un dato, y no ve cómo corregirlo', () => {
+    api.useDatos.mockReturnValue(resuelta(datos({ puede_editar: false, puede_observar: true, puede_responder: false })));
+    mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });
+    abrirLaFila();
+    expect(screen.getAllByRole('button', { name: 'Observar' })).toHaveLength(2);
+    expect(screen.getByLabelText(/^Edad/)).toHaveAttribute('readonly');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Observar' })[1]);
+    expect(screen.getByLabelText('Qué hay que revisar en este dato')).toBeInTheDocument();
   });
 });

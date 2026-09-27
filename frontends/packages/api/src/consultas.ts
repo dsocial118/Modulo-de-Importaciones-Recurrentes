@@ -166,6 +166,30 @@ export const useResponder = () =>
     (d) => ({ respuesta: d.respuesta }),
   );
 
+/** Observar un dato: una celda, no la fila entera. */
+export const useObservarDato = () =>
+  useEnvio<
+    { presentacion: number; importacion: number; numero_fila: number; campo_id: number; texto: string },
+    Mensaje
+  >(
+    (d) => `presentaciones/${d.presentacion}/observaciones/`,
+    (d) => ({ texto: d.texto, importacion_id: d.importacion, numero_fila: d.numero_fila, campo_id: d.campo_id }),
+  );
+
+/** El revisor no acepta la respuesta: la observación vuelve a abrirse. */
+export const useReabrirObservacion = () =>
+  useEnvio<{ observacion: number; texto: string }, Mensaje>(
+    (d) => `observaciones/${d.observacion}/reabrir/`,
+    (d) => ({ respuesta: d.texto }),
+  );
+
+/** El revisor retira su observación. */
+export const useDesestimarObservacion = () =>
+  useEnvio<{ observacion: number }, Mensaje>(
+    (d) => `observaciones/${d.observacion}/desestimar/`,
+    () => ({}),
+  );
+
 export const useRegistrarExpediente = () =>
   useEnvio<{ presentacion: number; expediente: string }, Mensaje>(
     (d) => `presentaciones/${d.presentacion}/expediente/`,

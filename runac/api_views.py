@@ -716,6 +716,24 @@ class ObservarView(APIView):
                 raise ValidationError(
                     {"importacion_id": ["No es una importación de esta presentación."]}
                 )
+        # Sobre un dato: la celda tiene que existir, y se guarda de quién es la
+        # fila, para que la observación se entienda sin abrir el archivo.
+        identificador = None
+        if d.get("campo_id"):
+            if not (d.get("importacion_id") and d.get("numero_fila")):
+                raise ValidationError(
+                    {
+                        "campo_id": [
+                            "Para observar un dato hacen falta la importación y la fila."
+                        ]
+                    }
+                )
+            try:
+                identificador = edicion.celda_observable(
+                    d["importacion_id"], d["numero_fila"], d["campo_id"]
+                )
+            except edicion.EdicionNoPermitida as error:
+                raise ValidationError({"campo_id": [str(error)]}) from error
         try:
             circuito.crear_observacion(
                 presentacion_id,
@@ -724,17 +742,57 @@ class ObservarView(APIView):
                 ubicacion={
                     "importacion_id": d.get("importacion_id"),
                     "numero_fila": d.get("numero_fila"),
+                    "campo_id": d.get("campo_id"),
+                    "identificador_registro": identificador,
                 },
             )
         except circuito.TransicionInvalida as error:
             raise ValidationError({"detail": str(error)}) from error
         return Response(
             {
-                "mensaje": "Observación registrada. La presentación volvió a la "
-                "jurisdicción para su subsanación."
+                "mensaje": "Observación registrada. La jurisdicción la va a ver en el dato "
+                "y en la lista de observaciones sin resolver."
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class ReabrirObservacionView(APIView):
+    """El revisor no acepta la respuesta: la observación vuelve a abrirse."""
+
+    @extend_schema(request=s.RespuestaSerializer, responses=s.MensajeSerializer)
+    def post(self, request, observacion_id):
+        _exigir(request.user, "revision")
+        presentacion_id = alcance.presentacion_de_la_observacion(observacion_id)
+        if presentacion_id is None:
+            raise NotFound("No existe esa observación.")
+        _presentacion_permitida(request.user, presentacion_id)
+        pedido = s.RespuestaSerializer(data=request.data)
+        pedido.is_valid(raise_exception=True)
+        try:
+            circuito.reabrir_observacion(
+                observacion_id, request.user, pedido.validated_data["respuesta"]
+            )
+        except circuito.TransicionInvalida as error:
+            raise ValidationError({"detail": str(error)}) from error
+        return Response({"mensaje": "La observación volvió a abrirse."})
+
+
+class DesestimarObservacionView(APIView):
+    """El revisor retira su observación."""
+
+    @extend_schema(request=None, responses=s.MensajeSerializer)
+    def post(self, request, observacion_id):
+        _exigir(request.user, "revision")
+        presentacion_id = alcance.presentacion_de_la_observacion(observacion_id)
+        if presentacion_id is None:
+            raise NotFound("No existe esa observación.")
+        _presentacion_permitida(request.user, presentacion_id)
+        try:
+            circuito.desestimar_observacion(observacion_id, request.user)
+        except circuito.TransicionInvalida as error:
+            raise ValidationError({"detail": str(error)}) from error
+        return Response({"mensaje": "Observación desestimada."})
 
 
 class ResponderView(APIView):
@@ -851,6 +909,14 @@ class DetalleView(APIView):
                 next(iter(severidades)) if len(severidades) == 1 else None
             ),
             "puede_editar": imp["estado"] == "VALIDA",
+            # Quién puede corregir: el rol, no sólo que haya datos. Por esto el
+            # revisor veía «Ver y corregir datos» (27-09-2026).
+            "puede_corregir": puede_editar_datos(request.user),
+            "observaciones_abiertas": sum(
+                1
+                for o in circuito.observaciones_de_la_importacion(importacion_id)
+                if o["estado"] == "ABIERTA"
+            ),
             "descargas": {
                 "errores": reverse("api_mir:errores_xlsx", args=[importacion_id]),
                 "marcado": reverse("api_mir:marcado_xlsx", args=[importacion_id]),
@@ -977,7 +1043,9 @@ class DatosView(APIView):
             OpenApiParameter("hoja", int),
             OpenApiParameter("pagina", int),
             OpenApiParameter(
-                "solo", str, description="«avisos»: sólo las filas con advertencia"
+                "solo",
+                str,
+                description="«avisos»: las filas con advertencia; «observadas»: con observaciones sin resolver",
             ),
         ],
         responses=s.DatosSerializer,
@@ -986,18 +1054,41 @@ class DatosView(APIView):
         _exigir(request.user, "resultado")
         _importacion_permitida(request.user, importacion_id)
         contexto = edicion.contexto_de(importacion_id)
-        if not contexto or not contexto["hojas"]:
+        # Las hojas de referencia no traen datos de la provincia: no se ofrecen.
+        # (Siguen en el contexto: el nombre de cada tabla depende de cuántas
+        # hojas tiene el archivo.)
+        visibles = [
+            h for h in (contexto or {}).get("hojas", []) if not h.get("referencia")
+        ]
+        if not visibles:
             raise NotFound("La importación no tiene datos para mostrar.")
         pedida = request.query_params.get("hoja")
-        hoja = next(
-            (h for h in contexto["hojas"] if str(h["id"]) == str(pedida)),
-            contexto["hojas"][0],
-        )
+        hoja = next((h for h in visibles if str(h["id"]) == str(pedida)), visibles[0])
+        # Las observaciones de cada dato: la que está sin resolver o, si no
+        # hay, la última que se resolvió. Las desestimadas no se muestran.
+        observaciones = circuito.observaciones_de_la_importacion(importacion_id)
+        por_celda: dict = {}
+        for o in observaciones:
+            if o["campo_id"] and o["estado"] != "DESESTIMADA":
+                por_celda.setdefault((o["numero_fila"], o["campo_id"]), o)
         datos = edicion.datos_de_la_hoja(
             importacion_id,
             hoja,
             pagina=request.query_params.get("pagina", 1),
             solo_con_advertencia=request.query_params.get("solo") == "avisos",
+            # «observadas»: las filas con alguna observación sin resolver.
+            solo_filas=(
+                sorted(
+                    {
+                        o["numero_fila"]
+                        for o in observaciones
+                        if o["estado"] == "ABIERTA"
+                        and o["hoja"] == hoja["nombre_esperado"]
+                    }
+                )
+                if request.query_params.get("solo") == "observadas"
+                else None
+            ),
         )
         salida = {
             "contexto": {
@@ -1011,13 +1102,17 @@ class DatosView(APIView):
                     contexto["estado_presentacion"]
                 ),
                 "editable": contexto["editable"],
+                "presentacion_id": contexto["presentacion_id"],
             },
             "hojas": [
-                {"id": h["id"], "nombre": h["nombre_esperado"]}
-                for h in contexto["hojas"]
+                {"id": h["id"], "nombre": h["nombre_esperado"]} for h in visibles
             ],
             "hoja": {"id": hoja["id"], "nombre": hoja["nombre_esperado"]},
             "puede_editar": puede_editar_datos(request.user) and contexto["editable"],
+            # Observa el nivel nacional; responde la jurisdicción.
+            "puede_observar": puede_revisar(request.user),
+            "puede_responder": puede_editar_datos(request.user),
+            "observaciones": observaciones,
             "total": datos["total"],
             "pagina": datos["pagina"],
             "paginas": datos["paginas"],
@@ -1037,6 +1132,10 @@ class DatosView(APIView):
                             "valor": c["valor"],
                             "opciones": c["opciones"],
                             "tiene_aviso": c["tiene_aviso"],
+                            "campo_id": c["campo"]["id"],
+                            "observacion": por_celda.get(
+                                (f["numero_fila"], c["campo"]["id"])
+                            ),
                         }
                         for c in f["celdas"]
                     ],

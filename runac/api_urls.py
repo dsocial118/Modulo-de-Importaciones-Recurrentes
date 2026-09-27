@@ -62,6 +62,16 @@ urlpatterns = [
         v.ResponderView.as_view(),
         name="responder",
     ),
+    path(
+        "observaciones/<int:observacion_id>/reabrir/",
+        v.ReabrirObservacionView.as_view(),
+        name="reabrir_observacion",
+    ),
+    path(
+        "observaciones/<int:observacion_id>/desestimar/",
+        v.DesestimarObservacionView.as_view(),
+        name="desestimar_observacion",
+    ),
     # Una importación
     path(
         "importaciones/<int:importacion_id>/", v.DetalleView.as_view(), name="detalle"

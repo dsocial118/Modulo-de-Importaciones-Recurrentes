@@ -174,6 +174,18 @@ def ejecutar(presentacion_id: int, accion: str, usuario, listo: bool = True) -> 
             raise TransicionInvalida(
                 "Faltan archivos obligatorios por importar. No se puede cerrar la carga."
             )
+        if accion == "habilitar":
+            cur.execute(
+                "SELECT COUNT(*) FROM mir_c2_observacion "
+                "WHERE presentacion_id = %s AND estado = 'ABIERTA'",
+                [presentacion_id],
+            )
+            abiertas = cur.fetchone()[0]
+            if abiertas:
+                raise TransicionInvalida(
+                    f"Hay {abiertas} observación(es) sin resolver: no se puede habilitar "
+                    "la presentación hasta que se respondan o se desestimen."
+                )
 
         usr = usuario.get_username()
         if accion == "reabrir_carga":
@@ -248,32 +260,106 @@ def presentaciones_del_periodo(codigo_periodo: str) -> list[dict]:
         return [dict(zip(columnas, f)) for f in cur.fetchall()]
 
 
+# ---------------------------------------------------------------------------
+# Observaciones
+#
+# El revisor nacional observa un DATO: una celda —importación, fila y campo—, no
+# la fila entera (pedido del responsable funcional, 27-09-2026). La jurisdicción
+# la resuelve de una de dos maneras:
+#
+#   · corrige el dato → la observación queda SUBSANADA, sola, con el antes y el
+#     después (`subsanar_al_corregir`, lo llama la edición);
+#   · responde que está bien así → RESPONDIDA, con su aclaración.
+#
+# El revisor puede no aceptar la respuesta y reabrirla (vuelve a ABIERTA), o
+# retirar su observación (DESESTIMADA). Sin resolver es ABIERTA, y mientras haya
+# alguna la presentación no se habilita.
+#
+# Una observación sin campo —sobre la presentación en general— sigue valiendo.
+# ---------------------------------------------------------------------------
+
+RESUELTAS = ("RESPONDIDA", "SUBSANADA", "DESESTIMADA")
+
+_SELECT_OBSERVACION = """
+    SELECT o.*, a.codigo AS archivo_codigo, c.nombre AS campo,
+           c.titulo_esperado AS campo_titulo, h.nombre_esperado AS hoja
+    FROM mir_c2_observacion o
+    LEFT JOIN mir_c2_importacion i ON i.id = o.importacion_id
+    LEFT JOIN mir_c1_archivo a ON a.id = i.archivo_id
+    LEFT JOIN mir_c1_campo c ON c.id = o.campo_id
+    LEFT JOIN mir_c1_hoja h ON h.id = c.hoja_id
+"""
+
+
+def _como_dicts(cur) -> list[dict]:
+    columnas = [c[0] for c in cur.description]
+    return [dict(zip(columnas, f)) for f in cur.fetchall()]
+
+
 def observaciones_de(presentacion_id: int, solo_abiertas: bool = False) -> list[dict]:
-    sql = """
-        SELECT o.*, a.codigo AS archivo_codigo
-        FROM mir_c2_observacion o
-        LEFT JOIN mir_c2_importacion i ON i.id = o.importacion_id
-        LEFT JOIN mir_c1_archivo a ON a.id = i.archivo_id
-        WHERE o.presentacion_id = %s
-    """
+    sql = _SELECT_OBSERVACION + " WHERE o.presentacion_id = %s"
     if solo_abiertas:
         sql += " AND o.estado = 'ABIERTA'"
-    sql += " ORDER BY o.creada_el DESC"
+    sql += " ORDER BY o.estado = 'ABIERTA' DESC, o.creada_el DESC"
     with connection.cursor() as cur:
         cur.execute(sql, [presentacion_id])
-        columnas = [c[0] for c in cur.description]
-        return [dict(zip(columnas, f)) for f in cur.fetchall()]
+        return _como_dicts(cur)
+
+
+def observaciones_de_la_importacion(importacion_id: int) -> list[dict]:
+    """Las observaciones de los datos de una importación: las abiertas primero."""
+    with connection.cursor() as cur:
+        cur.execute(
+            _SELECT_OBSERVACION + " WHERE o.importacion_id = %s"
+            " ORDER BY o.estado = 'ABIERTA' DESC, o.numero_fila, o.creada_el DESC",
+            [importacion_id],
+        )
+        return _como_dicts(cur)
+
+
+def _una(cur, observacion_id: int) -> dict:
+    cur.execute(_SELECT_OBSERVACION + " WHERE o.id = %s", [observacion_id])
+    filas = _como_dicts(cur)
+    if not filas:
+        raise TransicionInvalida("No existe esa observación.")
+    return filas[0]
+
+
+def _reflejar_en_la_presentacion(cur, presentacion_id: int) -> None:
+    """El estado de la presentación sigue a sus observaciones.
+
+    Si queda alguna abierta y la revisión estaba en curso, vuelve a la
+    jurisdicción (OBSERVADA). Si ya no queda ninguna y estaba observada, pasa a
+    SUBSANADA: falta que la jurisdicción cierre la carga otra vez.
+    """
+    cur.execute(
+        "SELECT COUNT(*) FROM mir_c2_observacion WHERE presentacion_id = %s AND estado = 'ABIERTA'",
+        [presentacion_id],
+    )
+    if cur.fetchone()[0]:
+        cur.execute(
+            """UPDATE mir_c2_presentacion SET estado = 'OBSERVADA'
+                WHERE id = %s AND estado IN ('EN_REVISION', 'CERRADA', 'HABILITADA', 'SUBSANADA')""",
+            [presentacion_id],
+        )
+    else:
+        cur.execute(
+            "UPDATE mir_c2_presentacion SET estado = 'SUBSANADA' WHERE id = %s AND estado = 'OBSERVADA'",
+            [presentacion_id],
+        )
 
 
 def crear_observacion(presentacion_id: int, usuario, texto: str, ubicacion=None):
     """El revisor observa; no modifica el dato.
 
-    `ubicacion` acota la observacion a un punto concreto: importacion, fila y
-    registro. Va agrupado porque son tres datos de la misma cosa.
+    `ubicacion` acota la observación a un punto concreto: la importación, la
+    fila, el campo y de quién es la fila. Van juntos porque son la misma cosa:
+    una celda. Un dato tiene una sola observación sin resolver a la vez.
     """
     ubicacion = ubicacion or {}
     importacion_id = ubicacion.get("importacion_id")
     numero_fila = ubicacion.get("numero_fila")
+    campo_id = ubicacion.get("campo_id")
     identificador_registro = ubicacion.get("identificador_registro")
     if not puede_revisar(usuario):
         raise TransicionInvalida(
@@ -282,34 +368,46 @@ def crear_observacion(presentacion_id: int, usuario, texto: str, ubicacion=None)
     if not (texto or "").strip():
         raise TransicionInvalida("La observación no puede estar vacía.")
     with connection.cursor() as cur:
+        if campo_id:
+            cur.execute(
+                """SELECT COUNT(*) FROM mir_c2_observacion
+                    WHERE importacion_id = %s AND numero_fila = %s AND campo_id = %s
+                      AND estado = 'ABIERTA'""",
+                [importacion_id, numero_fila, campo_id],
+            )
+            if cur.fetchone()[0]:
+                raise TransicionInvalida(
+                    "Ese dato ya tiene una observación sin resolver: se puede ampliar "
+                    "cuando la jurisdicción responda."
+                )
         cur.execute(
             """
             INSERT INTO mir_c2_observacion
-                (presentacion_id, importacion_id, numero_fila, identificador_registro,
-                 texto, estado, usuario_observa)
-            VALUES (%s, %s, %s, %s, %s, 'ABIERTA', %s)
+                (presentacion_id, importacion_id, numero_fila, campo_id,
+                 identificador_registro, texto, estado, usuario_observa)
+            VALUES (%s, %s, %s, %s, %s, %s, 'ABIERTA', %s)
         """,
             [
                 presentacion_id,
                 importacion_id or None,
                 numero_fila or None,
-                identificador_registro or None,
+                campo_id or None,
+                (identificador_registro or "")[:100] or None,
                 texto.strip(),
                 usuario.get_username(),
             ],
         )
-        cur.execute(
-            """UPDATE mir_c2_presentacion SET estado = 'OBSERVADA'
-                        WHERE id = %s AND estado IN ('EN_REVISION','CERRADA','HABILITADA')""",
-            [presentacion_id],
-        )
+        _reflejar_en_la_presentacion(cur, presentacion_id)
 
 
 def responder_observacion(observacion_id: int, usuario, respuesta: str):
-    """La jurisdicción responde. Si no quedan abiertas, pasa a SUBSANADA."""
+    """La jurisdicción aclara que el dato está bien así (o responde en general)."""
     if not (respuesta or "").strip():
         raise TransicionInvalida("La respuesta no puede estar vacía.")
     with connection.cursor() as cur:
+        observacion = _una(cur, observacion_id)
+        if observacion["estado"] != "ABIERTA":
+            raise TransicionInvalida("Esa observación ya está resuelta.")
         cur.execute(
             """UPDATE mir_c2_observacion
                        SET respuesta = %s, estado = 'RESPONDIDA',
@@ -317,25 +415,94 @@ def responder_observacion(observacion_id: int, usuario, respuesta: str):
                        WHERE id = %s""",
             [respuesta.strip(), usuario.get_username(), observacion_id],
         )
-        cur.execute(
-            "SELECT presentacion_id FROM mir_c2_observacion WHERE id = %s",
-            [observacion_id],
+        _reflejar_en_la_presentacion(cur, observacion["presentacion_id"])
+
+
+def subsanar_al_corregir(
+    cur,
+    importacion_id: int,
+    numero_fila: int,
+    campo_id: int,
+    usuario: str,
+    antes,
+    despues,
+    motivo: str = "",
+) -> int | None:
+    """Corregir un dato observado lo subsana. Devuelve la observación subsanada.
+
+    Lo llama la edición, con su cursor: la corrección y la subsanación entran
+    juntas o no entra ninguna.
+    """
+    cur.execute(
+        """SELECT id, presentacion_id FROM mir_c2_observacion
+            WHERE importacion_id = %s AND numero_fila = %s AND campo_id = %s AND estado = 'ABIERTA'""",
+        [importacion_id, numero_fila, campo_id],
+    )
+    fila = cur.fetchone()
+    if not fila:
+        return None
+    observacion_id, presentacion_id = fila
+    texto = f"Se corrigió el dato: de «{antes if antes not in (None, '') else '—'}» a «{despues if despues not in (None, '') else '—'}»."
+    if (motivo or "").strip():
+        texto += f" {motivo.strip()}"
+    cur.execute(
+        """UPDATE mir_c2_observacion
+              SET estado = 'SUBSANADA', respuesta = %s, respondida_el = NOW(), usuario_responde = %s
+            WHERE id = %s""",
+        [texto, usuario, observacion_id],
+    )
+    _reflejar_en_la_presentacion(cur, presentacion_id)
+    return observacion_id
+
+
+def reabrir_observacion(observacion_id: int, usuario, texto: str):
+    """El revisor no acepta la respuesta: la observación vuelve a abrirse."""
+    if not puede_revisar(usuario):
+        raise TransicionInvalida(
+            "Sólo el revisor técnico nacional puede reabrir una observación."
         )
-        fila = cur.fetchone()
-        if not fila:
-            return
-        presentacion_id = fila[0]
-        cur.execute(
-            """SELECT COUNT(*) FROM mir_c2_observacion
-                        WHERE presentacion_id = %s AND estado = 'ABIERTA'""",
-            [presentacion_id],
-        )
-        if cur.fetchone()[0] == 0:
-            cur.execute(
-                """UPDATE mir_c2_presentacion SET estado = 'SUBSANADA'
-                            WHERE id = %s AND estado = 'OBSERVADA'""",
-                [presentacion_id],
+    if not (texto or "").strip():
+        raise TransicionInvalida("Decí por qué no se acepta la respuesta.")
+    with connection.cursor() as cur:
+        observacion = _una(cur, observacion_id)
+        if observacion["estado"] not in ("RESPONDIDA", "SUBSANADA"):
+            raise TransicionInvalida(
+                "Sólo se reabre una observación respondida o subsanada."
             )
+        # La conversación queda entera en el texto: qué se observó, qué se
+        # respondió y por qué no alcanzó.
+        historia = (
+            f'{observacion["texto"]}\n\n— Respuesta ({observacion["usuario_responde"]}): '
+            f'{observacion["respuesta"]}\n— No se acepta ({usuario.get_username()}): {texto.strip()}'
+        )
+        cur.execute(
+            """UPDATE mir_c2_observacion
+                  SET estado = 'ABIERTA', texto = %s, respuesta = NULL,
+                      respondida_el = NULL, usuario_responde = NULL
+                WHERE id = %s""",
+            [historia, observacion_id],
+        )
+        _reflejar_en_la_presentacion(cur, observacion["presentacion_id"])
+
+
+def desestimar_observacion(observacion_id: int, usuario):
+    """El revisor retira su observación: deja de contar como sin resolver."""
+    if not puede_revisar(usuario):
+        raise TransicionInvalida(
+            "Sólo el revisor técnico nacional puede desestimar una observación."
+        )
+    with connection.cursor() as cur:
+        observacion = _una(cur, observacion_id)
+        if observacion["estado"] == "DESESTIMADA":
+            raise TransicionInvalida("Esa observación ya está desestimada.")
+        cur.execute(
+            """UPDATE mir_c2_observacion
+                  SET estado = 'DESESTIMADA', respondida_el = COALESCE(respondida_el, NOW()),
+                      usuario_responde = COALESCE(usuario_responde, %s)
+                WHERE id = %s""",
+            [usuario.get_username(), observacion_id],
+        )
+        _reflejar_en_la_presentacion(cur, observacion["presentacion_id"])
 
 
 def registrar_expediente(presentacion_id: int, numero: str, usuario):

@@ -26,19 +26,19 @@ import {
   mensajeDeError,
   useAccion,
   useRegistrarExpediente,
-  useResponder,
   useResultado,
   type Accion,
   type ArchivoDelResultado,
-  type Observacion,
 } from '@mir/api';
 import { EtiquetaDeEstado, Titulo, useAvisar, useConfirmar } from '@mir/ui';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ESTADO_DEL_ARCHIVO, SEVERIDAD, formaDe, tonoDeLaPresentacion } from '../comun/estados';
-import { fechaHora, numero, plural } from '../comun/formato';
+import { numero, plural } from '../comun/formato';
 import { SelectorDeJurisdiccion, SelectorDePeriodo } from '../comun/Selectores';
 import { conFiltros, useFiltros } from '../comun/filtros';
+import { TarjetaDeObservacion } from '../comun/Observaciones';
+import { dondeEsta } from '../comun/ubicacion';
 
 // Las acciones que no tienen vuelta atrás se confirman; el resto, no.
 const A_CONFIRMAR: Record<string, string> = {
@@ -121,65 +121,6 @@ function Archivo({ a, puedeEditar }: { a: ArchivoDelResultado; puedeEditar: bool
   );
 }
 
-function ObservacionDelRevisor({ o, puedeResponder }: { o: Observacion; puedeResponder: boolean }) {
-  const [respuesta, setRespuesta] = useState('');
-  const responder = useResponder();
-  const avisar = useAvisar();
-  const abierta = o.estado === 'ABIERTA';
-  return (
-    <Box sx={{ py: 2, borderTop: 1, borderColor: 'divider' }}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
-        <EtiquetaDeEstado tono={abierta ? 'attention' : 'info'} texto={abierta ? 'Abierta' : 'Respondida'} />
-        <Typography variant="caption" color="text.secondary">
-          {o.usuario_observa} · {fechaHora(o.creada_el)}
-          {o.archivo_codigo && ` · ${o.archivo_codigo}`}
-          {o.numero_fila && ` · fila ${o.numero_fila}`}
-        </Typography>
-      </Stack>
-      <Typography>{o.texto}</Typography>
-      {o.respuesta ? (
-        <Box sx={{ mt: 1, pl: 1.5, borderLeft: 3, borderColor: 'divider' }}>
-          <Typography variant="body2">
-            <strong>Respuesta:</strong> {o.respuesta}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {o.usuario_responde} · {fechaHora(o.respondida_el)}
-          </Typography>
-        </Box>
-      ) : (
-        puedeResponder && (
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1 }}>
-            <TextField
-              size="small"
-              fullWidth
-              label="Respuesta a la observación"
-              value={respuesta}
-              onChange={(e) => setRespuesta(e.target.value)}
-            />
-            <Button
-              variant="outlined"
-              disabled={!respuesta.trim() || responder.isPending}
-              onClick={() =>
-                responder.mutate(
-                  { observacion: o.id, respuesta },
-                  {
-                    onSuccess: (r) => {
-                      setRespuesta('');
-                      avisar({ texto: r.mensaje });
-                    },
-                    onError: (e) => avisar({ texto: mensajeDeError(e), error: true }),
-                  },
-                )
-              }
-            >
-              Responder
-            </Button>
-          </Stack>
-        )
-      )}
-    </Box>
-  );
-}
 
 export function Resultado() {
   const { periodo, jurisdiccion, cambiar } = useFiltros();
@@ -310,7 +251,12 @@ export function Resultado() {
               />
               <CardContent sx={{ pt: 0, '&:last-child': { pb: 0 } }}>
                 {d.observaciones.map((o) => (
-                  <ObservacionDelRevisor key={o.id} o={o} puedeResponder={d.puede_responder} />
+                  <TarjetaDeObservacion
+                    key={o.id}
+                    o={o}
+                    permisos={{ puedeObservar: false, puedeResponder: d.puede_responder }}
+                    ubicacion={dondeEsta(o) || undefined}
+                  />
                 ))}
               </CardContent>
             </Card>

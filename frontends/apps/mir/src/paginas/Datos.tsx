@@ -1,4 +1,5 @@
 import ArrowBack from '@mui/icons-material/ArrowBack';
+import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutlineOutlined';
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
@@ -10,6 +11,8 @@ import {
   Alert,
   Box,
   Button,
+  Card,
+  CardContent,
   FormControlLabel,
   LinearProgress,
   MenuItem,
@@ -26,10 +29,18 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { mensajeDeError, useCorregir, useDatos, type Celda, type FilaDeDatos } from '@mir/api';
+import {
+  mensajeDeError,
+  useCorregir,
+  useDatos,
+  type Celda,
+  type FilaDeDatos,
+} from '@mir/api';
 import { EtiquetaDeEstado, Titulo, useAvisar, useConfirmar } from '@mir/ui';
 import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ObservacionDelDato, TarjetaDeObservacion } from '../comun/Observaciones';
+import { dondeEsta } from '../comun/ubicacion';
 import { tonoDeLaPresentacion } from '../comun/estados';
 import { fechaHora, plural } from '../comun/formato';
 
@@ -131,15 +142,41 @@ function CampoEditable({
   );
 }
 
-function Fila({ f, editable, alCorregir }: { f: FilaDeDatos; editable: boolean; alCorregir: AlCorregir }) {
+type ParaObservar = {
+  permisos: { puedeObservar: boolean; puedeResponder: boolean };
+  presentacion: number;
+  importacion: number;
+};
+
+function Fila({
+  f,
+  editable,
+  alCorregir,
+  obs,
+}: {
+  f: FilaDeDatos;
+  editable: boolean;
+  alCorregir: AlCorregir;
+  obs: ParaObservar;
+}) {
+  const abiertas = f.celdas.filter((c) => c.observacion?.estado === 'ABIERTA').length;
   return (
-    <Accordion variant="outlined" disableGutters slotProps={{ transition: { unmountOnExit: true } }}>
+    // Una fila con observaciones sin resolver arranca abierta: es lo que hay que mirar.
+    <Accordion
+      variant="outlined"
+      disableGutters
+      defaultExpanded={abiertas > 0}
+      slotProps={{ transition: { unmountOnExit: true } }}
+    >
       <AccordionSummary expandIcon={<ExpandMore />}>
         <Stack sx={{ width: '100%' }} spacing={0.5}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
             {/* De quién es la fila, no sólo su número: pedido de la DNPYPI (#67). */}
             <Typography sx={{ fontWeight: 500 }}>{quien(f)}</Typography>
             {f.estado === 'EDITADA' && <EtiquetaDeEstado tono="pending" texto="Editada" />}
+            {abiertas > 0 && (
+              <EtiquetaDeEstado tono="critical" texto={plural(abiertas, 'observación', 'observaciones')} />
+            )}
             {f.avisos.length > 0 && (
               <EtiquetaDeEstado tono="attention" texto={plural(f.avisos.length, 'advertencia', 'advertencias')} />
             )}
@@ -154,7 +191,19 @@ function Fila({ f, editable, alCorregir }: { f: FilaDeDatos; editable: boolean; 
       <AccordionDetails>
         <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' } }}>
           {f.celdas.map((c) => (
-            <CampoEditable key={c.nombre} fila={f} celda={c} editable={editable} alCorregir={alCorregir} />
+            <Box key={c.nombre}>
+              <CampoEditable fila={f} celda={c} editable={editable} alCorregir={alCorregir} />
+              <ObservacionDelDato
+                observacion={c.observacion}
+                permisos={obs.permisos}
+                ubicacion={{
+                  presentacion: obs.presentacion,
+                  importacion: obs.importacion,
+                  numero_fila: f.numero_fila,
+                  campo_id: c.campo_id,
+                }}
+              />
+            </Box>
           ))}
         </Box>
       </AccordionDetails>
@@ -185,6 +234,14 @@ export function Datos() {
   if (consulta.isError) return <Alert severity="error">No existe esa importación, o no es de tu jurisdicción.</Alert>;
   const d = consulta.data;
   const c = d.contexto;
+  const abiertas = d.observaciones.filter((o) => o.estado === 'ABIERTA');
+  const resueltas = d.observaciones.filter((o) => o.estado === 'RESPONDIDA' || o.estado === 'SUBSANADA');
+  // Observa el nivel nacional; responde la jurisdicción, y sólo si la carga admite cambios.
+  const paraObservar: ParaObservar = {
+    permisos: { puedeObservar: d.puede_observar, puedeResponder: d.puede_responder && c.editable },
+    presentacion: c.presentacion_id,
+    importacion: id,
+  };
 
   const alCorregir: AlCorregir = async (fila, celda, valor) => {
     const motivo = await confirmar({
@@ -269,6 +326,39 @@ export function Datos() {
           </Alert>
         )}
 
+        {/* Lo que falta resolver, arriba de todo y a la vista: la lista de
+            observaciones sin resolver tiene que quedar muy clara (27-09-2026).
+            Lo resuelto, plegado debajo. */}
+        {(abiertas.length > 0 || resueltas.length > 0) && (
+          <Card variant="outlined">
+            <CardContent>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
+                <ChatBubbleOutline fontSize="small" color={abiertas.length ? 'error' : 'action'} />
+                <Typography sx={{ fontWeight: 500 }}>
+                  {abiertas.length
+                    ? `Observaciones sin resolver: ${abiertas.length}`
+                    : 'No quedan observaciones sin resolver'}
+                </Typography>
+              </Stack>
+              {abiertas.map((o) => (
+                <TarjetaDeObservacion key={o.id} o={o} permisos={paraObservar.permisos} ubicacion={dondeEsta(o)} />
+              ))}
+              {resueltas.length > 0 && (
+                <Accordion variant="outlined" disableGutters sx={{ mt: 1.5 }}>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography variant="body2">Resueltas ({resueltas.length})</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    {resueltas.map((o) => (
+                      <TarjetaDeObservacion key={o.id} o={o} permisos={paraObservar.permisos} ubicacion={dondeEsta(o)} />
+                    ))}
+                  </AccordionDetails>
+                </Accordion>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: { md: 'center' } }}>
           {d.hojas.length > 1 && (
             <TextField
@@ -292,6 +382,17 @@ export function Datos() {
             }
             label={`Sólo las filas con advertencia (${d.con_advertencia})`}
           />
+          {abiertas.length > 0 && (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={params.get('solo') === 'observadas'}
+                  onChange={(e) => poner({ solo: e.target.checked ? 'observadas' : '', pagina: '' })}
+                />
+              }
+              label="Sólo las filas con observaciones sin resolver"
+            />
+          )}
           <Typography variant="body2" color="text.secondary" sx={{ ml: { md: 'auto' } }}>
             {plural(d.total, 'fila', 'filas')} · página {d.pagina} de {d.paginas}
           </Typography>
@@ -301,7 +402,13 @@ export function Datos() {
         <Box>
           {d.filas.map((f) => (
             // La clave incluye la página: al cambiar de página, los campos arrancan de cero.
-            <Fila key={`${d.hoja.id}-${f.numero_fila}`} f={f} editable={d.puede_editar} alCorregir={alCorregir} />
+            <Fila
+              key={`${d.hoja.id}-${f.numero_fila}`}
+              f={f}
+              editable={d.puede_editar}
+              alCorregir={alCorregir}
+              obs={paraObservar}
+            />
           ))}
           {d.filas.length === 0 && (
             <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>

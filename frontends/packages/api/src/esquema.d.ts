@@ -158,6 +158,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mir/observaciones/{observacion_id}/desestimar/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description El revisor retira su observación. */
+        post: operations["mir_observaciones_desestimar_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/observaciones/{observacion_id}/reabrir/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description El revisor no acepta la respuesta: la observación vuelve a abrirse. */
+        post: operations["mir_observaciones_reabrir_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mir/observaciones/{observacion_id}/respuesta/": {
         parameters: {
             query?: never;
@@ -551,6 +585,8 @@ export interface components {
             valor: string;
             opciones: string[];
             tiene_aviso: boolean;
+            campo_id: number;
+            observacion: components["schemas"]["Observacion"] | null;
         };
         Comprobante: {
             id: number;
@@ -582,6 +618,7 @@ export interface components {
             estado_presentacion: string;
             estado_legible: string;
             editable: boolean;
+            presentacion_id: number;
         };
         /** @description Lo que se manda para corregir un dato. */
         Correccion: {
@@ -610,6 +647,9 @@ export interface components {
             filas: components["schemas"]["FilaDeDatos"][];
             historial: components["schemas"]["Cambio"][];
             descarga_historial: string;
+            puede_observar: boolean;
+            puede_responder: boolean;
+            observaciones: components["schemas"]["Observacion"][];
         };
         Descargas: {
             errores: string;
@@ -622,6 +662,8 @@ export interface components {
             resumen: components["schemas"]["HallazgoResumido"][];
             severidad_unica: string | null;
             puede_editar: boolean;
+            puede_corregir: boolean;
+            observaciones_abiertas: number;
             descargas: components["schemas"]["Descargas"];
         };
         ErrorDelArchivo: {
@@ -717,6 +759,7 @@ export interface components {
             texto: string;
             importacion_id?: number | null;
             numero_fila?: number | null;
+            campo_id?: number | null;
         };
         Observacion: {
             id: number;
@@ -727,6 +770,11 @@ export interface components {
             creada_el: string | null;
             archivo_codigo: string | null;
             numero_fila: number | null;
+            importacion_id: number | null;
+            hoja: string | null;
+            campo: string | null;
+            campo_titulo: string | null;
+            identificador_registro: string | null;
             respuesta: string | null;
             usuario_responde: string | null;
             /** Format: date-time */
@@ -989,7 +1037,7 @@ export interface operations {
             query?: {
                 hoja?: number;
                 pagina?: number;
-                /** @description «avisos»: sólo las filas con advertencia */
+                /** @description «avisos»: las filas con advertencia; «observadas»: con observaciones sin resolver */
                 solo?: string;
             };
             header?: never;
@@ -1142,6 +1190,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Inicio"];
+                };
+            };
+        };
+    };
+    mir_observaciones_desestimar_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                observacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensaje"];
+                };
+            };
+        };
+    };
+    mir_observaciones_reabrir_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                observacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Respuesta"];
+                "application/x-www-form-urlencoded": components["schemas"]["Respuesta"];
+                "multipart/form-data": components["schemas"]["Respuesta"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensaje"];
                 };
             };
         };

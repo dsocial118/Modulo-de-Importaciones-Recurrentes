@@ -163,21 +163,28 @@ export function Detalle() {
               <Tooltip
                 describeChild
                 title={
-                  d.puede_editar
+                  d.puede_corregir
                     ? 'Los datos que entraron, fila por fila: corregí las advertencias sin volver a subir el archivo.'
                     : 'Los datos que entraron, fila por fila. Tu rol los ve pero no los cambia.'
                 }
               >
                 <Button
                   variant="contained"
-                  startIcon={d.puede_editar ? <EditOutlined /> : <VisibilityOutlined />}
+                  startIcon={d.puede_corregir ? <EditOutlined /> : <VisibilityOutlined />}
                   onClick={() => navegar(`/resultado/${id}/datos`)}
                 >
-                  {d.puede_editar ? 'Ver y corregir datos' : 'Ver datos'}
+                  {d.puede_corregir ? 'Ver y corregir datos' : 'Ver datos'}
                 </Button>
               </Tooltip>
             )}
             <MenuDeDescargas marcado={d.descargas.marcado} informe={d.descargas.errores} />
+            {/* Las observaciones sin resolver se ven desde acá, sin entrar. */}
+            {d.observaciones_abiertas > 0 && (
+              <EtiquetaDeEstado
+                tono="critical"
+                texto={plural(d.observaciones_abiertas, 'observación sin resolver', 'observaciones sin resolver')}
+              />
+            )}
           </Stack>
         )}
 

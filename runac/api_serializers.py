@@ -232,6 +232,12 @@ class ObservacionSerializer(serializers.Serializer):
     creada_el = serializers.DateTimeField(allow_null=True)
     archivo_codigo = serializers.CharField(allow_null=True)
     numero_fila = serializers.IntegerField(allow_null=True)
+    # Dónde: una observación sobre un dato apunta a su celda.
+    importacion_id = serializers.IntegerField(allow_null=True)
+    hoja = serializers.CharField(allow_null=True)
+    campo = serializers.CharField(allow_null=True)
+    campo_titulo = serializers.CharField(allow_null=True)
+    identificador_registro = serializers.CharField(allow_null=True)
     respuesta = serializers.CharField(allow_null=True)
     usuario_responde = serializers.CharField(allow_null=True)
     respondida_el = serializers.DateTimeField(allow_null=True)
@@ -285,6 +291,8 @@ class NuevaObservacionSerializer(serializers.Serializer):
     texto = serializers.CharField()
     importacion_id = serializers.IntegerField(required=False, allow_null=True)
     numero_fila = serializers.IntegerField(required=False, allow_null=True)
+    # El dato observado: con importación y fila, la celda.
+    campo_id = serializers.IntegerField(required=False, allow_null=True)
 
 
 class RespuestaSerializer(serializers.Serializer):
@@ -382,6 +390,8 @@ class DetalleSerializer(serializers.Serializer):
     # ni la columna ni el filtro.
     severidad_unica = serializers.CharField(allow_null=True)
     puede_editar = serializers.BooleanField()
+    puede_corregir = serializers.BooleanField()
+    observaciones_abiertas = serializers.IntegerField()
     descargas = DescargasSerializer()
 
 
@@ -411,6 +421,7 @@ class ContextoDeEdicionSerializer(serializers.Serializer):
     estado_presentacion = serializers.CharField()
     estado_legible = serializers.CharField()
     editable = serializers.BooleanField()
+    presentacion_id = serializers.IntegerField()
 
 
 class HojaSerializer(serializers.Serializer):
@@ -432,6 +443,8 @@ class CeldaSerializer(serializers.Serializer):
     valor = serializers.CharField(allow_blank=True)
     opciones = serializers.ListField(child=serializers.CharField())
     tiene_aviso = serializers.BooleanField()
+    campo_id = serializers.IntegerField()
+    observacion = ObservacionSerializer(allow_null=True)
 
 
 class FilaDeDatosSerializer(serializers.Serializer):
@@ -466,6 +479,9 @@ class DatosSerializer(serializers.Serializer):
     filas = FilaDeDatosSerializer(many=True)
     historial = CambioSerializer(many=True)
     descarga_historial = serializers.CharField()
+    puede_observar = serializers.BooleanField()
+    puede_responder = serializers.BooleanField()
+    observaciones = ObservacionSerializer(many=True)
 
 
 class CorreccionSerializer(serializers.Serializer):
