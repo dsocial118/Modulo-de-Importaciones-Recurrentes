@@ -1295,11 +1295,17 @@ class ReglasView(APIView):
     ):  # pylint: disable=too-many-locals  # arma una pantalla entera
         _exigir(request.user, "estructura")
         hojas = []
-        for h in svc.hojas_disponibles():
+        # Con el nombre corto del archivo, no con su código (27-09-2026).
+        # Si el archivo tiene una sola hoja, basta con el archivo.
+        nombres = svc.nombres_cortos()
+        disponibles = svc.hojas_disponibles()
+        cuantas: dict[str, int] = {}
+        for h in disponibles:
+            cuantas[h["archivo"]] = cuantas.get(h["archivo"], 0) + 1
+        for h in disponibles:
+            archivo = nombres.get(h["archivo"], h["archivo"])
             etiqueta = (
-                h["hoja"]
-                if h["hoja"].upper().replace(" ", "") in h["archivo"].replace("_", "")
-                else f'{h["archivo"]} — {h["hoja"]}'
+                archivo if cuantas[h["archivo"]] == 1 else f'{archivo} — {h["hoja"]}'
             )
             hojas.append({"clave": f'{h["archivo"]}|{h["hoja"]}', "etiqueta": etiqueta})
         claves = [h["clave"] for h in hojas]

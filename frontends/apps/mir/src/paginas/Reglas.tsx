@@ -282,16 +282,22 @@ function Hoja({ d }: { d: TReglas }) {
       <Card variant="outlined">
         <CardContent sx={{ pt: 0, '&:last-child': { pb: 0 } }}>
           {ancho && (
+            // Los títulos, como los de las tablas: verde de marca con letra
+            // blanca, de borde a borde de la tarjeta (27-09-2026).
             <Box
               sx={{
                 display: 'grid',
                 gap: 2,
-                px: 1,
-                py: 1.5,
+                mx: -2,
+                px: 3,
+                py: 1.25,
+                mb: 0.5,
                 gridTemplateColumns: '48px minmax(0,1.4fr) 120px minmax(0,1.4fr) minmax(0,1fr)',
-                color: 'text.secondary',
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                borderRadius: '8px 8px 0 0',
                 fontSize: 14,
-                fontWeight: 500,
+                fontWeight: 600,
               }}
             >
               <span>Col.</span>

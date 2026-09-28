@@ -332,9 +332,9 @@ export function Cargar() {
     <>
       <Titulo
         titulo={d.jurisdiccion ? `Cargar archivos · ${d.jurisdiccion}` : "Cargar archivos"}
-        // Una sola explicación, corta (27-09-2026): antes eran dos, una arriba y
-        // otra abajo de la lista.
-        subtitulo="De a uno, con el nombre y la estructura de la plantilla. Si un archivo tiene errores bloqueantes no entra ninguna fila: se corrige el Excel y se vuelve a importar. Las advertencias se resuelven en el sistema."
+        // Una sola explicación, con el texto del responsable funcional (27-09-2026):
+        // antes eran dos, una arriba y otra abajo de la lista.
+        subtitulo="Deben ser cargados de a uno, con el nombre requerido y la estructura de la plantilla. Si un archivo tiene errores bloqueantes no se importa: se deberá corregir el Excel y volver a importar. Las advertencias se pueden resolver dentro del sistema."
       >
         <SelectorDeJurisdiccion
           jurisdicciones={d.jurisdicciones}
