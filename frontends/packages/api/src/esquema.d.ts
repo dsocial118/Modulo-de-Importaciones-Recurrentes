@@ -1174,6 +1174,7 @@ export interface components {
             csrf_token: string;
             salir: string;
             aviso: string;
+            marca: string;
             nombres_de_archivo: {
                 [key: string]: string;
             };

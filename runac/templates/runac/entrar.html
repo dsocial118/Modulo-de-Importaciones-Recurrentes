@@ -22,7 +22,7 @@
     </style>
     <div class="entrar">
         <div class="card">
-            <div class="card-header">Entrar a SISOC · RUNAC</div>
+            <div class="card-header">Entrar a {{ marca }}</div>
             <div class="card-body">
                 {% if form.errors %}<div class="alert alert-danger py-2">Usuario o contraseña incorrectos.</div>{% endif %}
                 <form method="post" id="form-entrar">

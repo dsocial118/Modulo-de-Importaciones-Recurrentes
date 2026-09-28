@@ -112,7 +112,7 @@ export function Layout({ instancia, usuario, rol, entidad, aviso, menu, activa, 
           )}
           <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 1 }}>
             <Typography variant="h6" component="div" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-              SISOC · {instancia}
+              {instancia}
             </Typography>
             {/* Etiqueta de seguridad: que nadie confunda esto con un sistema con
                 datos reales, ni en persona ni en una captura que circule. Va al
@@ -123,7 +123,7 @@ export function Layout({ instancia, usuario, rol, entidad, aviso, menu, activa, 
                 role="note"
                 variant="body2"
                 component="div"
-                sx={{ color: 'nav.accent', fontWeight: 500, display: { xs: 'none', md: 'block' }, whiteSpace: 'nowrap' }}
+                sx={{ color: 'nav.accent', fontWeight: 500, display: { xs: 'none', lg: 'block' }, whiteSpace: 'nowrap' }}
               >
                 ({aviso})
               </Typography>
@@ -166,7 +166,7 @@ export function Layout({ instancia, usuario, rol, entidad, aviso, menu, activa, 
           // En pantallas angostas no entra al lado del nombre: queda en su franja.
           <Box
             role="note"
-            sx={{ display: { xs: 'block', md: 'none' }, bgcolor: atencion.surface, color: atencion.text, px: 2, py: 0.5, fontSize: 13, fontWeight: 500, textAlign: 'center' }}
+            sx={{ display: { xs: 'block', lg: 'none' }, bgcolor: atencion.surface, color: atencion.text, px: 2, py: 0.5, fontSize: 13, fontWeight: 500, textAlign: 'center' }}
           >
             {aviso}
           </Box>
@@ -180,7 +180,7 @@ export function Layout({ instancia, usuario, rol, entidad, aviso, menu, activa, 
         sx={{ width: ANCHO, flexShrink: 0, displayPrint: 'none', '& .MuiDrawer-paper': { width: ANCHO, boxSizing: 'border-box' } }}
       >
         <Toolbar />
-        {aviso && <Box sx={{ height: 28, display: { xs: 'block', md: 'none' } }} />}
+        {aviso && <Box sx={{ height: 28, display: { xs: 'block', lg: 'none' } }} />}
         {lista}
       </Drawer>
 
@@ -200,7 +200,7 @@ export function Layout({ instancia, usuario, rol, entidad, aviso, menu, activa, 
         }}
       >
         <Toolbar sx={{ displayPrint: 'none', flexShrink: 0 }} />
-        {aviso && <Box sx={{ height: 28, flexShrink: 0, display: { xs: 'block', md: 'none' }, displayPrint: 'none' }} />}
+        {aviso && <Box sx={{ height: 28, flexShrink: 0, display: { xs: 'block', lg: 'none' }, displayPrint: 'none' }} />}
         {children}
       </Box>
     </Box>

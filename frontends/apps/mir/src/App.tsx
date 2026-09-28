@@ -50,7 +50,7 @@ export function App() {
   }, [pathname]);
 
   useEffect(() => {
-    if (sesion.data) document.title = sesion.data.instancia;
+    if (sesion.data) document.title = sesion.data.marca;
   }, [sesion.data]);
 
   if (sesion.isPending) {
@@ -93,7 +93,7 @@ export function App() {
   return (
     <Avisos>
       <Layout
-        instancia={s.instancia}
+        instancia={s.marca}
         usuario={s.usuario}
         rol={s.nombre_del_rol}
         entidad={s.jurisdiccion}

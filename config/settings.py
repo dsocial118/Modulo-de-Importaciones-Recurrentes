@@ -177,4 +177,8 @@ MIR_INSTANCIA = os.getenv("MIR_INSTANCIA", "RUNAC")
 MIR_MOSTRAR_AVISO = True
 # Desde el 27-09-2026 va al lado del nombre, en la barra, y no en una franja
 # aparte: a pedido del responsable funcional, para ganar lugar. Sigue a la vista.
-MIR_AVISO = "Versión 1.0 · funcional con datos de prueba"
+# La marca, igual en todos lados (pantallas, Excel, manual): ecosistema,
+# módulo con su versión e implementación (decidido el 28-09-2026).
+MIR_VERSION = "1.0"
+MIR_MARCA = f"SISOC · MIR v{MIR_VERSION} · {MIR_INSTANCIA}"
+MIR_AVISO = "funcional con datos de prueba"

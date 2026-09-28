@@ -55,9 +55,18 @@ LIMITE_LISTA_INLINE = 250
 # siguen andando.
 LISTAS = "Listas"
 
-AZUL = "1F4E79"
-AZUL_CLARO = "DDEBF7"
-GRIS = "F2F2F2"
+# Los colores del MIR (28-09-2026), con jerarquía: el título de la hoja en el
+# verde de la navegación con la franja ámbar; los grupos de columnas, en el
+# verde más oscuro; los títulos obligatorios en verde y los opcionales en un
+# verde más clarito. Antes era azul, que no es de la marca. Los mismos valores
+# están en `excel_estilo.py`, que el motor no importa porque corre fuera de
+# Django.
+VERDE_NAV = "045F5B"
+VERDE_GRUPO = "073B38"
+VERDE_OBLIGATORIO = "9DCECB"
+VERDE_OPCIONAL = "E4F1F0"
+AMBAR = "FFC000"
+MARCA = os.environ.get("MIR_MARCA", "SISOC · MIR v1.0 · RUNAC")
 BORDE = Border(*[Side(style="thin", color="BFBFBF")] * 4)
 
 
@@ -215,7 +224,7 @@ def escribir_hoja_listas(wb, catalogos) -> dict[str, str]:
         ws.cell(row=1, column=i, value=cat["nombre"][:255]).font = Font(
             bold=True, color="FFFFFF"
         )
-        ws.cell(row=1, column=i).fill = PatternFill("solid", fgColor=AZUL)
+        ws.cell(row=1, column=i).fill = PatternFill("solid", fgColor=VERDE_NAV)
         for j, v in enumerate(cat["valores"], start=2):
             ws.cell(row=j, column=i, value=v)
         ws.column_dimensions[letra].width = 28
@@ -256,13 +265,15 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
         hoja.get("descripcion") or archivo["titulo"] or ""
     )
     if titulo and fila_titulo and fila_titulo >= 1:
-        ws.cell(row=fila_titulo, column=1, value=titulo)
+        # Con la marca, para que quede el rastro de dónde salió (28-09-2026).
+        ws.cell(row=fila_titulo, column=1, value=f"{titulo}   ·   {MARCA}")
         ws.merge_cells(
             start_row=fila_titulo, start_column=1, end_row=fila_titulo, end_column=n
         )
         c = ws.cell(row=fila_titulo, column=1)
         c.font = Font(bold=True, size=14, color="FFFFFF")
-        c.fill = PatternFill("solid", fgColor=AZUL)
+        c.fill = PatternFill("solid", fgColor=VERDE_NAV)
+        c.border = Border(bottom=Side(style="thick", color=AMBAR))
         c.alignment = Alignment(horizontal="center", vertical="center")
         ws.row_dimensions[fila_titulo].height = 24
     # La fila 1, cuando el titulo no la ocupa.
@@ -318,7 +329,7 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
                     )
                 c = ws.cell(row=fila_dim, column=i + 1)
                 c.font = Font(bold=True, color="FFFFFF")
-                c.fill = PatternFill("solid", fgColor="2E75B6")
+                c.fill = PatternFill("solid", fgColor=VERDE_GRUPO)
                 c.alignment = Alignment(horizontal="center", vertical="center")
             i = j + 1
 
@@ -329,7 +340,8 @@ def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
         c = ws.cell(row=fila_enc, column=k, value=titulo)
         c.font = Font(bold=True)
         c.fill = PatternFill(
-            "solid", fgColor=AZUL_CLARO if campo["obligatorio"] else GRIS
+            "solid",
+            fgColor=VERDE_OBLIGATORIO if campo["obligatorio"] else VERDE_OPCIONAL,
         )
         c.alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
         c.border = BORDE
@@ -405,7 +417,8 @@ def generar(
     wb[LISTAS].sheet_state = "hidden"
 
     wb.properties.title = archivo["titulo"] or codigo
-    wb.properties.subject = f"RUNAC — plantilla {codigo}"
+    wb.properties.subject = f"{MARCA} — plantilla {codigo}"
+    wb.properties.creator = MARCA
     wb.properties.description = (
         f"Generada desde la Capa 1 el {date.today().isoformat()}"
         + (f" para el período {periodo}." if periodo else ".")

@@ -55,6 +55,8 @@ class SesionSerializer(serializers.Serializer):
     salir = serializers.CharField()
     # La etiqueta «datos de prueba». Vacía cuando no corresponde mostrarla.
     aviso = serializers.CharField(allow_blank=True)
+    # «SISOC · MIR v1.0 · RUNAC»: ecosistema, módulo e implementación.
+    marca = serializers.CharField()
     # Del código del archivo a su nombre corto. Sin nombre corto, el código.
     nombres_de_archivo = serializers.DictField(child=serializers.CharField())
 

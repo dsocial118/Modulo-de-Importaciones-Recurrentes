@@ -29,6 +29,7 @@ def datos_de_sesion(request):
     return {
         "mostrar_aviso": settings.MIR_MOSTRAR_AVISO,
         "aviso": settings.MIR_AVISO,
+        "marca": settings.MIR_MARCA,
         # El rol define qué puede hacer; la jurisdicción, sobre qué datos.
         "rol": nombre_del_rol(usuario) if autenticado else None,
         # Sólo la de quien pertenece a una: el nivel nacional no es de ninguna,

@@ -2628,6 +2628,8 @@ components:
           type: string
         aviso:
           type: string
+        marca:
+          type: string
         nombres_de_archivo:
           type: object
           additionalProperties:
@@ -2638,6 +2640,7 @@ components:
       - es_nacional
       - instancia
       - jurisdiccion
+      - marca
       - menu
       - nombre_del_rol
       - nombres_de_archivo

@@ -658,8 +658,10 @@ def armar_archivo_para_corregir(
             ),
             (
                 "Colores de los títulos",
-                "Celeste: dato obligatorio. Gris: opcional. Pasá el mouse por un título para "
-                "ver qué va, los valores posibles y los controles.",
+                "Verde: dato obligatorio. Verde clarito: opcional. Verde oscuro: grupo de "
+                "columnas. (En las plantillas bajadas antes del 28-09-2026, celeste y gris.) "
+                "Pasá el mouse por un título para ver qué va, los valores posibles y los "
+                "controles.",
             ),
         ],
         generado,

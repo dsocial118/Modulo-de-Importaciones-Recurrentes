@@ -10,8 +10,10 @@ Las solapas NO llevan color. Excel muestra la solapa activa clara y las demás
 con su color lleno: una solapa pintada llama más la atención que la que se
 está mirando, y parecía que la activa era otra (26-09-2026).
 
-La plantilla conserva su aspecto propio (`motor/plantilla.py`): sus colores de
-título —celeste obligatorio, gris opcional— son los que explica el instructivo.
+Desde el 28-09-2026 todos llevan la marca —«SISOC · MIR v1.0 · RUNAC»— en la
+franja ámbar de arriba y en el pie de impresión, y la plantilla usa la misma
+jerarquía de verdes (`motor/plantilla.py`): grupos en el verde más oscuro,
+obligatorios en verde, opcionales en verde clarito.
 """
 
 from __future__ import annotations
@@ -33,8 +35,19 @@ PENDIENTE = {"sup": "EFEFEE", "tin": "44403C", "bor": "78716C"}
 BIEN = {"sup": "C6E3E1", "tin": "045F5B", "bor": "04756F"}
 POR_GRAVEDAD = {"BLOQUEANTE": BLOQUEANTE, "ADVERTENCIA": ADVERTENCIA}
 
-# Los colores con que la plantilla pinta los títulos.
-CELESTE_PLANTILLA, GRIS_PLANTILLA = "DDEBF7", "F2F2F2"
+# Los colores con que la plantilla pinta los títulos: los mismos de
+# `motor/plantilla.py`.
+VERDE_GRUPO, VERDE_OBLIGATORIO, VERDE_OPCIONAL = "073B38", "9DCECB", "E4F1F0"
+
+
+def marca() -> str:
+    """«SISOC · MIR v1.0 · RUNAC»: ecosistema, módulo e implementación."""
+    try:
+        from django.conf import settings  # pylint: disable=import-outside-toplevel
+
+        return settings.MIR_MARCA
+    except Exception:  # pylint: disable=broad-except  # fuera de Django
+        return "SISOC · MIR v1.0 · RUNAC"
 
 
 def fuente(**k) -> Font:
@@ -96,7 +109,7 @@ def para_imprimir(ws, pie: str, repetir: str | None = None) -> None:
     ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
     if repetir:
         ws.print_title_rows = repetir
-    ws.oddFooter.left.text = pie
+    ws.oddFooter.left.text = f"{marca()} · {pie}"
     ws.oddFooter.right.text = "Página &P de &N"
     for parte in (ws.oddFooter.left, ws.oddFooter.right):
         parte.size, parte.font = 8, LETRA
@@ -106,6 +119,12 @@ def portada(ws, titulo: str, subtitulo: str, para_que: str, ancho: int = 6) -> N
     """El encabezado de una hoja de resumen: título, de qué se trata y la franja."""
     ws.sheet_view.showGridLines = False
     ws.column_dimensions["A"].width = 3
+    # La marca, en una franja ámbar arriba de todo: el rastro de dónde salió.
+    ws["B1"] = marca()
+    ws["B1"].font = fuente(size=9, bold=True, color=TINTA)
+    for col in range(2, 2 + ancho):
+        ws.cell(row=1, column=col).fill = relleno(AMBAR)
+    ws.row_dimensions[1].height = 18
     ws["B2"] = titulo
     ws["B2"].font = fuente(size=18, bold=True, color=TEAL)
     ws["B3"] = subtitulo

@@ -103,7 +103,7 @@ def armar(archivo: dict, periodo: str, generado: datetime, usuario: str = "") ->
         # El campo con el color de su título en la plantilla: así se lo reconoce.
         campo = ws.cell(row=n, column=4)
         campo.fill = e.relleno(
-            e.CELESTE_PLANTILLA if c.get("obligatorio") else e.GRIS_PLANTILLA
+            e.VERDE_OBLIGATORIO if c.get("obligatorio") else e.VERDE_OPCIONAL
         )
         campo.font = e.fuente(size=10, bold=True, color=e.TINTA)
         if ob == en_palabras.SEGUN_OTRO:
@@ -206,17 +206,25 @@ def _general(ws, archivo, periodo, generado, campos, titulos, pie, usuario=""):
             e.alto_para(ws, fila, [texto], 95)
             fila += 2
             continue
-        for color, borde, que in (
+        # La jerarquía de verdes de la plantilla (28-09-2026).
+        for color, borde, que, tinta in (
             (
-                e.CELESTE_PLANTILLA,
-                "9DC3E6",
-                "Celeste: dato obligatorio (el título lleva *).",
+                e.VERDE_GRUPO,
+                e.AMBAR,
+                "Verde oscuro: grupo de columnas (el título que abarca a varias).",
+                "FFFFFF",
             ),
-            (e.GRIS_PLANTILLA, "BFBFBF", "Gris: dato opcional."),
+            (
+                e.VERDE_OBLIGATORIO,
+                e.TEAL,
+                "Verde: dato obligatorio (el título lleva *).",
+                e.TINTA,
+            ),
+            (e.VERDE_OPCIONAL, "9DCECB", "Verde clarito: dato opcional.", e.TINTA),
         ):
             c = ws.cell(row=fila, column=3, value=que)
             c.fill = e.relleno(color)
-            c.font = e.fuente(size=10, bold=True, color=e.TINTA)
+            c.font = e.fuente(size=10, bold=True, color=tinta)
             c.border = Border(left=Side(style="thick", color=borde))
             fila += 1
         nota = (
