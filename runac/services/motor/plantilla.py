@@ -237,6 +237,43 @@ def escribir_hoja_listas(wb, catalogos) -> dict[str, str]:
     return rangos
 
 
+def repintar_titulos(ws, hoja) -> None:
+    """Los colores de hoy sobre una hoja ya completada, sin mover nada.
+
+    El archivo para corregir parte del Excel que subió la provincia, y ese
+    Excel conserva los colores de la plantilla con que se armó: las anteriores
+    al 28-09-2026 eran celestes y grises. Acá se repintan el título, la fila de
+    grupos y la de encabezados con los verdes del MIR. Los valores y las
+    posiciones no se tocan: son contra lo que valida el importador.
+    """
+    campos = hoja["campos"]
+    fila_enc = hoja["fila_encabezados"]
+    fila_dim = (fila_enc - 1) if hoja.get("dimensiones") and fila_enc > 1 else None
+    fila_titulo = (
+        (fila_dim - 1) if fila_dim else (fila_enc - 1 if fila_enc > 1 else None)
+    )
+    if fila_titulo and fila_titulo >= 1:
+        c = ws.cell(row=fila_titulo, column=1)
+        if c.value:
+            if MARCA not in str(c.value):
+                c.value = f"{c.value}   ·   {MARCA}"
+            c.font = Font(bold=True, size=14, color="FFFFFF")
+            c.fill = PatternFill("solid", fgColor=VERDE_NAV)
+            c.border = Border(bottom=Side(style="thick", color=AMBAR))
+    for campo in campos:
+        k = campo["orden"]
+        if fila_dim and campo.get("dimension"):
+            c = ws.cell(row=fila_dim, column=k)
+            c.font = Font(bold=True, color="FFFFFF")
+            c.fill = PatternFill("solid", fgColor=VERDE_GRUPO)
+        c = ws.cell(row=fila_enc, column=k)
+        c.font = Font(bold=True)
+        c.fill = PatternFill(
+            "solid",
+            fgColor=VERDE_OBLIGATORIO if campo["obligatorio"] else VERDE_OPCIONAL,
+        )
+
+
 def escribir_hoja_datos(wb, archivo, hoja, rangos, filas_vacias: int):
     ws = wb.create_sheet(hoja["nombre_esperado"][:31])
     campos = hoja["campos"]

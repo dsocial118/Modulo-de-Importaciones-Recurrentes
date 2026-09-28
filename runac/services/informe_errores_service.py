@@ -556,11 +556,13 @@ def armar_archivo_para_corregir(
 
     # El título de cada columna explica qué va: lo que antes decía la hoja de
     # instrucciones, ahora en el comentario, con las mismas palabras que el
-    # instructivo. Los colores de la plantilla no se tocan.
+    # instructivo. Y los títulos se repintan con los verdes de hoy: el Excel
+    # subido puede venir de una plantilla anterior, celeste (28-09-2026).
     for nombre, hoja in hojas.items():
         if nombre in referencia or nombre not in libro.sheetnames:
             continue
         ws = libro[nombre]
+        plantilla.repintar_titulos(ws, hoja)
         for campo in hoja["campos"]:
             celda = ws.cell(row=hoja["fila_encabezados"], column=campo["orden"])
             celda.comment = plantilla._comentario_del_campo(
