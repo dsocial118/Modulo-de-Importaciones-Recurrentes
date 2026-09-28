@@ -36,8 +36,8 @@ export function ObservacionesDelPeriodo() {
   const { periodo, cambiar } = useFiltros();
   const [params, setParams] = useSearchParams();
   const provincia = params.get('provincia');
-  // Sin elegir, lo que falta resolver: es para lo que se entra acá.
-  const estado = params.get('estado') ?? 'ABIERTA';
+  // De entrada, todas: provincia y estado (28-09-2026).
+  const estado = params.get('estado') ?? 'TODAS';
   const consulta = useObservacionesDelPeriodo(periodo, provincia, estado === 'TODAS' ? null : estado);
   const navegar = useNavigate();
   const poner = (clave: string, valor: string) => {
@@ -52,7 +52,10 @@ export function ObservacionesDelPeriodo() {
 
   return (
     <>
-      <Titulo titulo="Observaciones" subtitulo="Todas las del período, para el seguimiento.">
+      <Titulo
+        titulo="Observaciones"
+        subtitulo="Las observaciones que hizo la revisión nacional sobre los datos que importaron las provincias."
+      >
         <TextField
           select
           size="small"
@@ -60,6 +63,8 @@ export function ObservacionesDelPeriodo() {
           value={provincia ?? ''}
           onChange={(e) => poner('provincia', e.target.value)}
           sx={{ minWidth: 180 }}
+          // Que diga «Todas» cuando no hay una elegida: vacío no se entendía.
+          slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
         >
           <MenuItem value="">Todas</MenuItem>
           {d.jurisdicciones.map((j) => (
@@ -76,10 +81,10 @@ export function ObservacionesDelPeriodo() {
           onChange={(e) => poner('estado', e.target.value)}
           sx={{ minWidth: 160 }}
         >
+          <MenuItem value="TODAS">Todas</MenuItem>
           <MenuItem value="ABIERTA">Sin resolver</MenuItem>
           <MenuItem value="RESPONDIDA">Respondidas</MenuItem>
           <MenuItem value="SUBSANADA">Subsanadas</MenuItem>
-          <MenuItem value="TODAS">Todas</MenuItem>
         </TextField>
         {d.periodo && (
           <SelectorDePeriodo periodos={d.periodos} valor={d.periodo.codigo} alCambiar={(x) => cambiar({ periodo: x })} />
@@ -92,10 +97,10 @@ export function ObservacionesDelPeriodo() {
               <TableRow>
                 <TableCell>Provincia</TableCell>
                 <TableCell>Archivo · dato</TableCell>
-                <TableCell>De quién</TableCell>
+                <TableCell>Registro</TableCell>
                 <TableCell>Observación</TableCell>
                 <TableCell>Estado</TableCell>
-                <TableCell>Cuándo</TableCell>
+                <TableCell>Observó</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -135,7 +140,12 @@ export function ObservacionesDelPeriodo() {
                     <TableCell>
                       <EtiquetaDeEstado tono={e.tono} texto={e.texto} />
                     </TableCell>
-                    <TableCell>{fechaHora(o.respondida_el ?? o.creada_el)}</TableCell>
+                    <TableCell>
+                      {o.usuario_observa ?? '—'}
+                      <Typography variant="body2" color="text.secondary">
+                        {fechaHora(o.creada_el)}
+                      </Typography>
+                    </TableCell>
                   </TableRow>
                 );
               })}

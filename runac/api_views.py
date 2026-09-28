@@ -962,7 +962,7 @@ class RevisionView(APIView):
                         for a in circuito.acciones_disponibles(f, request.user)
                     ],
                     "puede_observar": es_revisor
-                    and f["estado"] in ("EN_REVISION", "CERRADA"),
+                    and f["estado"] in circuito.ESTADOS_OBSERVABLES,
                 }
             )
         datos = {
@@ -1198,7 +1198,8 @@ class DatosView(APIView):
             "hoja": {"id": hoja["id"], "nombre": hoja["nombre_esperado"]},
             "puede_editar": puede_editar_datos(request.user) and contexto["editable"],
             # Observa el nivel nacional; responde la jurisdicción.
-            "puede_observar": puede_revisar(request.user),
+            "puede_observar": puede_revisar(request.user)
+            and contexto["estado_presentacion"] in circuito.ESTADOS_OBSERVABLES,
             "puede_responder": puede_editar_datos(request.user),
             "observaciones": observaciones,
             "total": datos["total"],

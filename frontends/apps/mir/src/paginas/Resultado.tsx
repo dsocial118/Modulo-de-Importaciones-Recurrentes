@@ -70,6 +70,9 @@ const A_CONFIRMAR: Record<string, string> = {
   habilitar: 'Concluye la revisión y habilita a la jurisdicción a presentar formalmente.',
 };
 
+// Desde que la provincia cierra la carga hasta que se habilita: igual que el servidor.
+const OBSERVABLES = ['CERRADA', 'EN_REVISION', 'OBSERVADA', 'SUBSANADA'];
+
 const SOLAPAS = ['resumen', 'datos', 'observaciones', 'historial'] as const;
 type Solapa = (typeof SOLAPAS)[number];
 
@@ -306,7 +309,8 @@ function SolapaObservaciones({ d, puedeObservar }: { d: TResultado; puedeObserva
     <Stack spacing={2}>
       {d.observaciones.length === 0 && (
         <Typography color="text.secondary" sx={{ py: 2 }}>
-          No hay observaciones. El revisor observa cada dato desde la solapa Datos.
+          No hay observaciones. El revisor observa cada dato desde la solapa Datos, una vez que la provincia cierra la
+          carga.
         </Typography>
       )}
       {abiertas.length > 0 && (
@@ -532,7 +536,13 @@ export function Resultado() {
 
           {solapa === 'resumen' && <SolapaResumen d={d} alVerDatos={(i) => irA('datos', i)} />}
           {solapa === 'datos' && <SolapaDatos d={d} importacion={importacion} alElegir={(i) => irA('datos', i)} />}
-          {solapa === 'observaciones' && <SolapaObservaciones d={d} puedeObservar={!!sesion.data?.permisos.revisar} />}
+          {solapa === 'observaciones' && (
+            <SolapaObservaciones
+              d={d}
+              // Se observa desde que la provincia cierra la carga (28-09-2026).
+              puedeObservar={!!sesion.data?.permisos.revisar && !!p && OBSERVABLES.includes(p.estado)}
+            />
+          )}
           {solapa === 'historial' && <SolapaHistorial presentacion={p?.id ?? null} />}
         </>
       )}

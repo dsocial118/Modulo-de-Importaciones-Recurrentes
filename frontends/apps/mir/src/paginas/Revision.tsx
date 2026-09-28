@@ -1,7 +1,9 @@
 import {
   Alert,
+  Box,
   Button,
   Card,
+  Chip,
   LinearProgress,
   Stack,
   Table,
@@ -102,6 +104,7 @@ export function Revision() {
   if (consulta.isError) return <Alert severity="error">No se pudo cargar la revisión.</Alert>;
   const d = consulta.data;
   const pendientes = d.presentaciones.filter((p) => LE_TOCA.includes(p.estado));
+  const otras = d.presentaciones.filter((p) => !LE_TOCA.includes(p.estado));
 
   return (
     <>
@@ -143,11 +146,34 @@ export function Revision() {
           </Table>
         </TableContainer>
         {pendientes.length === 0 && (
-          <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-            No hay nada para revisar ahora.
-          </Typography>
+          <Box sx={{ py: 3, px: 2, textAlign: 'center' }}>
+            <Typography sx={{ fontWeight: 700 }}>Ninguna provincia está esperando tu revisión.</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Una provincia aparece acá cuando cierra la carga y la envía a revisión nacional, y vuelve a aparecer cuando
+              responde tus observaciones.
+            </Typography>
+          </Box>
         )}
       </Card>
+      {/* Las demás, para que se entienda por qué no están arriba (28-09-2026). */}
+      {otras.length > 0 && (
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.75 }}>
+            Las demás provincias, que todavía no te toca revisar
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+            {otras.map((p) => (
+              <Chip
+                key={p.id}
+                size="small"
+                variant="outlined"
+                label={`${p.jurisdiccion} · ${p.estado_legible}`}
+                onClick={() => navegar(conFiltros('/resultado', d.periodo?.codigo, p.jurisdiccion))}
+              />
+            ))}
+          </Box>
+        </Box>
+      )}
       <Button size="small" sx={{ mt: 1.5 }} onClick={() => navegar(conFiltros('/situacion', d.periodo?.codigo))}>
         Ver cómo viene cada provincia en el Estado de situación
       </Button>

@@ -284,6 +284,10 @@ def presentaciones_del_periodo(codigo_periodo: str) -> list[dict]:
 
 RESUELTAS = ("RESPONDIDA", "SUBSANADA", "DESESTIMADA")
 
+# Cuándo se puede observar: desde que la provincia cierra la carga hasta que se
+# habilita la presentación.
+ESTADOS_OBSERVABLES = ("CERRADA", "EN_REVISION", "OBSERVADA", "SUBSANADA")
+
 _SELECT_OBSERVACION = """
     SELECT o.*, a.codigo AS archivo_codigo, c.nombre AS campo,
            c.titulo_esperado AS campo_titulo, h.nombre_esperado AS hoja
@@ -372,6 +376,19 @@ def crear_observacion(presentacion_id: int, usuario, texto: str, ubicacion=None)
     if not (texto or "").strip():
         raise TransicionInvalida("La observación no puede estar vacía.")
     with connection.cursor() as cur:
+        # Se observa lo que la provincia ya dio por cargado: durante la carga
+        # el estado decía «En carga» y la revisión ya estaba andando, y no se
+        # entendía (decidido por el responsable funcional el 28-09-2026,
+        # opción a).
+        cur.execute(
+            "SELECT estado FROM mir_c2_presentacion WHERE id = %s", [presentacion_id]
+        )
+        fila = cur.fetchone()
+        if not fila or fila[0] not in ESTADOS_OBSERVABLES:
+            raise TransicionInvalida(
+                "Todavía no se puede observar: la provincia está cargando. Se observa "
+                "cuando cierra la carga y la envía a revisión nacional."
+            )
         if campo_id:
             cur.execute(
                 """SELECT COUNT(*) FROM mir_c2_observacion
