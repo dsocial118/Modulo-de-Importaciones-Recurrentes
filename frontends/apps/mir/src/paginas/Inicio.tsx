@@ -16,6 +16,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -124,7 +125,8 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
   const avance = d.avance.total ? Math.round((d.avance.cargados * 100) / d.avance.total) : 0;
 
   return (
-    <Stack spacing={2}>
+    // Compacto: los accesos de abajo tienen que verse sin desplazarse (28-09-2026).
+    <Stack spacing={1.5}>
       <Titulo
         // La provincia que se está viendo, a la vista: el nivel nacional elige
         // una y antes no lo decía en ningún lado (27-09-2026).
@@ -177,7 +179,7 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
 
 
       {periodo && periodo.estado !== 'ABIERTO' && (
-        <Alert severity="info">
+        <Alert severity="info" sx={{ py: 0 }}>
           El período {periodo.nombre || periodo.codigo} está {estadoPeriodo?.texto.toLowerCase()}.{' '}
           {periodo.estado === 'PREPARACION'
             ? 'Todavía no está habilitado para cargar, y la estructura se puede modificar.'
@@ -189,20 +191,21 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
       <Card variant="outlined">
         <CardHeader
           title={`Estado de la presentación — ${d.jurisdiccion ?? 'elegí una jurisdicción'}`}
+          sx={{ py: 1.25 }}
           slotProps={{ title: { variant: 'subtitle1', sx: { fontWeight: 500 } } }}
           action={
             d.presentacion && (
-              <Box sx={{ pt: 1, pr: 1 }}>
+              <Box sx={{ pr: 1 }}>
                 <EtiquetaDeEstado tono="info" texto={d.presentacion.estado_legible} />
               </Box>
             )
           }
         />
-        <CardContent sx={{ pt: 0 }}>
+        <CardContent sx={{ pt: 0, '&:last-child': { pb: 1.5 } }}>
           {d.archivos.length === 0 ? (
             <Typography color="text.secondary">Todavía no hay archivos definidos para este período.</Typography>
           ) : (
-            <Stack spacing={2}>
+            <Stack spacing={1}>
               <Box>
                 <Stack direction="row" sx={{ justifyContent: 'space-between', mb: 0.5 }}>
                   <Typography variant="body2" color="text.secondary">
@@ -216,7 +219,7 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
                   variant="determinate"
                   value={avance}
                   aria-label={`${d.avance.cargados} de ${d.avance.total} archivos importados`}
-                  sx={{ height: 8, borderRadius: 4 }}
+                  sx={{ height: 6, borderRadius: 3 }}
                 />
               </Box>
               {chico ? (
@@ -227,7 +230,7 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
                 </Box>
               ) : (
               <TableContainer>
-                <Table size="small" aria-label="Archivos del período">
+                <Table size="small" aria-label="Archivos del período" sx={{ '& td, & th': { py: 0.5 } }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>Archivo</TableCell>
@@ -244,14 +247,12 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
                       return (
                         <TableRow key={a.codigo} hover>
                           <TableCell>
-                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                              {nombreDe(a.codigo)}
-                            </Typography>
-                            {sinRepetir(a.nombre, nombreDe(a.codigo)) && (
-                              <Typography variant="caption" color="text.secondary">
-                                {a.nombre}
+                            {/* El nombre completo, al pasar el mouse: en otro renglón duplicaba el alto. */}
+                            <Tooltip title={sinRepetir(a.nombre, nombreDe(a.codigo)) ? a.nombre : ''}>
+                              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                {nombreDe(a.codigo)}
                               </Typography>
-                            )}
+                            </Tooltip>
                           </TableCell>
                           <TableCell align="center">{a.obligatorio ? 'Sí' : '—'}</TableCell>
                           <TableCell align="right">{a.campos}</TableCell>
@@ -299,15 +300,15 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
               >
                 {/* Más color con los tonos del tema, sin inventar ninguno: el
                     ícono de la sección sobre el verde de marca (27-09-2026). */}
-                <CardContent sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                <CardContent sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', py: 1.25, '&:last-child': { pb: 1.25 } }}>
                   <Box
                     aria-hidden
                     sx={{
                       flexShrink: 0,
                       display: 'grid',
                       placeItems: 'center',
-                      width: 40,
-                      height: 40,
+                      width: 32,
+                      height: 32,
                       borderRadius: '50%',
                       bgcolor: 'primary.main',
                       color: 'primary.contrastText',
@@ -320,7 +321,7 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
                       <Typography sx={{ fontWeight: 500 }}>{s.etiqueta}</Typography>
                       <ArrowForward fontSize="small" color="primary" />
                     </Stack>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.35 }}>
                       {s.detalle}
                     </Typography>
                   </Box>

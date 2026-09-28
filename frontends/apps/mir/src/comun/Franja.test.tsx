@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { mostrar, resuelta } from '../pruebas';
 import { FranjaDelCircuito } from './Franja';
 
-const api = vi.hoisted(() => ({ useFranja: vi.fn() }));
+const api = vi.hoisted(() => ({ useFranja: vi.fn(), useSesion: vi.fn(() => ({ data: { es_nacional: false } })) }));
 vi.mock('@mir/api', () => api);
 
 const pasos = ['Carga', 'Revisión nacional', 'Subsanación', 'Presentación', 'Consolidación'];

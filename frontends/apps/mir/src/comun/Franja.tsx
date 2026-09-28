@@ -3,12 +3,14 @@ import ChevronRight from '@mui/icons-material/ChevronRight';
 import RadioButtonChecked from '@mui/icons-material/RadioButtonChecked';
 import RadioButtonUnchecked from '@mui/icons-material/RadioButtonUnchecked';
 import { Box, Link, Stack, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
-import { useFranja } from '@mir/api';
+import { useFranja, useSesion } from '@mir/api';
 import { EtiquetaDeEstado } from '@mir/ui';
 import { Fragment } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const PANORAMA = ['/situacion', '/revision', '/observaciones', '/administracion'];
+// Iguales para todas las provincias: al nivel nacional no le dicen nada de una.
+const DEFINICION = ['/plantillas', '/reglas'];
 import { conFiltros, useFiltros } from './filtros';
 import { plural } from './formato';
 
@@ -44,7 +46,10 @@ export function FranjaDelCircuito() {
   // En las pantallas que miran a todas las provincias, la franja va apagada
   // aunque en la dirección haya quedado una elegida (28-09-2026).
   const { pathname } = useLocation();
-  const enPanorama = PANORAMA.some((ruta) => pathname.startsWith(ruta));
+  const nacional = useSesion().data?.es_nacional ?? false;
+  const enPanorama =
+    PANORAMA.some((ruta) => pathname.startsWith(ruta)) ||
+    (nacional && DEFINICION.some((ruta) => pathname.startsWith(ruta)));
   const consulta = useFranja(periodo, enPanorama ? null : jurisdiccion);
   const navegar = useNavigate();
   const theme = useTheme();
@@ -179,7 +184,9 @@ export function FranjaDelCircuito() {
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', ml: 'auto', flexWrap: 'nowrap', flexShrink: 0, '& > *': { whiteSpace: 'nowrap' } }}>
           <Typography variant="body2" sx={{ color: 'nav.textMuted' }}>
             {sinProvincia
-              ? 'Elegí una provincia para ver su avance'
+              ? enPanorama
+                ? null
+                : 'Elegí una provincia para ver su avance'
               : archivosEnPalabras(f.estado, f.archivos_importados, f.archivos_esperados)}
           </Typography>
           {f.observaciones_abiertas > 0 && (
