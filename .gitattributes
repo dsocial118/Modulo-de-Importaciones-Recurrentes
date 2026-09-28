@@ -1,0 +1,3 @@
+# Los guiones de shell se ejecutan en Linux (los contenedores) y en Git Bash:
+# con finales de linea de Windows fallan. Siempre LF.
+*.sh text eol=lf
