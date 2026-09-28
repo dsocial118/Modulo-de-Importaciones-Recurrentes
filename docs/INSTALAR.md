@@ -40,6 +40,30 @@ En «DESFASAJES» tiene que decir **«ninguno»**.
 
 De ahí en adelante, para levantarlo alcanza con `docker compose up -d`.
 
+## Actualizar una instalación que ya existe
+
+Sin perder lo cargado:
+
+```bash
+git pull
+docker compose build
+docker compose up -d
+bash entorno/actualizar_base.sh
+docker compose restart web
+```
+
+`entorno/actualizar_base.sh` aplica a la base los cambios de la definición que
+se agregaron después de armarla (los guiones de `entorno/sql/` desde el 35), y
+saltea los que ya tiene. **No usar `docker compose down -v`**: borra la base
+entera.
+
+Para comprobar que todo anda, el recorrido de punta a punta con los seis
+usuarios, sobre una base descartable que se borra al terminar:
+
+```bash
+bash entorno/pruebas/recorrido_completo.sh
+```
+
 ## Entrar
 
 **http://localhost:8100**
@@ -53,7 +77,7 @@ De ahí en adelante, para levantarlo alcanza con `docker compose up -d`.
 | `revisor` | Revisor técnico nacional | `runac` |
 | `admin` | Administrador nacional | `runac` |
 
-**La versión nueva, en React**, está en **http://localhost:8100/v2/mir/**, con
+**La versión nueva, en React** —la que se usa—, está en **http://localhost:8100/v2/mir/**, con
 los mismos usuarios. Convive con la actual: lo que todavía no se migró lleva a
 la pantalla de siempre. Ver [`docs/mir/front-v2.md`](mir/front-v2.md).
 
@@ -67,8 +91,8 @@ legajo van primero, porque las nóminas los referencian:
 DISP_PENAL · DISP_SCP · LEGAJO_NYA · MPI · MPE · MPJ_DAE
 ```
 
-Los seis tienen que quedar **VÁLIDA, con cero bloqueantes**. Alguno puede
-traer advertencias de rango —DISP_PENAL las trae—, y es lo esperado. Después probá las otras dos
+Los seis tienen que quedar **VÁLIDA, con cero bloqueantes y cero advertencias**.
+Después probá las otras dos
 carpetas: `_con_advertencias` entra igual pero con avisos, `_con_errores` no
 entra.
 
