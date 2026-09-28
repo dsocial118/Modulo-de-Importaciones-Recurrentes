@@ -1,4 +1,5 @@
 import AddOutlined from '@mui/icons-material/AddOutlined';
+import LockOutlined from '@mui/icons-material/LockOutlined';
 import {
   Alert,
   Box,
@@ -115,6 +116,7 @@ export function Administracion() {
   const d = consulta.data;
   const ocupado = cambiarEstado.isPending || armar.isPending || borrar.isPending || cambiarOperativo.isPending;
   const enElOperativo = d.jurisdicciones.filter((j) => j.en_el_operativo).map((j) => j.nombre);
+  const yaCargo = new Set(d.jurisdicciones.filter((j) => j.ya_cargo).map((j) => j.nombre));
   const paraAgregar = d.todas.filter((j) => !enElOperativo.includes(j));
 
   const pasarA = async (codigo: string, nuevo: string, titulo: string, texto: ReactNode) => {
@@ -221,20 +223,29 @@ export function Administracion() {
           <CardContent>
             <Typography sx={{ fontWeight: 700 }}>Provincias del operativo ({enElOperativo.length})</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Las que tienen que presentar. Las demás no aparecen en el Estado de situación.
+              Las que tienen que presentar. Las demás no aparecen en el Estado de situación. Las que ya cargaron
+              llevan un candado: no se pueden sacar.
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-              {enElOperativo.map((j) => (
-                <Chip
-                  key={j}
-                  label={j}
-                  color="primary"
-                  variant="outlined"
-                  disabled={ocupado}
-                  onDelete={() => operativo(j, false)}
-                  aria-label={`Sacar a ${j} del operativo`}
-                />
-              ))}
+              {enElOperativo.map((j) =>
+                // La que ya cargó no se saca: lo presentado quedaría fuera del
+                // estado de situación (28-09-2026). Lleva un candado.
+                yaCargo.has(j) ? (
+                  <Tooltip key={j} describeChild title={`${j} ya cargó archivos: no se puede sacar del operativo.`}>
+                    <Chip label={j} color="primary" icon={<LockOutlined />} />
+                  </Tooltip>
+                ) : (
+                  <Chip
+                    key={j}
+                    label={j}
+                    color="primary"
+                    variant="outlined"
+                    disabled={ocupado}
+                    onDelete={() => operativo(j, false)}
+                    aria-label={`Sacar a ${j} del operativo`}
+                  />
+                ),
+              )}
               <TextField
                 select
                 size="small"

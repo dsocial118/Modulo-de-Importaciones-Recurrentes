@@ -1958,9 +1958,12 @@ components:
           type: string
         en_el_operativo:
           type: boolean
+        ya_cargo:
+          type: boolean
       required:
       - en_el_operativo
       - nombre
+      - ya_cargo
     Mensaje:
       type: object
       description: 'Lo que devuelve una acción: qué pasó, dicho para una persona.'

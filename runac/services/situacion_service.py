@@ -46,19 +46,51 @@ def operativo() -> list[str]:
         return [f[0] for f in cur.fetchall()]
 
 
+_CON_CARGAS = """
+    SELECT COUNT(*) FROM mir_c2_importacion i
+    JOIN mir_c2_presentacion s ON s.id = i.presentacion_id
+    JOIN mir_c2_jurisdiccion j ON j.id = s.jurisdiccion_id
+    WHERE j.nombre = %s
+"""
+
+
 def jurisdicciones() -> list[dict]:
-    """Todas las jurisdicciones dadas de alta, con su marca de operativo."""
+    """Todas las jurisdicciones dadas de alta, con su marca de operativo.
+
+    `ya_cargo`: si subió algún archivo, en cualquier período. Esa no se puede
+    sacar del operativo (28-09-2026): sus datos quedarían fuera del panorama.
+    """
     with connection.cursor() as cur:
-        cur.execute("SELECT nombre, activa FROM mir_c2_jurisdiccion ORDER BY nombre")
-        return [{"nombre": n, "en_el_operativo": bool(a)} for n, a in cur.fetchall()]
+        cur.execute(
+            """SELECT j.nombre, j.activa,
+                      EXISTS (SELECT 1 FROM mir_c2_importacion i
+                              JOIN mir_c2_presentacion s ON s.id = i.presentacion_id
+                              WHERE s.jurisdiccion_id = j.id) AS ya_cargo
+               FROM mir_c2_jurisdiccion j ORDER BY j.nombre"""
+        )
+        return [
+            {"nombre": n, "en_el_operativo": bool(a), "ya_cargo": bool(c)}
+            for n, a, c in cur.fetchall()
+        ]
 
 
 def cambiar_operativo(nombre: str, en_el_operativo: bool, usuario) -> None:
-    """Suma o saca una provincia del operativo. Sólo el administrador."""
+    """Suma o saca una provincia del operativo. Sólo el administrador.
+
+    Una provincia que ya cargó no se saca: lo que presentó quedaría fuera del
+    estado de situación (pedido del responsable funcional, 28-09-2026).
+    """
     if not puede_administrar(usuario):
         raise circuito.TransicionInvalida(
             "Sólo el administrador nacional define el operativo."
         )
+    if not en_el_operativo:
+        with connection.cursor() as cur:
+            cur.execute(_CON_CARGAS, [nombre])
+            if cur.fetchone()[0]:
+                raise circuito.TransicionInvalida(
+                    f"{nombre} ya cargó archivos: no se puede sacar del operativo."
+                )
     with connection.cursor() as cur:
         cur.execute("SELECT id FROM mir_c2_jurisdiccion WHERE nombre = %s", [nombre])
         fila = cur.fetchone()

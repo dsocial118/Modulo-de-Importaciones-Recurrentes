@@ -53,4 +53,14 @@ describe('Franja del avance del circuito', () => {
     mostrar(<FranjaDelCircuito />);
     expect(screen.queryByRole('navigation', { name: 'Avance del circuito' })).not.toBeInTheDocument();
   });
+
+  it('para el nivel nacional con «Todas», se ve apagada y sin ningún paso activo', () => {
+    api.useFranja.mockReturnValue(
+      resuelta(franja({ estado: null, jurisdiccion: null, pasos: pasos.map((nombre) => ({ nombre, actual: false, hecho: false })) })),
+    );
+    mostrar(<FranjaDelCircuito />);
+    expect(screen.getByText('Todas las provincias')).toBeInTheDocument();
+    expect(screen.getByText('Elegí una provincia para ver su avance')).toBeInTheDocument();
+    expect(document.querySelector('[aria-current="step"]')).toBeNull();
+  });
 });

@@ -280,7 +280,12 @@ class FranjaView(APIView):
             "estado": None,
             "estado_legible": None,
             "que_pasa": "",
-            "pasos": [],
+            # Sin provincia elegida, los pasos igual, todos apagados: el nivel
+            # nacional ve que el avance es de cada provincia (28-09-2026).
+            "pasos": [
+                {"nombre": g["nombre"], "actual": False, "hecho": False}
+                for g in _pasos_de_la_franja("")
+            ],
             "te_toca": [],
             "archivos_importados": 0,
             "archivos_esperados": 0,

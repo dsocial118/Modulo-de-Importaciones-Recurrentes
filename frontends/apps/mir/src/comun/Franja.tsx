@@ -35,7 +35,7 @@ function archivosEnPalabras(estado: string | null | undefined, importados: numbe
  * (27-09-2026). Acá está siempre a la vista, sin ocupar lugar: los pasos con el
  * actual resaltado, los archivos cargados, las observaciones sin resolver y,
  * si le toca a quien mira, qué tiene que hacer. El detalle, al pasar el mouse.
- * Sin jurisdicción elegida —el nivel nacional en su bandeja— no se muestra.
+ * Sin jurisdicción elegida —el nivel nacional con «Todas»— se ve apagada.
  */
 export function FranjaDelCircuito() {
   const { periodo, jurisdiccion } = useFiltros();
@@ -46,7 +46,10 @@ export function FranjaDelCircuito() {
   // junto con lo demás y la franja se partía en tres; ahí se dice en cuál está.
   const chico = useMediaQuery(theme.breakpoints.down('lg'));
   const f = consulta.data;
-  if (!f || !f.estado || !f.pasos.length) return null;
+  if (!f || !f.pasos.length) return null;
+  // El avance es de cada provincia (28-09-2026): sin una elegida —el nivel
+  // nacional con «Todas»— la franja se ve apagada, sin ningún paso activo.
+  const sinProvincia = !f.estado;
 
   const actual = f.pasos.findIndex((p) => p.actual);
   const irAlResultado = () => navegar(conFiltros('/resultado', f.periodo, f.jurisdiccion));
@@ -66,15 +69,35 @@ export function FranjaDelCircuito() {
         borderColor: 'nav.accent',
         bgcolor: 'nav.activeBg',
         color: 'nav.text',
+        ...(sinProvincia && { opacity: 0.7, borderColor: 'nav.textMuted' }),
       }}
     >
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'nowrap', overflow: 'hidden' }}>
-        {/* Si no entra todo, lo primero que se achica es esto: está también en el título. */}
-        <Typography variant="body2" noWrap sx={{ color: 'nav.textMuted', fontWeight: 500, minWidth: 40, flexShrink: 1 }}>
-          {f.jurisdiccion} · {f.periodo_nombre || f.periodo}
+        {/* De qué provincia es el avance, bien a la vista: para el nivel
+            nacional cambia al cambiar de provincia (28-09-2026). Si no entra
+            todo, lo primero que se achica es el período. */}
+        <Typography variant="body2" noWrap sx={{ color: 'nav.textMuted', minWidth: 60, flexShrink: 1 }}>
+          <Box component="span" sx={{ color: 'nav.text', fontWeight: 700, fontSize: 15 }}>
+            {sinProvincia ? 'Todas las provincias' : f.jurisdiccion}
+          </Box>
+          {' · '}
+          {f.periodo_nombre || f.periodo}
         </Typography>
 
-        {chico ? (
+        {sinProvincia ? (
+          chico ? null : (
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0, color: 'nav.textMuted' }} aria-hidden>
+              {f.pasos.map((p, i) => (
+                <Fragment key={p.nombre}>
+                  {i > 0 && <ChevronRight fontSize="inherit" />}
+                  <Typography variant="body2" sx={{ px: 1, whiteSpace: 'nowrap' }}>
+                    {p.nombre}
+                  </Typography>
+                </Fragment>
+              ))}
+            </Stack>
+          )
+        ) : chico ? (
           // En pantallas angostas los pasos no entran: se dice en cuál está.
           <Tooltip describeChild title={f.que_pasa}>
             <Typography variant="body2">
@@ -123,7 +146,9 @@ export function FranjaDelCircuito() {
 
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', ml: 'auto', flexWrap: 'nowrap', flexShrink: 0, '& > *': { whiteSpace: 'nowrap' } }}>
           <Typography variant="body2" sx={{ color: 'nav.textMuted' }}>
-            {archivosEnPalabras(f.estado, f.archivos_importados, f.archivos_esperados)}
+            {sinProvincia
+              ? 'Elegí una provincia para ver su avance'
+              : archivosEnPalabras(f.estado, f.archivos_importados, f.archivos_esperados)}
           </Typography>
           {f.observaciones_abiertas > 0 && (
             <EtiquetaDeEstado

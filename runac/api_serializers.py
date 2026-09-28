@@ -731,6 +731,7 @@ class PeriodoDeAdministracionSerializer(PeriodoSerializer):
 class JurisdiccionDelOperativoSerializer(serializers.Serializer):
     nombre = serializers.CharField()
     en_el_operativo = serializers.BooleanField()
+    ya_cargo = serializers.BooleanField()
 
 
 class AdministracionSerializer(serializers.Serializer):

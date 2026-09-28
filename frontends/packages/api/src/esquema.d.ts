@@ -952,6 +952,7 @@ export interface components {
         JurisdiccionDelOperativo: {
             nombre: string;
             en_el_operativo: boolean;
+            ya_cargo: boolean;
         };
         /** @description Lo que devuelve una acción: qué pasó, dicho para una persona. */
         Mensaje: {
