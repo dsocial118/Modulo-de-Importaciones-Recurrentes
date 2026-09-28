@@ -30,7 +30,7 @@ import { ESTADO_DEL_ARCHIVO, formaDe } from '../comun/estados';
 import { plural } from '../comun/formato';
 import { SelectorDeJurisdiccion, SelectorDePeriodo } from '../comun/Selectores';
 import { conFiltros, useFiltros } from '../comun/filtros';
-import { useNombreDeArchivo } from '../comun/archivos';
+import { sinRepetir, useNombreDeArchivo } from '../comun/archivos';
 
 type Recien = ResultadoDeImportar & { codigo: string };
 
@@ -100,7 +100,7 @@ function FilaDeCarga({
           {/* En un renglón mientras entre; si no entra, el nombre requerido baja. */}
           <Stack direction="row" sx={{ flexWrap: 'wrap', alignItems: 'baseline', columnGap: 1.5 }}>
             <Typography variant="body2" color="text.secondary">
-              {a.nombre}
+              {sinRepetir(a.nombre, nombreDe(a.codigo))}
               {a.obligatorio ? ' · obligatorio' : ''}
             </Typography>
             <Typography variant="caption" color="text.secondary">

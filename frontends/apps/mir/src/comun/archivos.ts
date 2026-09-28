@@ -10,3 +10,8 @@ export function useNombreDeArchivo() {
   const nombres = useSesion().data?.nombres_de_archivo;
   return (codigo: string | null | undefined) => (codigo ? (nombres?.[codigo] ?? codigo) : '');
 }
+
+/** El nombre largo, salvo que repita el corto: el legajo se llama igual en los dos. */
+export function sinRepetir(largo: string | null | undefined, corto: string) {
+  return largo && largo.trim().toLowerCase() !== corto.trim().toLowerCase() ? largo : '';
+}

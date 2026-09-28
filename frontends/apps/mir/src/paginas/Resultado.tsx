@@ -34,7 +34,7 @@ import { SelectorDeJurisdiccion, SelectorDePeriodo } from '../comun/Selectores';
 import { conFiltros, useFiltros } from '../comun/filtros';
 import { TarjetaDeObservacion } from '../comun/Observaciones';
 import { dondeEsta } from '../comun/ubicacion';
-import { useNombreDeArchivo } from '../comun/archivos';
+import { sinRepetir, useNombreDeArchivo } from '../comun/archivos';
 
 // Las acciones que no tienen vuelta atrás se confirman; el resto, no.
 const A_CONFIRMAR: Record<string, string> = {
@@ -61,10 +61,10 @@ function Archivo({ a, puedeEditar }: { a: ArchivoDelResultado; puedeEditar: bool
           </Stack>
           {/* Nombre y cifras en un solo renglón (27-09-2026). */}
           <Typography variant="body2" color="text.secondary">
-            {a.nombre}
+            {sinRepetir(a.nombre, nombreDe(a.codigo))}
             {imp && (
               <Box component="span" sx={{ color: 'text.primary' }}>
-                {' · '}
+                {sinRepetir(a.nombre, nombreDe(a.codigo)) ? ' · ' : ''}
                 {filasEnPalabras(imp.filas_leidas, imp.filas_incorporadas)}
                 {imp.bloqueantes > 0 && <> · <strong>{plural(imp.bloqueantes, 'bloqueante', 'bloqueantes')}</strong></>}
                 {imp.advertencias > 0 && <> · {plural(imp.advertencias, 'advertencia', 'advertencias')}</>}

@@ -23,7 +23,7 @@ import { usePlantillas } from '@mir/api';
 import { Titulo } from '@mir/ui';
 import { SelectorDePeriodo } from '../comun/Selectores';
 import { useFiltros } from '../comun/filtros';
-import { useNombreDeArchivo } from '../comun/archivos';
+import { sinRepetir, useNombreDeArchivo } from '../comun/archivos';
 
 export function Plantillas() {
   const nombreDe = useNombreDeArchivo();
@@ -72,7 +72,7 @@ export function Plantillas() {
                       {nombreDe(a.codigo)}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" component="div">
-                      {a.nombre}
+                      {sinRepetir(a.nombre, nombreDe(a.codigo))}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {a.hojas} hojas · {a.campos} campos{a.obligatorio ? ' · obligatorio' : ''}
@@ -113,7 +113,7 @@ export function Plantillas() {
                           {nombreDe(a.codigo)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {a.nombre}
+                          {sinRepetir(a.nombre, nombreDe(a.codigo))}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">{a.hojas}</TableCell>

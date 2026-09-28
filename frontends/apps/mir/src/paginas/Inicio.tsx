@@ -35,7 +35,7 @@ import type { MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { conFiltros } from '../comun/filtros';
 import { ICONOS } from '../comun/iconos';
-import { useNombreDeArchivo } from '../comun/archivos';
+import { sinRepetir, useNombreDeArchivo } from '../comun/archivos';
 
 // Cómo se muestra el estado de un archivo. Neutral a propósito: un archivo
 // válido no se pinta de verde, porque el verde es de marca.
@@ -67,7 +67,7 @@ function FichaDeArchivo({ a }: { a: ArchivoDelPeriodo }) {
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
             {nombreDe(a.codigo)}
           </Typography>
-          {a.nombre && (
+          {sinRepetir(a.nombre, nombreDe(a.codigo)) && (
             <Typography variant="caption" color="text.secondary">
               {a.nombre}
             </Typography>
@@ -347,7 +347,7 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
                               {nombreDe(a.codigo)}
                             </Typography>
-                            {a.nombre && (
+                            {sinRepetir(a.nombre, nombreDe(a.codigo)) && (
                               <Typography variant="caption" color="text.secondary">
                                 {a.nombre}
                               </Typography>
