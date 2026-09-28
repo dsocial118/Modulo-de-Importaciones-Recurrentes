@@ -76,7 +76,12 @@ export function App() {
       enV2: m.en_v2,
     };
   });
-  const activa = SECCION_DE[pathname.split('/')[1] ?? ''] ?? '';
+  // Si la sección no está en el menú de quien mira —el nivel nacional entra al
+  // resultado de una provincia desde la bandeja de revisión—, se marca la
+  // sección desde la que llegó: si no, el menú no marcaba nada (27-09-2026).
+  const seccion = SECCION_DE[pathname.split('/')[1] ?? ''] ?? '';
+  const enElMenu = s.menu.some((m) => m.clave === seccion);
+  const activa = enElMenu ? seccion : seccion === 'resultado' && s.menu.some((m) => m.clave === 'revision') ? 'revision' : seccion;
 
   return (
     <Avisos>

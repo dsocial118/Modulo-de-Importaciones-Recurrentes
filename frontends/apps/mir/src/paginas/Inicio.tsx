@@ -17,6 +17,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -124,75 +125,92 @@ function HerramientasDelAdministrador({ periodo, estado }: { periodo: string; es
     <Card variant="outlined">
       <CardContent>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: { md: 'center' } }}>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography sx={{ fontWeight: 500 }}>Administración del período</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Las herramientas de prueba borran o arman datos de ejemplo y no forman parte del sistema definitivo.
-            </Typography>
-          </Box>
+          {/* Lo que hace cada botón, en su texto emergente y no en un párrafo
+              que empujaba los botones (27-09-2026). */}
+          <Typography sx={{ fontWeight: 500, flexGrow: 1 }}>Administración del período</Typography>
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
             {estado !== 'ABIERTO' && (
-              <Button
-                variant="contained"
-                disabled={ocupado}
-                onClick={() => pasarA('ABIERTO', 'Abrir el período', 'Las jurisdicciones van a poder importar, y la estructura queda congelada.')}
-              >
-                Abrir el período
-              </Button>
+              <Tooltip describeChild title="Habilita a todas las jurisdicciones a importar los archivos del período. Desde ese momento la definición (reglas y columnas) queda congelada.">
+                <span>
+                <Button
+                  variant="contained"
+                  disabled={ocupado}
+                  onClick={() => pasarA('ABIERTO', 'Abrir el período', 'Las jurisdicciones van a poder importar, y la estructura queda congelada.')}
+                >
+                  Abrir el período
+                </Button>
+                </span>
+              </Tooltip>
             )}
             {estado === 'ABIERTO' && (
               <>
-                <Button
-                  variant="outlined"
-                  disabled={ocupado}
-                  onClick={() => pasarA('CERRADO', 'Cerrar el período', 'Con el período cerrado ninguna jurisdicción puede importar.')}
-                >
-                  Cerrar el período
-                </Button>
-                <Button
-                  variant="outlined"
-                  disabled={ocupado}
-                  onClick={() =>
-                    pasarA(
-                      'PREPARACION',
-                      'Volver a preparación',
-                      'Habilita a cambiar la definición. Es una herramienta de prueba: en el sistema real, con el período abierto, la definición no se toca.',
-                    )
-                  }
-                >
-                  Volver a preparación (prueba)
-                </Button>
+                <Tooltip describeChild title="Cierra el período para TODAS las jurisdicciones: ninguna puede importar más. No cambia el estado de cada presentación.">
+                  <span>
+                  <Button
+                    variant="outlined"
+                    disabled={ocupado}
+                    onClick={() => pasarA('CERRADO', 'Cerrar el período', 'Con el período cerrado ninguna jurisdicción puede importar.')}
+                  >
+                    Cerrar el período
+                  </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip describeChild title="Herramienta de prueba: vuelve el período a preparación para poder cambiar la definición. En el sistema real no existe.">
+                  <span>
+                  <Button
+                    variant="outlined"
+                    disabled={ocupado}
+                    onClick={() =>
+                      pasarA(
+                        'PREPARACION',
+                        'Volver a preparación',
+                        'Habilita a cambiar la definición. Es una herramienta de prueba: en el sistema real, con el período abierto, la definición no se toca.',
+                      )
+                    }
+                  >
+                    Volver a preparación (prueba)
+                  </Button>
+                  </span>
+                </Tooltip>
               </>
             )}
-            <Button
-              variant="outlined"
-              disabled={ocupado}
-              onClick={async () => {
-                const ok = await confirmar({
-                  titulo: 'Armar demostración',
-                  texto: 'Se borrará lo que haya y se armará una presentación completa, con advertencias para corregir.',
-                  confirmar: 'Armar',
-                });
-                if (ok !== null) armar.mutate(undefined, alTerminar);
-              }}
-            >
-              Armar demostración
-            </Button>
-            <Button
-              variant="outlined"
-              color="warning"
-              disabled={ocupado}
-              onClick={async () => {
-                const ok = await confirmar({
-                  titulo: 'Borrar importaciones',
-                  texto: 'Se borrarán TODAS las importaciones de TODAS las jurisdicciones. Existe únicamente para hacer pruebas.',
-                  confirmar: 'Borrar todo',
-                });
-                if (ok !== null) borrar.mutate(undefined, alTerminar);
-              }}
-            >
-              Borrar importaciones
-            </Button>
+            <Tooltip describeChild title="Herramienta de prueba: borra lo cargado y arma una presentación completa de Chubut, con advertencias para corregir.">
+              <span>
+              <Button
+                variant="outlined"
+                disabled={ocupado}
+                onClick={async () => {
+                  const ok = await confirmar({
+                    titulo: 'Armar demostración',
+                    texto: 'Se borrará lo que haya y se armará una presentación completa, con advertencias para corregir.',
+                    confirmar: 'Armar',
+                  });
+                  if (ok !== null) armar.mutate(undefined, alTerminar);
+                }}
+              >
+                Armar demostración
+              </Button>
+              </span>
+            </Tooltip>
+            <Tooltip describeChild title="Herramienta de prueba: borra todas las importaciones de todas las jurisdicciones.">
+              <span>
+              <Button
+                variant="outlined"
+                color="warning"
+                disabled={ocupado}
+                onClick={async () => {
+                  const ok = await confirmar({
+                    titulo: 'Borrar importaciones',
+                    texto: 'Se borrarán TODAS las importaciones de TODAS las jurisdicciones. Existe únicamente para hacer pruebas.',
+                    confirmar: 'Borrar todo',
+                  });
+                  if (ok !== null) borrar.mutate(undefined, alTerminar);
+                }}
+              >
+                Borrar importaciones
+              </Button>
+              </span>
+            </Tooltip>
           </Stack>
         </Stack>
       </CardContent>
@@ -227,7 +245,9 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
   return (
     <Stack spacing={2}>
       <Titulo
-        titulo="Inicio"
+        // La provincia que se está viendo, a la vista: el nivel nacional elige
+        // una y antes no lo decía en ningún lado (27-09-2026).
+        titulo={d.jurisdiccion ? `Inicio · ${d.jurisdiccion}` : 'Inicio'}
         subtitulo={
           periodo && estadoPeriodo ? (
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
