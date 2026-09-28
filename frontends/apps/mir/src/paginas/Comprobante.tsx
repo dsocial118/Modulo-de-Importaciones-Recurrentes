@@ -20,9 +20,11 @@ import type { ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fecha, fechaHora, numero } from '../comun/formato';
 import { conFiltros } from '../comun/filtros';
+import { useNombreDeArchivo } from '../comun/archivos';
 
 /** La constancia formal de la entrega. Se imprime sin el menú ni la barra. */
 export function Comprobante() {
+  const nombreDe = useNombreDeArchivo();
   const id = Number(useParams().id);
   const navegar = useNavigate();
   const consulta = useComprobante(id);
@@ -85,7 +87,7 @@ export function Comprobante() {
             <TableBody>
               {c.archivos.map((a) => (
                 <TableRow key={a.codigo}>
-                  <TableCell sx={{ fontWeight: 500 }}>{a.codigo}</TableCell>
+                  <TableCell sx={{ fontWeight: 500 }}>{nombreDe(a.codigo)}</TableCell>
                   <TableCell sx={{ fontFamily: 'monospace' }}>{a.nombre_archivo}</TableCell>
                   <TableCell align="right">{numero(a.filas_incorporadas)}</TableCell>
                   <TableCell>{fechaHora(a.iniciada_el)}</TableCell>

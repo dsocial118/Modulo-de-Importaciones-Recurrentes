@@ -2181,6 +2181,10 @@ components:
           type: string
         aviso:
           type: string
+        nombres_de_archivo:
+          type: object
+          additionalProperties:
+            type: string
       required:
       - aviso
       - csrf_token
@@ -2189,6 +2193,7 @@ components:
       - jurisdiccion
       - menu
       - nombre_del_rol
+      - nombres_de_archivo
       - permisos
       - rol
       - salir

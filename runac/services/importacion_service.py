@@ -84,12 +84,12 @@ def en_palabras_comunes(
 # ---------------------------------------------------------------------------
 
 
-_ORDINALES = {1: "1.er", 2: "2.º", 3: "3.er", 4: "4.º"}
-_UNIDADES = {"T": "trimestre", "S": "semestre"}
+_ORDINALES = {1: "1er.", 2: "2do.", 3: "3er.", 4: "4to."}
+_UNIDADES = {"T": "Trimestre", "S": "Semestre"}
 
 
 def nombre_del_periodo(p: dict | None) -> str:
-    """Cómo se lee un período: «1.er trimestre 2026» y no «2026_T1».
+    """Cómo se lee un período: «1er. Trimestre 2026» y no «2026_T1».
 
     Sale del código, el año y el número que guarda la base. La unidad
     —trimestre o semestre— la dice la letra del código, porque la base todavía
@@ -927,3 +927,18 @@ def importar_uno(
     resultado["codigo"] = codigo_archivo
     resultado["nombre_sugerido"] = esperado
     return resultado
+
+
+def nombres_cortos() -> dict[str, str]:
+    """Del código de cada archivo a cómo se lo nombra en pantalla.
+
+    Sale de `mir_c1_archivo.nombre_corto` (guion 35). Si la base todavía no
+    tiene la columna, o el archivo no tiene nombre corto, queda el código.
+    """
+    with connection.cursor() as cur:
+        try:
+            cur.execute("SELECT codigo, nombre_corto FROM mir_c1_archivo")
+        except Exception:  # pylint: disable=broad-except  # base sin el guion 35
+            cur.execute("SELECT codigo FROM mir_c1_archivo")
+            return {c: c for (c,) in cur.fetchall()}
+        return {c: (n or c) for c, n in cur.fetchall()}

@@ -30,6 +30,7 @@ import { ESTADO_DEL_ARCHIVO, formaDe } from '../comun/estados';
 import { plural } from '../comun/formato';
 import { SelectorDeJurisdiccion, SelectorDePeriodo } from '../comun/Selectores';
 import { conFiltros, useFiltros } from '../comun/filtros';
+import { useNombreDeArchivo } from '../comun/archivos';
 
 type Recien = ResultadoDeImportar & { codigo: string };
 
@@ -75,6 +76,7 @@ function FilaDeCarga({
   ocupado: boolean;
   alImportar: (a: ArchivoACargar, archivo: File) => Promise<void>;
 }) {
+  const nombreDe = useNombreDeArchivo();
   const campo = useRef<HTMLInputElement>(null);
   const e = formaDe(ESTADO_DEL_ARCHIVO, a.estado);
   const atencion = coloresDe('attention', useTheme().palette.mode);
@@ -87,7 +89,7 @@ function FilaDeCarga({
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} sx={{ alignItems: { md: 'center' } }}>
         <Box sx={{ flex: { md: '0 1 720px' }, minWidth: 0 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-            <Typography sx={{ fontWeight: 500 }}>{a.codigo}</Typography>
+            <Typography sx={{ fontWeight: 500 }}>{nombreDe(a.codigo)}</Typography>
             <EtiquetaDeEstado tono={e.tono} texto={e.texto} />
             {a.filas != null && (
               <Typography variant="body2" color="text.secondary">
@@ -176,6 +178,7 @@ function FilaDeCarga({
 }
 
 function ResultadoDelArchivo({ r, alCerrar, alVer }: { r: Recien | null; alCerrar: () => void; alVer: () => void }) {
+  const nombreDe = useNombreDeArchivo();
   const { palette } = useTheme();
   if (!r) return null;
   const entro = !r.rechazado && r.estado === 'VALIDA';
@@ -192,7 +195,7 @@ function ResultadoDelArchivo({ r, alCerrar, alVer }: { r: Recien | null; alCerra
       <DialogContent>
         <Box sx={{ bgcolor: c.surface, color: c.text, borderLeft: `4px solid ${c.border}`, borderRadius: 1, p: 2 }}>
         <Typography gutterBottom>
-          Archivo <strong>{r.codigo}</strong>.
+          Archivo <strong>{nombreDe(r.codigo)}</strong>.
         </Typography>
         {r.rechazado ? (
           <Typography>{r.mensaje}</Typography>
@@ -238,6 +241,7 @@ function ResultadoDelArchivo({ r, alCerrar, alVer }: { r: Recien | null; alCerra
 }
 
 export function Cargar() {
+  const nombreDe = useNombreDeArchivo();
   const { periodo, jurisdiccion, cambiar } = useFiltros();
   const consulta = useCarga(periodo, jurisdiccion);
   const cargar = useCargarArchivo();
@@ -273,11 +277,11 @@ export function Cargar() {
         a.correcciones ? plural(a.correcciones, 'corrección hecha', 'correcciones hechas') : null,
       ].filter(Boolean);
       const ok = await confirmar({
-        titulo: `Reemplazar ${a.codigo}`,
+        titulo: `Reemplazar ${nombreDe(a.codigo)}`,
         texto: (
           <>
             <Typography gutterBottom>
-              Ya hay una importación de <strong>{a.codigo}</strong>
+              Ya hay una importación de <strong>{nombreDe(a.codigo)}</strong>
               {hoy.length > 0 && <> ({hoy.join(', ')})</>}. Vas a subir{' '}
               <Box component="span" sx={{ fontFamily: 'monospace' }}>
                 {archivo.name}

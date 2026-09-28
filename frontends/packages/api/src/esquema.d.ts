@@ -968,6 +968,9 @@ export interface components {
             csrf_token: string;
             salir: string;
             aviso: string;
+            nombres_de_archivo: {
+                [key: string]: string;
+            };
         };
         /**
          * @description * `ADVERTENCIA` - ADVERTENCIA

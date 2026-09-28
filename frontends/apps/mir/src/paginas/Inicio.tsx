@@ -35,6 +35,7 @@ import type { MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { conFiltros } from '../comun/filtros';
 import { ICONOS } from '../comun/iconos';
+import { useNombreDeArchivo } from '../comun/archivos';
 
 // Cómo se muestra el estado de un archivo. Neutral a propósito: un archivo
 // válido no se pinta de verde, porque el verde es de marca.
@@ -57,13 +58,14 @@ const estadoDe = (a: ArchivoDelPeriodo) => ESTADO_DEL_ARCHIVO[a.estado] ?? { tex
 
 /** En el teléfono, cada archivo es una ficha: una tabla de seis columnas no entra. */
 function FichaDeArchivo({ a }: { a: ArchivoDelPeriodo }) {
+  const nombreDe = useNombreDeArchivo();
   const e = estadoDe(a);
   return (
     <Box sx={{ py: 1.5, borderTop: 1, borderColor: 'divider' }}>
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
         <Box>
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
-            {a.codigo}
+            {nombreDe(a.codigo)}
           </Typography>
           {a.nombre && (
             <Typography variant="caption" color="text.secondary">
@@ -199,6 +201,7 @@ function HerramientasDelAdministrador({ periodo, estado }: { periodo: string; es
 }
 
 export function Inicio({ sesion }: { sesion: Sesion }) {
+  const nombreDe = useNombreDeArchivo();
   const navegar = useNavigate();
   const [params, setParams] = useSearchParams();
   const chico = useMediaQuery(useTheme().breakpoints.down('sm'));
@@ -271,63 +274,6 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
         </TextField>
       </Titulo>
 
-      {/* Los accesos, todos en una misma fila y arriba: antes quedaban debajo
-          del estado y había que desplazarse para verlos (27-09-2026). */}
-      {accesos.length > 0 && (
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: `repeat(${accesos.length}, minmax(0, 1fr))` },
-          }}
-        >
-          {accesos.map((s) => (
-            <Card key={s.clave} variant="outlined" sx={{ borderTop: 3, borderTopColor: 'primary.main' }}>
-              {/* Se va con el mismo período y la misma jurisdicción. Lo que siga en la
-                  versión actual se abre allá. */}
-              <CardActionArea
-                href={s.en_v2 ? `/v2/mir${destino(s.ruta)}` : `${s.ruta}?periodo=${periodo?.codigo ?? ''}`}
-                onClick={(e: MouseEvent) => {
-                  if (!s.en_v2 || e.ctrlKey || e.metaKey) return;
-                  e.preventDefault();
-                  navegar(destino(s.ruta));
-                }}
-                sx={{ height: '100%' }}
-              >
-                {/* Más color con los tonos del tema, sin inventar ninguno: el
-                    ícono de la sección sobre el verde de marca (27-09-2026). */}
-                <CardContent sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
-                  <Box
-                    aria-hidden
-                    sx={{
-                      flexShrink: 0,
-                      display: 'grid',
-                      placeItems: 'center',
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      bgcolor: 'primary.main',
-                      color: 'primary.contrastText',
-                    }}
-                  >
-                    {ICONOS[s.clave]}
-                  </Box>
-                  <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Typography sx={{ fontWeight: 500 }}>{s.etiqueta}</Typography>
-                      <ArrowForward fontSize="small" color="primary" />
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary">
-                      {s.detalle}
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          ))}
-        </Box>
-      )}
-
 
       {periodo && periodo.estado !== 'ABIERTO' && (
         <Alert severity="info">
@@ -399,7 +345,7 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
                         <TableRow key={a.codigo} hover>
                           <TableCell>
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {a.codigo}
+                              {nombreDe(a.codigo)}
                             </Typography>
                             {a.nombre && (
                               <Typography variant="caption" color="text.secondary">
@@ -427,6 +373,63 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
           )}
         </CardContent>
       </Card>
+
+      {/* Los accesos, abajo y todos en una misma fila (27-09-2026). Arriba
+          quedaban demasiado cerca del menú, que ofrece lo mismo. */}
+      {accesos.length > 0 && (
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: `repeat(${accesos.length}, minmax(0, 1fr))` },
+          }}
+        >
+          {accesos.map((s) => (
+            <Card key={s.clave} variant="outlined" sx={{ borderTop: 3, borderTopColor: 'primary.main' }}>
+              {/* Se va con el mismo período y la misma jurisdicción. Lo que siga en la
+                  versión actual se abre allá. */}
+              <CardActionArea
+                href={s.en_v2 ? `/v2/mir${destino(s.ruta)}` : `${s.ruta}?periodo=${periodo?.codigo ?? ''}`}
+                onClick={(e: MouseEvent) => {
+                  if (!s.en_v2 || e.ctrlKey || e.metaKey) return;
+                  e.preventDefault();
+                  navegar(destino(s.ruta));
+                }}
+                sx={{ height: '100%' }}
+              >
+                {/* Más color con los tonos del tema, sin inventar ninguno: el
+                    ícono de la sección sobre el verde de marca (27-09-2026). */}
+                <CardContent sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                  <Box
+                    aria-hidden
+                    sx={{
+                      flexShrink: 0,
+                      display: 'grid',
+                      placeItems: 'center',
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                    }}
+                  >
+                    {ICONOS[s.clave]}
+                  </Box>
+                  <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontWeight: 500 }}>{s.etiqueta}</Typography>
+                      <ArrowForward fontSize="small" color="primary" />
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                      {s.detalle}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          ))}
+        </Box>
+      )}
     </Stack>
   );
 }

@@ -23,8 +23,10 @@ import { usePlantillas } from '@mir/api';
 import { Titulo } from '@mir/ui';
 import { SelectorDePeriodo } from '../comun/Selectores';
 import { useFiltros } from '../comun/filtros';
+import { useNombreDeArchivo } from '../comun/archivos';
 
 export function Plantillas() {
+  const nombreDe = useNombreDeArchivo();
   const { periodo, cambiar } = useFiltros();
   const consulta = usePlantillas(periodo);
   const chico = useMediaQuery(useTheme().breakpoints.down('sm'));
@@ -67,7 +69,7 @@ export function Plantillas() {
                 <Stack key={a.codigo} direction="row" spacing={1} sx={{ py: 1.5, alignItems: 'center' }}>
                   <Box sx={{ flexGrow: 1 }}>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {a.codigo}
+                      {nombreDe(a.codigo)}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" component="div">
                       {a.nombre}
@@ -76,7 +78,7 @@ export function Plantillas() {
                       {a.hojas} hojas · {a.campos} campos{a.obligatorio ? ' · obligatorio' : ''}
                     </Typography>
                   </Box>
-                  <Button size="small" variant="outlined" href={a.descarga} aria-label={`Plantilla de ${a.codigo}`}>
+                  <Button size="small" variant="outlined" href={a.descarga} aria-label={`Plantilla de ${nombreDe(a.codigo)}`}>
                     <DownloadOutlined fontSize="small" />
                   </Button>
                   <Button
@@ -84,7 +86,7 @@ export function Plantillas() {
                     variant="outlined"
                     color="inherit"
                     href={a.descarga_instructivo}
-                    aria-label={`Instructivo de ${a.codigo}`}
+                    aria-label={`Instructivo de ${nombreDe(a.codigo)}`}
                   >
                     <DescriptionOutlined fontSize="small" />
                   </Button>
@@ -108,7 +110,7 @@ export function Plantillas() {
                     <TableRow key={a.codigo} hover>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {a.codigo}
+                          {nombreDe(a.codigo)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {a.nombre}

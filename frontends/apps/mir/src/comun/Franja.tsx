@@ -59,26 +59,30 @@ export function FranjaDelCircuito() {
         // Fuera del recuadro que se desplaza: queda siempre a la vista.
         flexShrink: 0,
         px: { xs: 2, md: 3 },
-        py: 0.75,
-        borderBottom: 1,
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
+        // Más marcada (27-09-2026): más alta, con letra más grande y sobre un
+        // verde claro de la marca, para que no se confunda con el contenido.
+        py: 1,
+        borderBottom: 2,
+        borderColor: 'primary.main',
+        bgcolor: (t) =>
+          `color-mix(in srgb, ${t.palette.primary.main} ${t.palette.mode === 'light' ? 14 : 24}%, ${t.palette.background.paper})`,
       }}
     >
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'nowrap', overflow: 'hidden' }}>
-        <Typography variant="caption" color="text.secondary" noWrap sx={{ fontWeight: 500, flexShrink: 0 }}>
+        {/* Si no entra todo, lo primero que se achica es esto: está también en el título. */}
+        <Typography variant="body2" color="text.secondary" noWrap sx={{ fontWeight: 500, minWidth: 40, flexShrink: 1 }}>
           {f.jurisdiccion} · {f.periodo_nombre || f.periodo}
         </Typography>
 
         {chico ? (
           // En pantallas angostas los pasos no entran: se dice en cuál está.
           <Tooltip describeChild title={f.que_pasa}>
-            <Typography variant="caption">
+            <Typography variant="body2">
               Paso {actual + 1} de {f.pasos.length}: <strong>{f.pasos[actual]?.nombre}</strong>
             </Typography>
           </Tooltip>
         ) : (
-          <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center' }} component="ol" role="list">
+          <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center', flexShrink: 0, m: 0, p: 0 }} component="ol" role="list">
             {f.pasos.map((p, i) => (
               <Fragment key={p.nombre}>
                 {i > 0 && <ChevronRight fontSize="inherit" sx={{ color: 'text.disabled' }} aria-hidden />}
@@ -91,21 +95,21 @@ export function FranjaDelCircuito() {
                     sx={{
                       alignItems: 'center',
                       listStyle: 'none',
-                      px: 0.75,
-                      py: 0.25,
+                      px: 1,
+                      py: 0.4,
                       borderRadius: 1,
                       bgcolor: p.actual ? 'primary.main' : 'transparent',
                       color: p.actual ? 'primary.contrastText' : p.hecho ? 'text.secondary' : 'text.disabled',
                     }}
                   >
                     {p.hecho ? (
-                      <CheckCircle sx={{ fontSize: 14 }} />
+                      <CheckCircle sx={{ fontSize: 18 }} />
                     ) : p.actual ? (
-                      <RadioButtonChecked sx={{ fontSize: 14 }} />
+                      <RadioButtonChecked sx={{ fontSize: 18 }} />
                     ) : (
-                      <RadioButtonUnchecked sx={{ fontSize: 14 }} />
+                      <RadioButtonUnchecked sx={{ fontSize: 18 }} />
                     )}
-                    <Typography variant="caption" sx={{ fontWeight: p.actual ? 600 : 400, whiteSpace: 'nowrap' }}>
+                    <Typography variant="body2" sx={{ fontWeight: p.actual ? 600 : 400, whiteSpace: 'nowrap' }}>
                       {p.nombre}
                     </Typography>
                   </Stack>
@@ -115,8 +119,8 @@ export function FranjaDelCircuito() {
           </Stack>
         )}
 
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', ml: 'auto', flexWrap: 'nowrap', minWidth: 0, '& > *': { whiteSpace: 'nowrap' } }}>
-          <Typography variant="caption" color="text.secondary">
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', ml: 'auto', flexWrap: 'nowrap', flexShrink: 0, '& > *': { whiteSpace: 'nowrap' } }}>
+          <Typography variant="body2" color="text.secondary">
             {archivosEnPalabras(f.estado, f.archivos_importados, f.archivos_esperados)}
           </Typography>
           {f.observaciones_abiertas > 0 && (
@@ -126,9 +130,9 @@ export function FranjaDelCircuito() {
             />
           )}
           {f.te_toca.length > 0 && (
-            <Typography variant="caption">
+            <Typography variant="body2">
               Te toca:{' '}
-              <Link component="button" variant="caption" onClick={irAlResultado} sx={{ fontWeight: 600, verticalAlign: 'baseline' }}>
+              <Link component="button" variant="body2" onClick={irAlResultado} sx={{ fontWeight: 600, verticalAlign: 'baseline' }}>
                 {f.te_toca.join(' o ').toLowerCase()}
               </Link>
             </Typography>

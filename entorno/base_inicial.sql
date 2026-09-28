@@ -1,9 +1,9 @@
 -- Base inicial del MIR, implementación RUNAC. La genera entorno/exportar_base.sh: no editar a mano.
 -- origen: runac_v2
--- generada: 2026-09-26
+-- generada: 2026-09-27
 -- contenido: 6 archivos · 380 campos
 -- campos: 380
--- huella_capa1: d854e6ac0decf583
+-- huella_capa1: eb1a3510a011f760
 /*!50503 SET NAMES utf8mb4 */;
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `runac` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */;
 USE `runac`;
@@ -391,6 +391,7 @@ CREATE TABLE `mir_c1_archivo` (
   `codigo` varchar(30) NOT NULL COMMENT 'Código estable que identifica el tipo de archivo, por ejemplo MPI, MPE o MPJ_DAE. No cambia nunca.',
   `descripcion` text COMMENT 'Descripción funcional de la información contenida en el archivo.',
   `activo` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Indica si el archivo sigue formando parte de los que se solicitan.',
+  `nombre_corto` varchar(80) DEFAULT NULL COMMENT 'Cómo se nombra el archivo en las pantallas. Vacío: se muestra el código.',
   PRIMARY KEY (`id`),
   UNIQUE KEY `codigo` (`codigo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='La identidad del archivo. Todo lo que puede cambiar entre períodos vive en la versión.';
@@ -2188,7 +2189,7 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-26 17:43:06
+-- Dump completed on 2026-09-27 21:08:02
 -- MySQL dump 10.13  Distrib 8.4.11, for Linux (x86_64)
 --
 -- Host: localhost    Database: runac_v2
@@ -2241,7 +2242,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `auth_user` WRITE;
 /*!40000 ALTER TABLE `auth_user` DISABLE KEYS */;
-INSERT INTO `auth_user` VALUES (1,'pbkdf2_sha256$1000000$Kc3sM7bvPpZceXOd2qbWsD$KdZ3Y5WCHuOYrsxwpnQVkHUmVpTa696sQl6eoKUWqs0=','2026-09-26 12:10:05.652388',0,'operador','Operador provincial','','',0,1,'2026-09-08 01:22:55.505424'),(2,'pbkdf2_sha256$1000000$y9f9fQxowtARzVJ4UOQr0l$wYF1cIyIE7SB1bWzxPoI4bBtdbVGvyzT6gMMfcWVQwQ=','2026-09-12 14:35:52.204325',0,'responsable','Responsable provincial','','',0,1,'2026-09-08 01:22:55.892049'),(3,'pbkdf2_sha256$1000000$TvKLtD1drjK7SyJfl875al$oKXXTQj6b2sY/mJ6RS4FodSumkSNzv38w8mcZdgJAuA=','2026-09-26 00:15:36.804921',0,'revisor','Revisor técnico nacional','','',0,1,'2026-09-08 01:22:56.250835'),(4,'pbkdf2_sha256$1000000$OHgXa5N0sTHWEUHs4iaQWW$WaEO8aE/CJFejadnXtCInmXkFzOzds6xrOsWT8E+n6o=','2026-09-24 14:02:11.181618',1,'admin','Administrador nacional','','',1,1,'2026-09-08 01:22:56.572629'),(5,'pbkdf2_sha256$1000000$tF4UcNuwhb9v96RhKKRZbr$wGFZkmqa8JJvNMsWBIGRzjt0sTTRDdfGtm3NsaeOK28=','2026-09-26 00:15:37.626230',0,'operador_chaco','Operador provincial','','',0,1,'2026-09-26 00:15:11.003001'),(6,'pbkdf2_sha256$1000000$H34eDPmqFtBYPwUKWxw4eq$ipVr6/dkxapq7KdTDRDD6kbw/FpG321SaA4U4VpVXGA=','2026-09-26 00:15:27.201966',0,'responsable_chaco','Responsable provincial','','',0,1,'2026-09-26 00:15:11.392822');
+INSERT INTO `auth_user` VALUES (1,'pbkdf2_sha256$1000000$Kc3sM7bvPpZceXOd2qbWsD$KdZ3Y5WCHuOYrsxwpnQVkHUmVpTa696sQl6eoKUWqs0=','2026-09-26 12:10:05.652388',0,'operador','Operador provincial','','',0,1,'2026-09-08 01:22:55.505424'),(2,'pbkdf2_sha256$1000000$y9f9fQxowtARzVJ4UOQr0l$wYF1cIyIE7SB1bWzxPoI4bBtdbVGvyzT6gMMfcWVQwQ=','2026-09-12 14:35:52.204325',0,'responsable','Responsable provincial','','',0,1,'2026-09-08 01:22:55.892049'),(3,'pbkdf2_sha256$1000000$TvKLtD1drjK7SyJfl875al$oKXXTQj6b2sY/mJ6RS4FodSumkSNzv38w8mcZdgJAuA=','2026-09-26 00:15:36.804921',0,'revisor','Revisor técnico nacional','','',0,1,'2026-09-08 01:22:56.250835'),(4,'pbkdf2_sha256$1000000$OHgXa5N0sTHWEUHs4iaQWW$WaEO8aE/CJFejadnXtCInmXkFzOzds6xrOsWT8E+n6o=','2026-09-28 00:01:00.764648',1,'admin','Administrador nacional','','',1,1,'2026-09-08 01:22:56.572629'),(5,'pbkdf2_sha256$1000000$tF4UcNuwhb9v96RhKKRZbr$wGFZkmqa8JJvNMsWBIGRzjt0sTTRDdfGtm3NsaeOK28=','2026-09-26 00:15:37.626230',0,'operador_chaco','Operador provincial','','',0,1,'2026-09-26 00:15:11.003001'),(6,'pbkdf2_sha256$1000000$H34eDPmqFtBYPwUKWxw4eq$ipVr6/dkxapq7KdTDRDD6kbw/FpG321SaA4U4VpVXGA=','2026-09-26 00:15:27.201966',0,'responsable_chaco','Responsable provincial','','',0,1,'2026-09-26 00:15:11.392822');
 /*!40000 ALTER TABLE `auth_user` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2362,7 +2363,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `mir_c1_archivo` WRITE;
 /*!40000 ALTER TABLE `mir_c1_archivo` DISABLE KEYS */;
-INSERT INTO `mir_c1_archivo` VALUES (1,'DISP_PENAL','Listado de dispositivos penales',1),(2,'DISP_SCP','Listado de dispositivos de cuidado residencial',1),(3,'MPI','Nómina de medidas de protección integral',1),(4,'MPE','Nómina de medidas de protección excepcional',1),(5,'MPJ_DAE','Nómina de medidas penales juveniles',1),(9,'LEGAJO_NYA','Legajo de niños, niñas y adolescentes',1);
+INSERT INTO `mir_c1_archivo` VALUES (1,'DISP_PENAL','Listado de dispositivos penales',1,'Dispositivos penales'),(2,'DISP_SCP','Listado de dispositivos de cuidado residencial',1,'Dispositivos de cuidado residencial'),(3,'MPI','Nómina de medidas de protección integral',1,'MPI'),(4,'MPE','Nómina de medidas de protección excepcional',1,'MPE'),(5,'MPJ_DAE','Nómina de medidas penales juveniles',1,'MPJ y DAE'),(9,'LEGAJO_NYA','Legajo de niños, niñas y adolescentes',1,'Legajo de niños, niñas y adolescentes');
 /*!40000 ALTER TABLE `mir_c1_archivo` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2505,4 +2506,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-26 17:43:07
+-- Dump completed on 2026-09-27 21:08:03

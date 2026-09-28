@@ -30,11 +30,20 @@ export function Titulo({ titulo, subtitulo, volver, children }: Props) {
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           {/* Un nombre de archivo es una palabra larga sin espacios: sin esto,
               en un teléfono empuja la pantalla hacia el costado. */}
-          {/* El filete ámbar es el acento de la marca, el mismo del borde de la barra. */}
+          {/* Que se destaque (27-09-2026): más grande, en el verde oscuro de la
+              marca y con el filete ámbar, el mismo del borde de la barra. */}
           <Typography
-            variant="h6"
+            variant="h5"
             component="h1"
-            sx={{ fontWeight: 700, overflowWrap: 'anywhere', lineHeight: 1.3, borderLeft: 4, borderColor: 'nav.accent', pl: 1.25 }}
+            sx={{
+              fontWeight: 700,
+              overflowWrap: 'anywhere',
+              lineHeight: 1.25,
+              color: (t) => (t.palette.mode === 'light' ? t.palette.primary.dark : t.palette.text.primary),
+              borderLeft: 5,
+              borderColor: 'nav.accent',
+              pl: 1.25,
+            }}
           >
             {titulo}
           </Typography>

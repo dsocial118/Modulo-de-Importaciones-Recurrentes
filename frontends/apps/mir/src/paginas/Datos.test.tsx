@@ -11,7 +11,11 @@ const api = vi.hoisted(() => ({
   useReabrirObservacion: vi.fn(),
   useDesestimarObservacion: vi.fn(),
 }));
-vi.mock('@mir/api', () => ({ ...api, mensajeDeError: () => 'error' }));
+vi.mock('@mir/api', () => ({
+  ...api,
+  mensajeDeError: () => 'error',
+  useSesion: () => ({ data: { nombres_de_archivo: {} } }),
+}));
 
 function datos(extra = {}) {
   return {

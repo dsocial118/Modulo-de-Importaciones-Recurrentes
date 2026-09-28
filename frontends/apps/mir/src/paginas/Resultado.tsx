@@ -34,6 +34,7 @@ import { SelectorDeJurisdiccion, SelectorDePeriodo } from '../comun/Selectores';
 import { conFiltros, useFiltros } from '../comun/filtros';
 import { TarjetaDeObservacion } from '../comun/Observaciones';
 import { dondeEsta } from '../comun/ubicacion';
+import { useNombreDeArchivo } from '../comun/archivos';
 
 // Las acciones que no tienen vuelta atrás se confirman; el resto, no.
 const A_CONFIRMAR: Record<string, string> = {
@@ -44,6 +45,7 @@ const A_CONFIRMAR: Record<string, string> = {
 };
 
 function Archivo({ a, puedeEditar }: { a: ArchivoDelResultado; puedeEditar: boolean }) {
+  const nombreDe = useNombreDeArchivo();
   const navegar = useNavigate();
   const imp = a.importacion;
   const e = formaDe(ESTADO_DEL_ARCHIVO, a.estado);
@@ -54,7 +56,7 @@ function Archivo({ a, puedeEditar }: { a: ArchivoDelResultado; puedeEditar: bool
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: { md: 'flex-start' } }}>
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-            <Typography sx={{ fontWeight: 500 }}>{a.codigo}</Typography>
+            <Typography sx={{ fontWeight: 500 }}>{nombreDe(a.codigo)}</Typography>
             <EtiquetaDeEstado tono={e.tono} texto={e.texto} />
           </Stack>
           {/* Nombre y cifras en un solo renglón (27-09-2026). */}

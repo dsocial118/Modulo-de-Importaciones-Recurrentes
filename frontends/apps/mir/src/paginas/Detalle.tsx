@@ -38,6 +38,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ESTADO_DEL_ARCHIVO, SEVERIDAD, formaDe } from '../comun/estados';
 import { filasEnPalabras, numero, plural } from '../comun/formato';
 import { conFiltros } from '../comun/filtros';
+import { useNombreDeArchivo } from '../comun/archivos';
 
 const POR_PAGINA = 50;
 
@@ -89,6 +90,7 @@ function MenuDeDescargas({ marcado, informe }: { marcado: string; informe: strin
 }
 
 export function Detalle() {
+  const nombreDe = useNombreDeArchivo();
   const id = Number(useParams().id);
   const navegar = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -136,7 +138,7 @@ export function Detalle() {
   return (
     <>
       <Titulo
-        titulo={`${imp.archivo_codigo} · ${imp.nombre_archivo ?? ''}`}
+        titulo={`${nombreDe(imp.archivo_codigo)} · ${imp.nombre_archivo ?? ''}`}
         volver={
           <Button size="small" startIcon={<ArrowBack />} onClick={() => navegar(volver)} sx={{ mb: 1, ml: -1 }}>
             Volver al resultado

@@ -55,11 +55,13 @@ class SesionSerializer(serializers.Serializer):
     salir = serializers.CharField()
     # La etiqueta «datos de prueba». Vacía cuando no corresponde mostrarla.
     aviso = serializers.CharField(allow_blank=True)
+    # Del código del archivo a su nombre corto. Sin nombre corto, el código.
+    nombres_de_archivo = serializers.DictField(child=serializers.CharField())
 
 
 class PeriodoSerializer(serializers.Serializer):
     codigo = serializers.CharField()
-    # «1.er trimestre 2026»: el código queda para las direcciones y los archivos.
+    # «1er. Trimestre 2026»: el código queda para las direcciones y los archivos.
     nombre = serializers.SerializerMethodField()
     estado = serializers.CharField()
     fecha_desde = serializers.DateField()

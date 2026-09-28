@@ -50,6 +50,7 @@ import { dondeEsta } from '../comun/ubicacion';
 import { Grilla } from '../comun/Grilla';
 import { tonoDeLaPresentacion } from '../comun/estados';
 import { fechaHora, plural } from '../comun/formato';
+import { useNombreDeArchivo } from '../comun/archivos';
 
 // La fila entera, no sólo su número: la confirmación dice de quién es.
 type AlCorregir = (fila: FilaDeDatos, celda: Celda, valor: string) => Promise<boolean>;
@@ -270,6 +271,7 @@ function RenglonDelDato({
 }
 
 export function Datos() {
+  const nombreDe = useNombreDeArchivo();
   const id = Number(useParams().id);
   const navegar = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -348,7 +350,7 @@ export function Datos() {
   return (
     <>
       <Titulo
-        titulo={`${c.archivo_codigo} · ${d.puede_editar && c.editable ? 'ver y corregir datos' : 'ver datos'}`}
+        titulo={`${nombreDe(c.archivo_codigo)} · ${d.puede_editar && c.editable ? 'ver y corregir datos' : 'ver datos'}`}
         volver={
           <Button size="small" startIcon={<ArrowBack />} onClick={() => navegar(`/resultado/${id}`)} sx={{ mb: 1, ml: -1 }}>
             Volver al detalle

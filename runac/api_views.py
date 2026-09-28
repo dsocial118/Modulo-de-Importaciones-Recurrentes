@@ -194,6 +194,9 @@ class SesionView(APIView):
             "salir": f'{reverse("runac:salir")}?next=/v2/mir/',
             # Etiqueta de seguridad, no decoración: ver MIR_AVISO en settings.
             "aviso": settings.MIR_AVISO if settings.MIR_MOSTRAR_AVISO else "",
+            # Cómo se nombra cada archivo en pantalla: «Dispositivos penales»
+            # y no DISP_PENAL (guion 35, 27-09-2026).
+            "nombres_de_archivo": svc.nombres_cortos(),
         }
         return Response(s.SesionSerializer(datos).data)
 
