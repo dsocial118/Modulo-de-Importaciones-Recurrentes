@@ -91,14 +91,14 @@ export function App() {
         salir={s.salir}
         alNavegar={(ruta) => navegar(ruta)}
       >
-        {/* Los títulos de las tablas, teñidos con el verde de marca: más color
-            sin inventar ninguno (27-09-2026). Tinte sólido, porque varios
-            quedan fijos al desplazarse y uno transparente dejaría ver debajo. */}
+        {/* Los títulos de las tablas, en el verde de marca con su tinta de
+            contraste (propuesta B, elegida el 27-09-2026). Color lleno: varios
+            quedan fijos al desplazarse, y uno transparente dejaría ver debajo. */}
         <GlobalStyles
           styles={(t) => ({
             '#contenido .MuiTableHead-root .MuiTableCell-head': {
-              backgroundColor: `color-mix(in srgb, ${t.palette.primary.main} ${t.palette.mode === 'light' ? 8 : 20}%, ${t.palette.background.paper})`,
-              color: t.palette.mode === 'light' ? t.palette.primary.dark : t.palette.text.primary,
+              backgroundColor: t.palette.primary.main,
+              color: t.palette.primary.contrastText,
               fontWeight: 600,
             },
           })}

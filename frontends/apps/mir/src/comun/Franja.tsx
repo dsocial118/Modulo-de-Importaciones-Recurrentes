@@ -59,18 +59,18 @@ export function FranjaDelCircuito() {
         // Fuera del recuadro que se desplaza: queda siempre a la vista.
         flexShrink: 0,
         px: { xs: 2, md: 3 },
-        // Más marcada (27-09-2026): más alta, con letra más grande y sobre un
-        // verde claro de la marca, para que no se confunda con el contenido.
+        // Con los colores de la navegación y el paso actual en ámbar, como la
+        // sección activa del menú (propuesta C, elegida el 27-09-2026).
         py: 1,
-        borderBottom: 2,
-        borderColor: 'primary.main',
-        bgcolor: (t) =>
-          `color-mix(in srgb, ${t.palette.primary.main} ${t.palette.mode === 'light' ? 14 : 24}%, ${t.palette.background.paper})`,
+        borderBottom: 3,
+        borderColor: 'nav.accent',
+        bgcolor: 'nav.activeBg',
+        color: 'nav.text',
       }}
     >
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'nowrap', overflow: 'hidden' }}>
         {/* Si no entra todo, lo primero que se achica es esto: está también en el título. */}
-        <Typography variant="body2" color="text.secondary" noWrap sx={{ fontWeight: 500, minWidth: 40, flexShrink: 1 }}>
+        <Typography variant="body2" noWrap sx={{ color: 'nav.textMuted', fontWeight: 500, minWidth: 40, flexShrink: 1 }}>
           {f.jurisdiccion} · {f.periodo_nombre || f.periodo}
         </Typography>
 
@@ -85,7 +85,7 @@ export function FranjaDelCircuito() {
           <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center', flexShrink: 0, m: 0, p: 0 }} component="ol" role="list">
             {f.pasos.map((p, i) => (
               <Fragment key={p.nombre}>
-                {i > 0 && <ChevronRight fontSize="inherit" sx={{ color: 'text.disabled' }} aria-hidden />}
+                {i > 0 && <ChevronRight fontSize="inherit" sx={{ color: 'nav.textMuted' }} aria-hidden />}
                 <Tooltip describeChild title={p.actual ? `${f.estado_legible}: ${f.que_pasa}` : p.hecho ? 'Hecho' : 'Todavía no'}>
                   <Stack
                     component="li"
@@ -98,8 +98,10 @@ export function FranjaDelCircuito() {
                       px: 1,
                       py: 0.4,
                       borderRadius: 1,
-                      bgcolor: p.actual ? 'primary.main' : 'transparent',
-                      color: p.actual ? 'primary.contrastText' : p.hecho ? 'text.secondary' : 'text.disabled',
+                      bgcolor: p.actual ? 'nav.accent' : 'transparent',
+                      // Sobre el ámbar, la tinta que le da contraste (la oscura, en los dos modos).
+                      color: (t) =>
+                        p.actual ? t.palette.getContrastText(t.palette.nav.accent) : p.hecho ? t.palette.nav.text : t.palette.nav.textMuted,
                     }}
                   >
                     {p.hecho ? (
@@ -120,7 +122,7 @@ export function FranjaDelCircuito() {
         )}
 
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', ml: 'auto', flexWrap: 'nowrap', flexShrink: 0, '& > *': { whiteSpace: 'nowrap' } }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: 'nav.textMuted' }}>
             {archivosEnPalabras(f.estado, f.archivos_importados, f.archivos_esperados)}
           </Typography>
           {f.observaciones_abiertas > 0 && (
@@ -132,7 +134,7 @@ export function FranjaDelCircuito() {
           {f.te_toca.length > 0 && (
             <Typography variant="body2">
               Te toca:{' '}
-              <Link component="button" variant="body2" onClick={irAlResultado} sx={{ fontWeight: 600, verticalAlign: 'baseline' }}>
+              <Link component="button" variant="body2" onClick={irAlResultado} sx={{ fontWeight: 600, verticalAlign: 'baseline', color: 'nav.accent' }}>
                 {f.te_toca.join(' o ').toLowerCase()}
               </Link>
             </Typography>

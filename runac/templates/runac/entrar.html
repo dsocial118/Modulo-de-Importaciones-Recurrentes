@@ -1,60 +1,119 @@
 {% extends "runac/base.html" %}
 {% block titulo %}Entrar{% endblock %}
-
 {% block contenido %}
-    <div class="row justify-content-center mt-4">
-        <div class="col-md-5">
-            <div class="card">
-                <div class="card-header">Entrar a RUNAC</div>
-                <div class="card-body">
-
-                    {% if form.errors %}<div class="alert alert-danger py-2">Usuario o contraseña incorrectos.</div>{% endif %}
-
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label">Usuario</label>
-                            <input type="text" name="username" class="form-control" autofocus required />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Contraseña</label>
-                            <input type="password" name="password" class="form-control" required />
-                        </div>
-                        <button class="btn btn-primary w-100">Entrar</button>
-                    </form>
-
-                    <hr class="my-4" />
-                    <p class="ayuda mb-1">
-                        <strong>Usuarios de prueba</strong> — la contraseña es <span class="mono">runac</span>
-                    </p>
-                    <table class="table table-sm tabla-compacta mb-0 tabla-ficha">
-                        <tr>
-                            <td class="mono">operador</td>
-                            <td class="ayuda">Operador provincial · Chubut</td>
-                        </tr>
-                        <tr>
-                            <td class="mono">responsable</td>
-                            <td class="ayuda">Responsable provincial · Chubut</td>
-                        </tr>
-                        <tr>
-                            <td class="mono">operador_chaco</td>
-                            <td class="ayuda">Operador provincial · Chaco</td>
-                        </tr>
-                        <tr>
-                            <td class="mono">responsable_chaco</td>
-                            <td class="ayuda">Responsable provincial · Chaco</td>
-                        </tr>
-                        <tr>
-                            <td class="mono">revisor</td>
-                            <td class="ayuda">Revisor técnico nacional</td>
-                        </tr>
-                        <tr>
-                            <td class="mono">admin</td>
-                            <td class="ayuda">Administrador nacional</td>
-                        </tr>
-                    </table>
-                </div>
+    {% comment %}
+    Los usuarios de prueba, explicados (pedido del responsable funcional,
+    27-09-2026): antes eran una lista de nombres técnicos sin decir qué es cada
+    uno. Van agrupados por dónde trabajan y dicen qué hace cada rol. Un clic
+    completa el formulario. La contraseña es de prueba y está en el repo.
+    {% endcomment %}
+    <style>
+      .entrar { max-width: 980px; margin: 1.5rem auto; display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); }
+      @media (min-width: 900px) { .entrar { grid-template-columns: 340px minmax(0, 1fr); align-items: start; } }
+      .entrar .card-header { background: var(--nav); color: var(--nav-tinta); border-bottom: 3px solid var(--nav-acento); font-weight: 700; }
+      .prueba-grupo { margin-bottom: 1rem; }
+      .prueba-grupo h3 { font-size: .95rem; font-weight: 700; color: var(--marca-oscura); margin: 0 0 .5rem; }
+      .prueba-usuarios { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+      .prueba-usuario { text-align: left; width: 100%; border: 1px solid var(--borde); border-left: 4px solid var(--marca); border-radius: 8px; background: var(--papel); padding: .6rem .75rem; color: var(--tinta); }
+      .prueba-usuario:hover, .prueba-usuario:focus-visible { background: var(--marca-superficie); outline: 2px solid var(--marca); outline-offset: 1px; }
+      .prueba-usuario .rol { display: block; font-weight: 700; }
+      .prueba-usuario .que { display: block; font-size: .85rem; color: var(--tinta-suave); margin-top: .15rem; }
+      .prueba-usuario .usuario { display: inline-block; font-family: ui-monospace, Consolas, monospace; font-size: .8rem; background: var(--marca-chip); color: var(--marca-oscura); border-radius: 4px; padding: 0 .35rem; margin-top: .35rem; }
+    </style>
+    <div class="entrar">
+        <div class="card">
+            <div class="card-header">Entrar a SISOC · RUNAC</div>
+            <div class="card-body">
+                {% if form.errors %}<div class="alert alert-danger py-2">Usuario o contraseña incorrectos.</div>{% endif %}
+                <form method="post" id="form-entrar">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="usuario">Usuario</label>
+                        <input type="text"
+                               id="usuario"
+                               name="username"
+                               class="form-control"
+                               autofocus
+                               required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="clave">Contraseña</label>
+                        <input type="password"
+                               id="clave"
+                               name="password"
+                               class="form-control"
+                               required />
+                    </div>
+                    <button class="btn btn-primary w-100">Entrar</button>
+                </form>
             </div>
         </div>
+        <section class="card">
+            <div class="card-body">
+                <h2 class="h6 mb-1">Usuarios para probar</h2>
+                <p class="ayuda mb-3">
+                    Cada usuario es una persona con un rol distinto en el circuito. Elegí uno y se completa el formulario:
+                    la contraseña de todos es <span class="mono">runac</span>.
+                </p>
+                <div class="prueba-grupo">
+                    <h3>Provincia de Chubut</h3>
+                    <div class="prueba-usuarios">
+                        <button type="button" class="prueba-usuario" data-usuario="operador">
+                            <span class="rol">Operador provincial</span>
+                            <span class="que">Carga los archivos del período y corrige los datos.</span>
+                            <span class="usuario">operador</span>
+                        </button>
+                        <button type="button" class="prueba-usuario" data-usuario="responsable">
+                            <span class="rol">Responsable provincial</span>
+                            <span class="que">Corrige, cierra la carga, responde las observaciones y presenta el período.</span>
+                            <span class="usuario">responsable</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="prueba-grupo">
+                    <h3>Provincia de Chaco</h3>
+                    <div class="prueba-usuarios">
+                        <button type="button" class="prueba-usuario" data-usuario="operador_chaco">
+                            <span class="rol">Operador provincial</span>
+                            <span class="que">Lo mismo que el de Chubut, con los datos de Chaco.</span>
+                            <span class="usuario">operador_chaco</span>
+                        </button>
+                        <button type="button" class="prueba-usuario" data-usuario="responsable_chaco">
+                            <span class="rol">Responsable provincial</span>
+                            <span class="que">Lo mismo que el de Chubut, con los datos de Chaco.</span>
+                            <span class="usuario">responsable_chaco</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="prueba-grupo mb-0">
+                    <h3>Nivel nacional</h3>
+                    <div class="prueba-usuarios">
+                        <button type="button" class="prueba-usuario" data-usuario="revisor">
+                            <span class="rol">Revisor técnico nacional</span>
+                            <span class="que">Revisa lo que presentan las provincias, observa datos y habilita la presentación. No modifica datos.</span>
+                            <span class="usuario">revisor</span>
+                        </button>
+                        <button type="button" class="prueba-usuario" data-usuario="admin">
+                            <span class="rol">Administrador nacional</span>
+                            <span class="que">Prepara los períodos, ajusta las reglas antes de abrirlos, y los abre y los cierra. No carga ni corrige datos.</span>
+                            <span class="usuario">admin</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
+{% endblock %}
+{% block scripts %}
+    {{ block.super }}
+    <script>
+      // Un clic en un usuario de prueba completa el formulario. Sólo datos de prueba.
+      document.querySelectorAll(".prueba-usuario").forEach(function (b) {
+        b.addEventListener("click", function () {
+          document.getElementById("usuario").value = b.dataset.usuario;
+          document.getElementById("clave").value = "runac";
+          document.getElementById("clave").focus();
+        });
+      });
+    </script>
 {% endblock %}
