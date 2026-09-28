@@ -266,47 +266,95 @@ export function Cargar() {
   const d = consulta.data;
   const habilitada = d.carga_abierta && d.puede_cargar && d.periodo?.estado === 'ABIERTO';
 
+  // Los que usan datos de este, directa o indirectamente: si este entra,
+  // quedan anulados y hay que volver a cargarlos (27-09-2026). Es la misma
+  // cadena que sigue el servidor (`archivos_que_dependen_de`).
+  const dependientesDe = (codigo: string) => {
+    const vistos = new Set<string>();
+    const pendientes = [codigo];
+    while (pendientes.length) {
+      const actual = pendientes.pop()!;
+      for (const x of d.archivos) {
+        if (x.necesita.includes(actual) && !vistos.has(x.codigo) && x.codigo !== codigo) {
+          vistos.add(x.codigo);
+          pendientes.push(x.codigo);
+        }
+      }
+    }
+    return d.archivos.filter((x) => vistos.has(x.codigo) && x.importada);
+  };
+
   const importar = async (a: ArchivoACargar, archivo: File) => {
-    // Sólo se pregunta al reemplazar: es lo único que pisa algo. Importar por
-    // primera vez no necesita confirmación, porque un archivo con errores se
-    // rechaza entero y no deja nada a medias.
-    if (a.importada) {
+    // Se pregunta sólo cuando se pisa algo: al reemplazar, o cuando el archivo
+    // nuevo anula a otros que dependen de él. Importar por primera vez un
+    // archivo del que nadie depende no pregunta: si tiene errores se rechaza
+    // entero y no deja nada a medias.
+    const afectados = dependientesDe(a.codigo);
+    if (a.importada || afectados.length) {
       const hoy = [
         a.filas != null ? plural(a.filas, 'fila', 'filas') : null,
         a.advertencias ? plural(a.advertencias, 'advertencia', 'advertencias') : null,
         a.correcciones ? plural(a.correcciones, 'corrección hecha', 'correcciones hechas') : null,
       ].filter(Boolean);
       const ok = await confirmar({
-        titulo: `Reemplazar ${nombreDe(a.codigo)}`,
+        titulo: a.importada ? `Reemplazar ${nombreDe(a.codigo)}` : `Importar ${nombreDe(a.codigo)}`,
         texto: (
           <>
-            <Typography gutterBottom>
-              Ya hay una importación de <strong>{nombreDe(a.codigo)}</strong>
-              {hoy.length > 0 && <> ({hoy.join(', ')})</>}. Vas a subir{' '}
-              <Box component="span" sx={{ fontFamily: 'monospace' }}>
-                {archivo.name}
-              </Box>
-              .
-            </Typography>
-            <Typography>
-              Si el archivo nuevo entra, reemplaza al anterior
-              {a.correcciones ? (
-                <>
-                  {' '}
-                  y{' '}
-                  <strong>
-                    {a.correcciones === 1
-                      ? 'se pierde la corrección hecha'
-                      : `se pierden las ${a.correcciones} correcciones hechas`}
-                  </strong>{' '}
-                  dentro del sistema
-                </>
-              ) : null}
-              . Si tiene errores bloqueantes, no se incorpora y el anterior queda como estaba.
-            </Typography>
+            {a.importada && (
+              <>
+                <Typography gutterBottom>
+                  Ya hay una importación de <strong>{nombreDe(a.codigo)}</strong>
+                  {hoy.length > 0 && <> ({hoy.join(', ')})</>}. Vas a subir{' '}
+                  <Box component="span" sx={{ fontFamily: 'monospace' }}>
+                    {archivo.name}
+                  </Box>
+                  .
+                </Typography>
+                <Typography gutterBottom>
+                  Si el archivo nuevo entra, reemplaza al anterior
+                  {a.correcciones ? (
+                    <>
+                      {' '}
+                      y{' '}
+                      <strong>
+                        {a.correcciones === 1
+                          ? 'se pierde la corrección hecha'
+                          : `se pierden las ${a.correcciones} correcciones hechas`}
+                      </strong>{' '}
+                      dentro del sistema
+                    </>
+                  ) : null}
+                  .
+                </Typography>
+              </>
+            )}
+            {/* La advertencia fuerte: lo que depende de este archivo se anula
+                y hay que volver a cargarlo, con sus correcciones. */}
+            {afectados.length > 0 && (
+              <Alert severity="error" sx={{ my: 1.5 }}>
+                <strong>
+                  También se anulan {afectados.length === 1 ? 'este archivo, que depende' : 'estos archivos, que dependen'} de{' '}
+                  {nombreDe(a.codigo)}, y hay que volver a cargar{afectados.length === 1 ? 'lo' : 'los'}:
+                </strong>
+                <Box component="ul" sx={{ my: 0.5, pl: 2.5 }}>
+                  {afectados.map((x) => (
+                    <li key={x.codigo}>
+                      <strong>{nombreDe(x.codigo)}</strong>
+                      {x.filas != null && <> · {plural(x.filas, 'fila', 'filas')}</>}
+                      {x.correcciones ? (
+                        <> · se pierden {plural(x.correcciones, 'corrección', 'correcciones')} y su historial de cambios</>
+                      ) : null}
+                    </li>
+                  ))}
+                </Box>
+                Se validaron contra el {nombreDe(a.codigo)} de antes. No se borran de la base: quedan anulados, como
+                constancia, pero dejan de valer.
+              </Alert>
+            )}
+            <Typography>Si el archivo tiene errores bloqueantes, no se incorpora y no cambia nada.</Typography>
           </>
         ),
-        confirmar: 'Reemplazar',
+        confirmar: afectados.length ? 'Sí, subirlo y anular los otros' : 'Reemplazar',
         color: 'warning',
       });
       if (ok === null) return;

@@ -733,6 +733,36 @@ def valores_a_coincidir(cur, archivos, archivo, presentacion_id) -> dict:
     return coincidencias
 
 
+def archivos_que_dependen_de(archivos: list[dict], codigo: str) -> list[int]:
+    """Los archivos que usan datos de este, directa o indirectamente.
+
+    Un archivo depende de otro cuando alguno de sus campos tiene una regla que
+    busca el valor allá (EXISTE_EN_ARCHIVO o COINCIDE_CON_ARCHIVO). Se sigue la
+    cadena: si C depende de B y B de A, cambiar A obliga a recargar B y C.
+    Devuelve los `archivo_id`.
+    """
+    usa: dict[str, set] = {}
+    for b in archivos:
+        for hoja in b.get("hojas") or []:
+            for campo in hoja.get("campos") or []:
+                for regla in campo.get("reglas") or []:
+                    if regla.get("tipo_regla") in (
+                        "EXISTE_EN_ARCHIVO",
+                        "COINCIDE_CON_ARCHIVO",
+                    ):
+                        destino = (regla.get("parametros") or {}).get("archivo")
+                        if destino and destino != b["codigo"]:
+                            usa.setdefault(destino, set()).add(b["codigo"])
+    alcanzados: set = set()
+    pendientes = [codigo]
+    while pendientes:
+        for hijo in usa.get(pendientes.pop(), set()):
+            if hijo not in alcanzados and hijo != codigo:
+                alcanzados.add(hijo)
+                pendientes.append(hijo)
+    return [b["archivo_id"] for b in archivos if b["codigo"] in alcanzados]
+
+
 def identificar_fila(campos, valores_crudos) -> str | None:
     """De quién es esta fila, en las palabras de la planilla.
 
@@ -1417,6 +1447,22 @@ def _ejecutar_con(args, cn):
                       AND estado='VALIDA'""",
                 (presentacion_id, a["archivo_id"], importacion_id),
             )
+            # Y los que dependen de este —las nóminas de los dispositivos, todo
+            # lo que cuelga del legajo— se tienen que volver a cargar: fueron
+            # validados contra el archivo de antes (pedido del responsable
+            # funcional, 27-09-2026). Anulación lógica, como la del reemplazo:
+            # sus filas y su historial quedan como constancia. Sólo los
+            # anteriores a esta importación: en una carga de varios archivos,
+            # los que vienen después ya se validan contra el nuevo.
+            dependientes = archivos_que_dependen_de(archivos, a["codigo"])
+            if dependientes:
+                marcas = ", ".join(["%s"] * len(dependientes))
+                cur2.execute(
+                    f"""UPDATE mir_c2_importacion SET estado='ANULADA'
+                        WHERE presentacion_id=%s AND archivo_id IN ({marcas})
+                          AND estado='VALIDA' AND id < %s""",
+                    (presentacion_id, *dependientes, importacion_id),
+                )
         cn.commit()
 
         marca = (

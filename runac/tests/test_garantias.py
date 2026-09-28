@@ -524,3 +524,36 @@ def test_la_jurisdiccion_es_una_sola_en_todas_las_pantallas():
     )
     # Y si nunca se eligió, la del usuario: no puede quedar vacío.
     assert "jurisdiccion_de(usuario)" in fuente
+
+
+# ---------------------------------------------------------------------------
+# «Si se vuelve a cargar un archivo, lo que depende de él se vuelve a cargar»
+# ---------------------------------------------------------------------------
+
+
+def _archivo(codigo, archivo_id, usa=()):
+    reglas = [
+        {"tipo_regla": "EXISTE_EN_ARCHIVO", "parametros": {"archivo": destino}}
+        for destino in usa
+    ]
+    return {
+        "codigo": codigo,
+        "archivo_id": archivo_id,
+        "hojas": [{"campos": [{"reglas": reglas}]}],
+    }
+
+
+def test_reemplazar_el_legajo_obliga_a_recargar_lo_que_cuelga_de_el():
+    """Pedido del responsable funcional (27-09-2026): se validaron contra el de antes."""
+    from importar import archivos_que_dependen_de
+
+    archivos = [
+        _archivo("DISP_PENAL", 1),
+        _archivo("LEGAJO_NYA", 2),
+        _archivo("MPI", 3, usa=["LEGAJO_NYA"]),
+        _archivo("MPJ_DAE", 4, usa=["LEGAJO_NYA", "DISP_PENAL"]),
+        _archivo("OTRO", 5, usa=["MPI"]),
+    ]
+    assert sorted(archivos_que_dependen_de(archivos, "LEGAJO_NYA")) == [3, 4, 5]
+    assert archivos_que_dependen_de(archivos, "DISP_PENAL") == [4]
+    assert archivos_que_dependen_de(archivos, "MPJ_DAE") == []
