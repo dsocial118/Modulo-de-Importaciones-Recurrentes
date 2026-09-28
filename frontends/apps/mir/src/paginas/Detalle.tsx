@@ -173,7 +173,7 @@ export function Detalle() {
                 <Button
                   variant="contained"
                   startIcon={d.puede_corregir ? <EditOutlined /> : <VisibilityOutlined />}
-                  onClick={() => navegar(`/resultado/${id}/datos`)}
+                  onClick={() => navegar(conFiltros('/resultado', imp.periodo, imp.jurisdiccion, { solapa: 'datos', imp: id }))}
                 >
                   {d.puede_corregir ? 'Ver y corregir datos' : 'Ver datos'}
                 </Button>

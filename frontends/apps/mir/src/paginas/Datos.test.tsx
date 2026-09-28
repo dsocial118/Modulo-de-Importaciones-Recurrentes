@@ -132,11 +132,10 @@ describe('Corregir datos', () => {
     return base;
   };
 
-  it('la provincia ve las observaciones sin resolver arriba y puede responder que está bien así', () => {
+  it('la provincia ve cuántas observaciones quedan sin resolver y puede responder que está bien así', () => {
     api.useDatos.mockReturnValue(resuelta(conObservacion()));
     mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=fichas', patron: '/resultado/:id/datos' });
-    expect(screen.getByText('Observaciones sin resolver: 1')).toBeInTheDocument();
-    expect(screen.getByText('MPI · 9 · Paz · Ana · Edad')).toBeInTheDocument();
+    expect(screen.getByText(/1 observación sin resolver/)).toBeInTheDocument();
     // La fila observada arranca abierta y lo dice en su título.
     expect(screen.getByText('1 observación')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Está bien así' }).length).toBeGreaterThan(0);

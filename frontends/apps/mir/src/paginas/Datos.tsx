@@ -13,8 +13,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   FormControlLabel,
   LinearProgress,
   MenuItem,
@@ -44,10 +42,9 @@ import {
   type HaceFaltaConfirmar,
 } from '@mir/api';
 import { EtiquetaDeEstado, Titulo, useAvisar, useConfirmar } from '@mir/ui';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ObservacionDelDato, TarjetaDeObservacion } from '../comun/Observaciones';
-import { dondeEsta } from '../comun/ubicacion';
+import { ObservacionDelDato } from '../comun/Observaciones';
 import { Grilla } from '../comun/Grilla';
 import { tonoDeLaPresentacion } from '../comun/estados';
 import { fechaHora, plural } from '../comun/formato';
@@ -271,9 +268,20 @@ function RenglonDelDato({
   );
 }
 
-export function Datos() {
+/**
+ * Ver y corregir los datos de una importación. Va dentro de la solapa «Datos»
+ * de la presentación (`incrustado`), sin título propio, sin historial —tiene
+ * su solapa— y sin la lista de observaciones arriba, que empujaba la grilla
+ * hacia abajo (27-09-2026). Por su dirección propia sigue andando sola.
+ */
+export function Datos({
+  importacion,
+  incrustado = false,
+  selectorDeArchivo,
+}: { importacion?: number; incrustado?: boolean; selectorDeArchivo?: ReactNode } = {}) {
   const nombreDe = useNombreDeArchivo();
-  const id = Number(useParams().id);
+  const parametro = Number(useParams().id);
+  const id = importacion ?? parametro;
   const navegar = useNavigate();
   const [params, setParams] = useSearchParams();
   const avisar = useAvisar();
@@ -307,7 +315,6 @@ export function Datos() {
   const abiertas = d.observaciones.filter((o) => o.estado === 'ABIERTA');
   const filaElegida = elegida ? d.filas.find((f) => f.numero_fila === elegida.fila) : undefined;
   const celdaElegida = filaElegida?.celdas.find((x) => x.nombre === elegida?.campo);
-  const resueltas = d.observaciones.filter((o) => o.estado === 'RESPONDIDA' || o.estado === 'SUBSANADA');
   // Observa el nivel nacional; responde la jurisdicción, y sólo si la carga admite cambios.
   const paraObservar: ParaObservar = {
     permisos: { puedeObservar: d.puede_observar, puedeResponder: d.puede_responder && c.editable },
@@ -382,6 +389,7 @@ export function Datos() {
 
   return (
     <>
+      {!incrustado && (
       <Titulo
         titulo={`${nombreDe(c.archivo_codigo)} · ${d.puede_editar && c.editable ? 'ver y corregir datos' : 'ver datos'}`}
         volver={
@@ -411,9 +419,12 @@ export function Datos() {
           </span>
         </Tooltip>
       </Titulo>
+      )}
 
       <Stack spacing={2}>
-        {!c.editable ? (
+        {/* Dentro de la solapa, sin avisos: el estado ya está en el título de la
+            presentación, y cada dato dice si se puede tocar. */}
+        {incrustado ? null : !c.editable ? (
           <Alert severity="info">
             La presentación está en «{c.estado_legible}» y los datos no se pueden modificar. Para corregir, el
             responsable provincial tiene que <strong>reabrir la carga</strong>.
@@ -430,40 +441,17 @@ export function Datos() {
           </Alert>
         )}
 
-        {/* Lo que falta resolver, arriba de todo y a la vista: la lista de
-            observaciones sin resolver tiene que quedar muy clara (27-09-2026).
-            Lo resuelto, plegado debajo. */}
-        {(abiertas.length > 0 || resueltas.length > 0) && (
-          <Card variant="outlined">
-            <CardContent>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
-                <ChatBubbleOutline fontSize="small" color={abiertas.length ? 'error' : 'action'} />
-                <Typography sx={{ fontWeight: 500 }}>
-                  {abiertas.length
-                    ? `Observaciones sin resolver: ${abiertas.length}`
-                    : 'No quedan observaciones sin resolver'}
-                </Typography>
-              </Stack>
-              {abiertas.map((o) => (
-                <TarjetaDeObservacion key={o.id} o={o} permisos={paraObservar.permisos} ubicacion={dondeEsta(o)} />
-              ))}
-              {resueltas.length > 0 && (
-                <Accordion variant="outlined" disableGutters sx={{ mt: 1.5 }}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="body2">Resueltas ({resueltas.length})</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    {resueltas.map((o) => (
-                      <TarjetaDeObservacion key={o.id} o={o} permisos={paraObservar.permisos} ubicacion={dondeEsta(o)} />
-                    ))}
-                  </AccordionDetails>
-                </Accordion>
-              )}
-            </CardContent>
-          </Card>
+        {/* Las observaciones no van arriba de la grilla: tienen su solapa en
+            la presentación, y acá quedan marcadas en rojo en cada dato. */}
+        {!incrustado && abiertas.length > 0 && (
+          <Alert severity="error" icon={<ChatBubbleOutline fontSize="inherit" />}>
+            {plural(abiertas.length, 'observación sin resolver', 'observaciones sin resolver')}: están marcadas en rojo en cada
+            dato y en la solapa Observaciones de la presentación.
+          </Alert>
         )}
 
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: { md: 'center' } }}>
+          {selectorDeArchivo}
           {d.hojas.length > 1 && (
             <TextField
               select
@@ -578,6 +566,7 @@ export function Datos() {
         {/* En la página, no en una ventana: los modales quedan para confirmar
             lo que pisa algo (26-09-2026). Cerrado de entrada, para no empujar
             los datos hacia abajo. */}
+        {!incrustado && (
         <Accordion variant="outlined" disableGutters id="historial">
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -620,6 +609,7 @@ export function Datos() {
             )}
           </AccordionDetails>
         </Accordion>
+        )}
       </Stack>
     </>
   );
