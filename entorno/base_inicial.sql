@@ -2189,7 +2189,7 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-27 21:08:02
+-- Dump completed on 2026-09-27 23:25:25
 -- MySQL dump 10.13  Distrib 8.4.11, for Linux (x86_64)
 --
 -- Host: localhost    Database: runac_v2
@@ -2242,7 +2242,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `auth_user` WRITE;
 /*!40000 ALTER TABLE `auth_user` DISABLE KEYS */;
-INSERT INTO `auth_user` VALUES (1,'pbkdf2_sha256$1000000$Kc3sM7bvPpZceXOd2qbWsD$KdZ3Y5WCHuOYrsxwpnQVkHUmVpTa696sQl6eoKUWqs0=','2026-09-26 12:10:05.652388',0,'operador','Operador provincial','','',0,1,'2026-09-08 01:22:55.505424'),(2,'pbkdf2_sha256$1000000$y9f9fQxowtARzVJ4UOQr0l$wYF1cIyIE7SB1bWzxPoI4bBtdbVGvyzT6gMMfcWVQwQ=','2026-09-12 14:35:52.204325',0,'responsable','Responsable provincial','','',0,1,'2026-09-08 01:22:55.892049'),(3,'pbkdf2_sha256$1000000$TvKLtD1drjK7SyJfl875al$oKXXTQj6b2sY/mJ6RS4FodSumkSNzv38w8mcZdgJAuA=','2026-09-26 00:15:36.804921',0,'revisor','Revisor técnico nacional','','',0,1,'2026-09-08 01:22:56.250835'),(4,'pbkdf2_sha256$1000000$OHgXa5N0sTHWEUHs4iaQWW$WaEO8aE/CJFejadnXtCInmXkFzOzds6xrOsWT8E+n6o=','2026-09-28 00:01:00.764648',1,'admin','Administrador nacional','','',1,1,'2026-09-08 01:22:56.572629'),(5,'pbkdf2_sha256$1000000$tF4UcNuwhb9v96RhKKRZbr$wGFZkmqa8JJvNMsWBIGRzjt0sTTRDdfGtm3NsaeOK28=','2026-09-26 00:15:37.626230',0,'operador_chaco','Operador provincial','','',0,1,'2026-09-26 00:15:11.003001'),(6,'pbkdf2_sha256$1000000$H34eDPmqFtBYPwUKWxw4eq$ipVr6/dkxapq7KdTDRDD6kbw/FpG321SaA4U4VpVXGA=','2026-09-26 00:15:27.201966',0,'responsable_chaco','Responsable provincial','','',0,1,'2026-09-26 00:15:11.392822');
+INSERT INTO `auth_user` VALUES (1,'pbkdf2_sha256$1000000$Kc3sM7bvPpZceXOd2qbWsD$KdZ3Y5WCHuOYrsxwpnQVkHUmVpTa696sQl6eoKUWqs0=','2026-09-28 01:53:19.845566',0,'operador','Operador provincial','','',0,1,'2026-09-08 01:22:55.505424'),(2,'pbkdf2_sha256$1000000$y9f9fQxowtARzVJ4UOQr0l$wYF1cIyIE7SB1bWzxPoI4bBtdbVGvyzT6gMMfcWVQwQ=','2026-09-12 14:35:52.204325',0,'responsable','Responsable provincial','','',0,1,'2026-09-08 01:22:55.892049'),(3,'pbkdf2_sha256$1000000$TvKLtD1drjK7SyJfl875al$oKXXTQj6b2sY/mJ6RS4FodSumkSNzv38w8mcZdgJAuA=','2026-09-28 01:53:19.602115',0,'revisor','Revisor técnico nacional','','',0,1,'2026-09-08 01:22:56.250835'),(4,'pbkdf2_sha256$1000000$OHgXa5N0sTHWEUHs4iaQWW$WaEO8aE/CJFejadnXtCInmXkFzOzds6xrOsWT8E+n6o=','2026-09-28 01:53:16.981092',1,'admin','Administrador nacional','','',1,1,'2026-09-08 01:22:56.572629'),(5,'pbkdf2_sha256$1000000$tF4UcNuwhb9v96RhKKRZbr$wGFZkmqa8JJvNMsWBIGRzjt0sTTRDdfGtm3NsaeOK28=','2026-09-26 00:15:37.626230',0,'operador_chaco','Operador provincial','','',0,1,'2026-09-26 00:15:11.003001'),(6,'pbkdf2_sha256$1000000$H34eDPmqFtBYPwUKWxw4eq$ipVr6/dkxapq7KdTDRDD6kbw/FpG321SaA4U4VpVXGA=','2026-09-26 00:15:27.201966',0,'responsable_chaco','Responsable provincial','','',0,1,'2026-09-26 00:15:11.392822');
 /*!40000 ALTER TABLE `auth_user` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2473,7 +2473,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `mir_c2_jurisdiccion` WRITE;
 /*!40000 ALTER TABLE `mir_c2_jurisdiccion` DISABLE KEYS */;
-INSERT INTO `mir_c2_jurisdiccion` VALUES (1,'CHUBUT','Chubut','PRESENTACION_PERIODICA',1),(2,'SALTA','Salta','PRESENTACION_PERIODICA',1),(3,'CHACO','Chaco','PRESENTACION_PERIODICA',1),(4,'FORMOSA','Formosa','PRESENTACION_PERIODICA',1),(5,'CABA','CABA','PRESENTACION_PERIODICA',1),(6,'BUENOS AIRES','Buenos Aires','PRESENTACION_PERIODICA',1),(7,'CATAMARCA','Catamarca','PRESENTACION_PERIODICA',1),(8,'CÓRDOBA','Córdoba','PRESENTACION_PERIODICA',1);
+INSERT INTO `mir_c2_jurisdiccion` VALUES (1,'CHUBUT','Chubut','PRESENTACION_PERIODICA',1),(2,'SALTA','Salta','PRESENTACION_PERIODICA',1),(3,'CHACO','Chaco','PRESENTACION_PERIODICA',1),(4,'FORMOSA','Formosa','PRESENTACION_PERIODICA',0),(5,'CABA','CABA','PRESENTACION_PERIODICA',0),(6,'BUENOS AIRES','Buenos Aires','PRESENTACION_PERIODICA',0),(7,'CATAMARCA','Catamarca','PRESENTACION_PERIODICA',0),(8,'CÓRDOBA','Córdoba','PRESENTACION_PERIODICA',1),(9,'MENDOZA','Mendoza','PRESENTACION_PERIODICA',1),(10,'NEUQUÉN','Neuquén','PRESENTACION_PERIODICA',1),(11,'ENTRE RÍOS','Entre Ríos','PRESENTACION_PERIODICA',1),(12,'CORRIENTES','Corrientes','PRESENTACION_PERIODICA',1),(13,'SAN JUAN','San Juan','PRESENTACION_PERIODICA',1),(14,'TUCUMÁN','Tucumán','PRESENTACION_PERIODICA',1);
 /*!40000 ALTER TABLE `mir_c2_jurisdiccion` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2506,4 +2506,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-27 21:08:03
+-- Dump completed on 2026-09-27 23:25:26
