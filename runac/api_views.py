@@ -354,7 +354,9 @@ class InicioView(APIView):
             "periodos": periodos,
             "periodo": periodo,
             "jurisdiccion": jurisdiccion,
-            "jurisdicciones": JURISDICCIONES if es_nacional(request.user) else [],
+            "jurisdicciones": (
+                situacion.operativo() if es_nacional(request.user) else []
+            ),
             "presentacion": presentacion,
             "archivos": [_archivo(a) for a in archivos],
             "avance": {"cargados": len(cargados), "total": len(archivos)},
@@ -581,7 +583,9 @@ class CargaView(APIView):
             "periodos": periodos,
             "periodo": periodo,
             "jurisdiccion": jurisdiccion,
-            "jurisdicciones": JURISDICCIONES if es_nacional(request.user) else [],
+            "jurisdicciones": (
+                situacion.operativo() if es_nacional(request.user) else []
+            ),
             "estado_legible": circuito.estado_legible(estado_codigo),
             # Con la carga cerrada no se importa: primero hay que reabrirla.
             "carga_abierta": estado_codigo == "EN_CARGA",
@@ -733,7 +737,7 @@ class ResultadoView(APIView):
             "periodos": periodos,
             "periodo": periodo,
             "jurisdiccion": jurisdiccion,
-            "jurisdicciones": JURISDICCIONES if es_nacional(usuario) else [],
+            "jurisdicciones": situacion.operativo() if es_nacional(usuario) else [],
             "presentacion": (
                 {
                     "id": pres["id"],

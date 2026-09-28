@@ -6,7 +6,9 @@ import { Box, Link, Stack, Tooltip, Typography, useMediaQuery, useTheme } from '
 import { useFranja } from '@mir/api';
 import { EtiquetaDeEstado } from '@mir/ui';
 import { Fragment } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+const PANORAMA = ['/situacion', '/revision', '/observaciones', '/administracion'];
 import { conFiltros, useFiltros } from './filtros';
 import { plural } from './formato';
 
@@ -39,7 +41,11 @@ function archivosEnPalabras(estado: string | null | undefined, importados: numbe
  */
 export function FranjaDelCircuito() {
   const { periodo, jurisdiccion } = useFiltros();
-  const consulta = useFranja(periodo, jurisdiccion);
+  // En las pantallas que miran a todas las provincias, la franja va apagada
+  // aunque en la dirección haya quedado una elegida (28-09-2026).
+  const { pathname } = useLocation();
+  const enPanorama = PANORAMA.some((ruta) => pathname.startsWith(ruta));
+  const consulta = useFranja(periodo, enPanorama ? null : jurisdiccion);
   const navegar = useNavigate();
   const theme = useTheme();
   // Un solo renglón siempre: por debajo de 1200 px los cinco pasos no entran
@@ -76,13 +82,39 @@ export function FranjaDelCircuito() {
         {/* De qué provincia es el avance, bien a la vista: para el nivel
             nacional cambia al cambiar de provincia (28-09-2026). Si no entra
             todo, lo primero que se achica es el período. */}
-        <Typography variant="body2" noWrap sx={{ color: 'nav.textMuted', minWidth: 60, flexShrink: 1 }}>
-          <Box component="span" sx={{ color: 'nav.text', fontWeight: 700, fontSize: 15 }}>
-            {sinProvincia ? 'Todas las provincias' : f.jurisdiccion}
-          </Box>
-          {' · '}
-          {f.periodo_nombre || f.periodo}
-        </Typography>
+        {sinProvincia ? (
+          <Typography variant="body2" noWrap sx={{ color: 'nav.textMuted', minWidth: 60, flexShrink: 1 }}>
+            <Box component="span" sx={{ color: 'nav.text', fontWeight: 700, fontSize: 15 }}>
+              Todas las provincias
+            </Box>
+            {' · '}
+            {f.periodo_nombre || f.periodo}
+          </Typography>
+        ) : (
+          // La provincia que se está viendo, en un recuadro ámbar: es lo más
+          // importante de la franja para el nivel nacional (28-09-2026).
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 60, flexShrink: 1, overflow: 'hidden' }}>
+            <Box
+              component="span"
+              sx={{
+                flexShrink: 0,
+                px: 1.25,
+                py: 0.25,
+                borderRadius: 1,
+                bgcolor: 'nav.accent',
+                color: (t) => t.palette.getContrastText(t.palette.nav.accent),
+                fontWeight: 800,
+                fontSize: 15,
+                letterSpacing: 0.2,
+              }}
+            >
+              {f.jurisdiccion}
+            </Box>
+            <Typography variant="body2" noWrap sx={{ color: 'nav.textMuted', minWidth: 0 }}>
+              {f.periodo_nombre || f.periodo}
+            </Typography>
+          </Stack>
+        )}
 
         {sinProvincia ? (
           chico ? null : (
