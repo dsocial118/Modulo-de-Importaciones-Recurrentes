@@ -64,6 +64,25 @@ class EdicionNoPermitida(Exception):
     """La edición no corresponde: por estado, por rol o por dato inválido."""
 
 
+class HaceFaltaConfirmar(Exception):
+    """El dato lo usan filas de otros archivos: hay que decidir si se actualizan.
+
+    Como en una base relacional, un cambio no puede dejar huérfano lo que lo
+    referencia (pedido del responsable funcional, 27-09-2026): se cambió el
+    nombre de un dispositivo y las nóminas quedaron nombrando uno que ya no
+    existía. Se pregunta; si se acepta, se actualizan todas; si no, no cambia
+    nada.
+    """
+
+    def __init__(self, usos: list[dict]):
+        cuantas = sum(len(g["filas"]) for g in usos)
+        super().__init__(
+            f"Ese dato lo usan {cuantas} fila(s) de otros archivos. "
+            "Hay que confirmar si se actualizan también."
+        )
+        self.usos = usos
+
+
 def _filas(cursor) -> list[dict[str, Any]]:
     columnas = [c[0] for c in cursor.description]
     return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
@@ -708,6 +727,167 @@ def _convertir(valor: str, campo: dict, periodo: str | None = None):
     return texto, None
 
 
+def _vigente(cur, presentacion_id: int, codigo: str) -> dict | None:
+    """La importación vigente de un archivo en la presentación, con su versión."""
+    cur.execute(
+        """
+        SELECT i.id, av.id AS version_id, av.numero AS version
+        FROM mir_c2_importacion i
+        JOIN mir_c1_archivo a ON a.id = i.archivo_id
+        JOIN mir_c1_archivo_version av ON av.id = i.archivo_version_id
+        WHERE i.presentacion_id = %s AND a.codigo = %s AND i.estado = 'VALIDA'
+        ORDER BY i.id DESC LIMIT 1
+        """,
+        [presentacion_id, codigo],
+    )
+    filas = _filas(cur)
+    return filas[0] if filas else None
+
+
+def _tablas_de(cur, codigo: str, vigente: dict) -> list[dict]:
+    """Las hojas de la versión vigente de un archivo, con su tabla y sus campos."""
+    cur.execute(
+        """SELECT h.id, h.nombre_esperado,
+                  GROUP_CONCAT(c.nombre SEPARATOR '|') AS campos
+           FROM mir_c1_hoja h JOIN mir_c1_campo c ON c.hoja_id = h.id
+           WHERE h.archivo_version_id = %s
+           GROUP BY h.id""",
+        [vigente["version_id"]],
+    )
+    hojas = _filas(cur)
+    varias = len(hojas) > 1
+    for h in hojas:
+        h["campos"] = set((h["campos"] or "").split("|"))
+        h["tabla"] = _identificador_seguro(
+            nombre_tabla_receptora(
+                codigo, h["nombre_esperado"], varias, vigente["version"]
+            )
+        )
+    return hojas
+
+
+def _usos_del_dato(
+    cur, contexto: dict, hoja: dict, numero_fila: int, fila: dict, campo: str
+) -> list[dict]:
+    """Las filas de OTROS archivos que usan este dato, con su valor de hoy.
+
+    Son las que cuelgan de las reglas entre archivos (EXISTE_EN_ARCHIVO y
+    COINCIDE_CON_ARCHIVO) que apuntan a este archivo y a este campo, en la
+    importación vigente de la misma presentación. Si otra fila de este mismo
+    archivo sigue teniendo el valor viejo, las que lo nombran no quedan
+    huérfanas y no se tocan.
+    """
+    anterior = fila.get(campo)
+    if anterior is None or str(anterior).strip() == "":
+        return []
+    codigo = contexto["archivo_codigo"]
+    presentacion_id = contexto["presentacion_id"]
+    cur.execute(
+        """
+        SELECT tr.nombre AS tipo, r.parametros, c.nombre AS campo_hijo,
+               c.titulo_esperado AS titulo_hijo, h.id AS hoja_id,
+               h.nombre_esperado AS hoja, av.id AS version_id, a.codigo AS archivo
+        FROM mir_c1_campo_regla cr
+        JOIN mir_c1_regla r ON r.id = cr.regla_id
+        JOIN mir_c1_tipo_regla tr ON tr.id = r.tipo_regla_id
+        JOIN mir_c1_campo c ON c.id = cr.campo_id
+        JOIN mir_c1_hoja h ON h.id = c.hoja_id
+        JOIN mir_c1_archivo_version av ON av.id = h.archivo_version_id
+        JOIN mir_c1_archivo a ON a.id = av.archivo_id
+        WHERE tr.nombre IN ('EXISTE_EN_ARCHIVO', 'COINCIDE_CON_ARCHIVO')
+        """
+    )
+    reglas = _filas(cur)
+    usos: dict[tuple, dict] = {}
+    for regla in reglas:
+        crudo = regla["parametros"]
+        if isinstance(crudo, (bytes, bytearray)):
+            crudo = crudo.decode("utf-8")
+        par = crudo if isinstance(crudo, dict) else json.loads(crudo or "{}")
+        if par.get("archivo") != codigo or par.get("campo") != campo:
+            continue
+        if par.get("hoja") and par["hoja"] != hoja["nombre_esperado"]:
+            continue
+        existe = regla["tipo"] == "EXISTE_EN_ARCHIVO"
+        llave = None
+        if existe:
+            # ¿Otra fila de este archivo sigue diciendo lo mismo? Entonces lo
+            # que la nombra sigue teniendo a quién nombrar.
+            propio = _vigente(cur, presentacion_id, codigo)
+            sigue = False
+            for h in _tablas_de(cur, codigo, propio) if propio else []:
+                if campo not in h["campos"]:
+                    continue
+                cur.execute(
+                    f"SELECT numero_fila, `{_identificador_seguro(campo)}` FROM `{h['tabla']}` "
+                    "WHERE importacion_id = %s",
+                    [propio["id"]],
+                )
+                for n, v in cur.fetchall():
+                    if h["id"] == hoja["id"] and n == numero_fila:
+                        continue
+                    if clave(v) == clave(anterior):
+                        sigue = True
+                        break
+                if sigue:
+                    break
+            if sigue:
+                continue
+        else:
+            llave = fila.get(par.get("clave"))
+            if llave is None or str(llave).strip() == "":
+                continue
+        hijo = _vigente(cur, presentacion_id, regla["archivo"])
+        if not hijo or hijo["version_id"] != regla["version_id"]:
+            continue
+        tabla_hijo = next(
+            (
+                h
+                for h in _tablas_de(cur, regla["archivo"], hijo)
+                if h["id"] == regla["hoja_id"]
+            ),
+            None,
+        )
+        if not tabla_hijo:
+            continue
+        campos_hijo = campos_de_la_hoja(regla["hoja_id"])
+        columnas = ", ".join(
+            f"`{_identificador_seguro(c['nombre'])}`" for c in campos_hijo
+        )
+        cur.execute(
+            f"SELECT numero_fila, {columnas} FROM `{tabla_hijo['tabla']}` "
+            "WHERE importacion_id = %s ORDER BY numero_fila",
+            [hijo["id"]],
+        )
+        nombres = ["numero_fila"] + [c["nombre"] for c in campos_hijo]
+        for valores in cur.fetchall():
+            f = dict(zip(nombres, valores))
+            if clave(f.get(regla["campo_hijo"])) != clave(anterior):
+                continue
+            if not existe and clave(f.get(par.get("clave"))) != clave(llave):
+                continue
+            grupo = usos.setdefault(
+                (hijo["id"], regla["hoja_id"], regla["campo_hijo"]),
+                {
+                    "archivo": regla["archivo"],
+                    "importacion_id": hijo["id"],
+                    "hoja_id": regla["hoja_id"],
+                    "hoja": regla["hoja"],
+                    "campo": regla["campo_hijo"],
+                    "campo_titulo": regla["titulo_hijo"],
+                    "filas": [],
+                },
+            )
+            if all(x["numero_fila"] != f["numero_fila"] for x in grupo["filas"]):
+                grupo["filas"].append(
+                    {
+                        "numero_fila": f["numero_fila"],
+                        "identificacion": identificacion_de_la_fila(campos_hijo, f),
+                    }
+                )
+    return list(usos.values())
+
+
 @transaction.atomic
 def editar(
     importacion_id: int,
@@ -717,8 +897,14 @@ def editar(
     valor_nuevo: str,
     usuario: str,
     motivo: str = "",
+    en_cascada: bool = False,
 ) -> dict[str, Any]:
-    """Corrige un dato y deja constancia. Devuelve el valor guardado."""
+    """Corrige un dato y deja constancia. Devuelve el valor guardado.
+
+    Si el dato lo usan filas de otros archivos, sin `en_cascada` no se toca
+    nada y se levanta `HaceFaltaConfirmar` con esas filas; con `en_cascada`,
+    se corrigen también, cada una con su constancia. Todo entra junto o nada.
+    """
     contexto = contexto_de(importacion_id)
     if not contexto:
         raise EdicionNoPermitida("No existe esa importación.")
@@ -774,6 +960,13 @@ def editar(
 
         if str(valor_anterior or "") == str(valor or ""):
             return {"sin_cambios": True, "valor": valor_anterior}
+
+        # Lo que usa este dato en otros archivos, con el valor de antes.
+        usos = _usos_del_dato(
+            cur, contexto, hoja, numero_fila, fila_actual, campo["nombre"]
+        )
+        if usos and not en_cascada:
+            raise HaceFaltaConfirmar(usos)
 
         # Antes de guardar: cómo queda la fila con el valor nuevo. Un dato que
         # deja la fila con un error bloqueante no se guarda —el archivo entró
@@ -849,8 +1042,31 @@ def editar(
             ],
         )
 
+    # Y las filas de otros archivos que lo usaban pasan al valor nuevo, cada
+    # una con su constancia. Si alguna no puede, no entra nada: es la misma
+    # transacción.
+    actualizadas = 0
+    origen = con_nombres_de_archivo(contexto["archivo_codigo"])
+    for grupo in usos:
+        for f in grupo["filas"]:
+            editar(
+                importacion_id=grupo["importacion_id"],
+                hoja_id=grupo["hoja_id"],
+                numero_fila=f["numero_fila"],
+                nombre_campo=grupo["campo"],
+                valor_nuevo=valor_nuevo,
+                usuario=usuario,
+                motivo=(
+                    f"Actualizado junto con {origen}, fila {numero_fila}: "
+                    f"«{valor_anterior}» por «{valor}»."
+                ),
+                en_cascada=True,
+            )
+            actualizadas += 1
+
     return {
         "sin_cambios": False,
+        "en_cascada": actualizadas,
         "valor": valor,
         "anterior": valor_anterior,
         "advertencias": len(hallazgos),

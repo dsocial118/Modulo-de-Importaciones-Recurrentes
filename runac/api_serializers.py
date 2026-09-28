@@ -523,15 +523,40 @@ class CorreccionSerializer(serializers.Serializer):
     campo = serializers.CharField()
     valor = serializers.CharField(allow_blank=True)
     motivo = serializers.CharField(allow_blank=True, required=False, default="")
+    # Confirmado: si el dato lo usan filas de otros archivos, se actualizan también.
+    en_cascada = serializers.BooleanField(required=False, default=False)
 
 
 class CorreccionHechaSerializer(serializers.Serializer):
     sin_cambios = serializers.BooleanField()
+    # Cuántas filas de otros archivos se actualizaron junto con este dato.
+    en_cascada = serializers.IntegerField()
     valor = serializers.CharField(allow_blank=True)
     advertencias = serializers.IntegerField()
     # Lo que quedó observado en ESTE campo con el valor nuevo: guardar y quedar
     # bien no son lo mismo.
     observaciones = serializers.ListField(child=serializers.CharField())
+
+
+class FilaQueLoUsaSerializer(serializers.Serializer):
+    numero_fila = serializers.IntegerField()
+    identificacion = serializers.CharField(allow_blank=True)
+
+
+class UsoDelDatoSerializer(serializers.Serializer):
+    archivo = serializers.CharField()
+    archivo_nombre = serializers.CharField()
+    importacion_id = serializers.IntegerField()
+    hoja = serializers.CharField()
+    campo_titulo = serializers.CharField()
+    filas = FilaQueLoUsaSerializer(many=True)
+
+
+class HaceFaltaConfirmarSerializer(serializers.Serializer):
+    """El dato lo usan filas de otros archivos: hay que decidir antes."""
+
+    detail = serializers.CharField()
+    usos = UsoDelDatoSerializer(many=True)
 
 
 # ---------------------------------------------------------------------------

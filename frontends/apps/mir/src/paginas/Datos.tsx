@@ -41,6 +41,7 @@ import {
   useDatos,
   type Celda,
   type FilaDeDatos,
+  type HaceFaltaConfirmar,
 } from '@mir/api';
 import { EtiquetaDeEstado, Titulo, useAvisar, useConfirmar } from '@mir/ui';
 import { useState } from 'react';
@@ -327,19 +328,51 @@ export function Datos() {
       campo: { etiqueta: 'Motivo (opcional)' },
     });
     if (motivo === null) return false;
+    const pedido = { hoja_id: d.hoja.id, numero_fila: fila.numero_fila, campo: celda.nombre, valor, motivo, en_cascada: false };
     try {
-      const r = await corregir.mutateAsync({
-        hoja_id: d.hoja.id,
-        numero_fila: fila.numero_fila,
-        campo: celda.nombre,
-        valor,
-        motivo,
-      });
+      let r;
+      try {
+        r = await corregir.mutateAsync(pedido);
+      } catch (e) {
+        // Como en una base relacional (27-09-2026): si el dato lo usan filas de
+        // otros archivos, se pregunta si se actualizan también. Si no, el dato
+        // queda como estaba y no cambia nada.
+        const aviso = (e as { response?: { status?: number; data?: HaceFaltaConfirmar } })?.response;
+        if (aviso?.status !== 409 || !aviso.data?.usos) throw e;
+        const usos = aviso.data.usos;
+        const cuantas = usos.reduce((n, g) => n + g.filas.length, 0);
+        const seguir = await confirmar({
+          titulo: 'Ese dato se usa en otros archivos',
+          texto: (
+            <>
+              Pasar <strong>{celda.titulo}</strong> de «{celda.valor || '—'}» a «{valor || '—'}» deja sin su referencia a{' '}
+              <strong>{plural(cuantas, 'fila', 'filas')}</strong> que lo usan:
+              <Box component="ul" sx={{ my: 1, pl: 3, maxHeight: 220, overflowY: 'auto' }}>
+                {usos.map((g) => (
+                  <li key={`${g.importacion_id}-${g.hoja}-${g.campo_titulo}`}>
+                    <strong>{g.archivo_nombre}</strong>
+                    {g.hoja && g.hoja !== g.archivo_nombre && g.hoja !== g.archivo ? ` (hoja ${g.hoja})` : ''} · {g.campo_titulo}:{' '}
+                    {g.filas.map((f) => f.identificacion || `fila ${f.numero_fila}`).join('; ')}
+                  </li>
+                ))}
+              </Box>
+              ¿Se actualizan también? Si no, el dato queda como estaba.
+            </>
+          ),
+          confirmar: 'Sí, actualizar todas',
+        });
+        if (seguir === null) {
+          avisar({ texto: 'No se cambió nada: el dato quedó como estaba.' });
+          return false;
+        }
+        r = await corregir.mutateAsync({ ...pedido, en_cascada: true });
+      }
       // Guardar y quedar bien no son lo mismo: si el valor nuevo quedó
       // observado, se dice.
+      const junto = r.en_cascada ? ` También se actualizaron ${plural(r.en_cascada, 'fila', 'filas')} de otros archivos.` : '';
       if (r.sin_cambios) avisar({ texto: 'El valor era el mismo: no se registró un cambio.' });
-      else if (r.observaciones.length) avisar({ texto: `Guardado, pero quedó observado: ${r.observaciones.join(' ')}` });
-      else avisar({ texto: 'Dato corregido. Queda registrado en el historial.' });
+      else if (r.observaciones.length) avisar({ texto: `Guardado, pero quedó observado: ${r.observaciones.join(' ')}${junto}` });
+      else avisar({ texto: `Dato corregido. Queda registrado en el historial.${junto}` });
       return true;
     } catch (e) {
       avisar({ texto: mensajeDeError(e), error: true });

@@ -652,9 +652,12 @@ export interface components {
             valor: string;
             /** @default  */
             motivo: string;
+            /** @default false */
+            en_cascada: boolean;
         };
         CorreccionHecha: {
             sin_cambios: boolean;
+            en_cascada: number;
             valor: string;
             advertencias: number;
             observaciones: string[];
@@ -719,6 +722,10 @@ export interface components {
             avisos: components["schemas"]["AvisoDeFila"][];
             celdas: components["schemas"]["Celda"][];
         };
+        FilaQueLoUsa: {
+            numero_fila: number;
+            identificacion: string;
+        };
         /** @description El avance del circuito, para la franja de arriba de todas las pantallas. */
         Franja: {
             jurisdiccion: string | null;
@@ -732,6 +739,11 @@ export interface components {
             archivos_importados: number;
             archivos_esperados: number;
             observaciones_abiertas: number;
+        };
+        /** @description El dato lo usan filas de otros archivos: hay que decidir antes. */
+        HaceFaltaConfirmar: {
+            detail: string;
+            usos: components["schemas"]["UsoDelDato"][];
         };
         Hallazgo: {
             numero_fila: number | null;
@@ -995,6 +1007,14 @@ export interface components {
             bloqueantes: number;
             advertencias: number;
         };
+        UsoDelDato: {
+            archivo: string;
+            archivo_nombre: string;
+            importacion_id: number;
+            hoja: string;
+            campo_titulo: string;
+            filas: components["schemas"]["FilaQueLoUsa"][];
+        };
         ValoresAdmitidos: {
             texto: string;
             detalle: string;
@@ -1150,6 +1170,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CorreccionHecha"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HaceFaltaConfirmar"];
                 };
             };
         };

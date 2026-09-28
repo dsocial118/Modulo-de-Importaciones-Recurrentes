@@ -1234,7 +1234,11 @@ class DatosView(APIView):
         return Response(s.DatosSerializer(salida).data)
 
     @extend_schema(
-        request=s.CorreccionSerializer, responses=s.CorreccionHechaSerializer
+        request=s.CorreccionSerializer,
+        responses={
+            200: s.CorreccionHechaSerializer,
+            409: s.HaceFaltaConfirmarSerializer,
+        },
     )
     def post(self, request, importacion_id):
         _exigir(request.user, "resultado")
@@ -1255,11 +1259,26 @@ class DatosView(APIView):
                 valor_nuevo=d["valor"],
                 usuario=request.user.get_username(),
                 motivo=d.get("motivo", ""),
+                en_cascada=d.get("en_cascada", False),
+            )
+        except edicion.HaceFaltaConfirmar as aviso:
+            # 409: el pedido es correcto, pero antes hay que decidir qué pasa
+            # con las filas de otros archivos que usan este dato.
+            usos = [
+                {**g, "archivo_nombre": svc.con_nombres_de_archivo(g["archivo"])}
+                for g in aviso.usos
+            ]
+            return Response(
+                s.HaceFaltaConfirmarSerializer(
+                    {"detail": str(aviso), "usos": usos}
+                ).data,
+                status=409,
             )
         except edicion.EdicionNoPermitida as error:
             raise ValidationError({"detail": str(error)}) from error
         datos = {
             "sin_cambios": resultado["sin_cambios"],
+            "en_cascada": resultado.get("en_cascada") or 0,
             "valor": "" if resultado.get("valor") is None else str(resultado["valor"]),
             "advertencias": resultado.get("advertencias") or 0,
             "observaciones": resultado.get("observaciones") or [],

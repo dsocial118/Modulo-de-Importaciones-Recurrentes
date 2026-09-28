@@ -174,6 +174,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/CorreccionHecha'
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HaceFaltaConfirmar'
+          description: ''
   /api/mir/importaciones/{importacion_id}/errores.xlsx:
     get:
       operationId: mir_importaciones_errores.xlsx_retrieve
@@ -1210,6 +1216,9 @@ components:
         motivo:
           type: string
           default: ''
+        en_cascada:
+          type: boolean
+          default: false
       required:
       - campo
       - hoja_id
@@ -1220,6 +1229,8 @@ components:
       properties:
         sin_cambios:
           type: boolean
+        en_cascada:
+          type: integer
         valor:
           type: string
         advertencias:
@@ -1230,6 +1241,7 @@ components:
             type: string
       required:
       - advertencias
+      - en_cascada
       - observaciones
       - sin_cambios
       - valor
@@ -1412,6 +1424,16 @@ components:
       - estado
       - identificacion
       - numero_fila
+    FilaQueLoUsa:
+      type: object
+      properties:
+        numero_fila:
+          type: integer
+        identificacion:
+          type: string
+      required:
+      - identificacion
+      - numero_fila
     Franja:
       type: object
       description: El avance del circuito, para la franja de arriba de todas las pantallas.
@@ -1458,6 +1480,19 @@ components:
       - periodo_nombre
       - que_pasa
       - te_toca
+    HaceFaltaConfirmar:
+      type: object
+      description: 'El dato lo usan filas de otros archivos: hay que decidir antes.'
+      properties:
+        detail:
+          type: string
+        usos:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsoDelDato'
+      required:
+      - detail
+      - usos
     Hallazgo:
       type: object
       properties:
@@ -2249,6 +2284,30 @@ components:
       - bloqueantes
       - filas
       - validas
+    UsoDelDato:
+      type: object
+      properties:
+        archivo:
+          type: string
+        archivo_nombre:
+          type: string
+        importacion_id:
+          type: integer
+        hoja:
+          type: string
+        campo_titulo:
+          type: string
+        filas:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilaQueLoUsa'
+      required:
+      - archivo
+      - archivo_nombre
+      - campo_titulo
+      - filas
+      - hoja
+      - importacion_id
     ValoresAdmitidos:
       type: object
       properties:

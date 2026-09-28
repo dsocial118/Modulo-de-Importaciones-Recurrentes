@@ -176,6 +176,45 @@ describe('Corregir datos', () => {
     expect(screen.getByRole('button', { name: 'Observar' })).toBeInTheDocument();
   });
 
+
+  it('si el dato lo usan otros archivos, pregunta; al aceptar, pide actualizarlos también', async () => {
+    const conflicto = {
+      response: {
+        status: 409,
+        data: {
+          detail: 'Ese dato lo usan 2 fila(s) de otros archivos.',
+          usos: [
+            {
+              archivo: 'MPJ_DAE',
+              archivo_nombre: 'MPJ y DAE',
+              importacion_id: 18,
+              hoja: 'MPJ',
+              campo_titulo: 'Nombre del dispositivo',
+              filas: [{ numero_fila: 4, identificacion: '3 · Paz · Ana' }],
+            },
+          ],
+        },
+      },
+    };
+    const mutateAsync = vi
+      .fn()
+      .mockRejectedValueOnce(conflicto)
+      .mockResolvedValueOnce({ sin_cambios: false, en_cascada: 1, valor: '12', advertencias: 0, observaciones: [] });
+    api.useCorregir.mockReturnValue({ ...envio(), mutateAsync });
+    api.useDatos.mockReturnValue(resuelta(datos()));
+    mostrar(<Datos />, { ruta: '/resultado/11/datos?vista=grilla', patron: '/resultado/:id/datos' });
+    fireEvent.doubleClick(screen.getByText('107'));
+    const edad = screen.getByLabelText('Edad');
+    fireEvent.change(edad, { target: { value: '12' } });
+    fireEvent.keyDown(edad, { key: 'Enter' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Guardar' }));
+    expect(await screen.findByText('Ese dato se usa en otros archivos')).toBeInTheDocument();
+    expect(screen.getByText(/3 · Paz · Ana/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, actualizar todas' }));
+    await vi.waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
+    expect(mutateAsync.mock.calls[1][0]).toMatchObject({ en_cascada: true, valor: '12' });
+  });
+
   it('sin elegir vista, abre en grilla', () => {
     api.useDatos.mockReturnValue(resuelta(datos()));
     mostrar(<Datos />, { ruta: '/resultado/11/datos', patron: '/resultado/:id/datos' });

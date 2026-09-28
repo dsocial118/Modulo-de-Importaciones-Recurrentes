@@ -28,6 +28,7 @@ export type FilaDeDatos = E['FilaDeDatos'];
 export type Celda = E['Celda'];
 export type Correccion = E['Correccion'];
 export type CorreccionHecha = E['CorreccionHecha'];
+export type HaceFaltaConfirmar = E['HaceFaltaConfirmar'];
 export type Reglas = E['Reglas'];
 export type CampoDeReglas = E['CampoDeReglas'];
 export type CambiosDeReglas = E['CambiosDeReglas'];
