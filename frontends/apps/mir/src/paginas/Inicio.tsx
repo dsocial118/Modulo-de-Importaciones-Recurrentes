@@ -29,6 +29,7 @@ import {
 import { EtiquetaDeEstado, Titulo, type Tono } from '@mir/ui';
 import type { MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { AvisoDePreparacion } from '../comun/AvisoDePreparacion';
 import { conFiltros } from '../comun/filtros';
 import { ICONOS } from '../comun/iconos';
 import { sinRepetir, useNombreDeArchivo } from '../comun/archivos';
@@ -178,6 +179,12 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
       </Titulo>
 
 
+      <AvisoDePreparacion />
+      {!periodo && !sesion.periodo_en_preparacion && (
+        <Alert severity="info" sx={{ py: 0 }}>
+          No hay un período habilitado. El período se habilita para la carga cuando el nivel nacional lo abre.
+        </Alert>
+      )}
       {periodo && periodo.estado !== 'ABIERTO' && (
         <Alert severity="info" sx={{ py: 0 }}>
           El período {periodo.nombre || periodo.codigo} está {estadoPeriodo?.texto.toLowerCase()}.{' '}

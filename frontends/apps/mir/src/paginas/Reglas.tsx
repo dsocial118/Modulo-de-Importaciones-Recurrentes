@@ -385,6 +385,12 @@ export function Reglas() {
           provincias cargando, mover una regla haría que a dos que presentaron lo mismo les fuera distinto.
         </Alert>
       )}
+      {d.puede_editar && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <strong>Definición en preparación:</strong> las reglas y las columnas se pueden modificar hasta que se abra el
+          período. Al abrirlo, la definición queda congelada.
+        </Alert>
+      )}
       {consulta.isFetching && <LinearProgress sx={{ mb: 1 }} />}
       {d.campos.length ? (
         // La clave es la hoja: al cambiar de hoja, lo que no se guardó se descarta.

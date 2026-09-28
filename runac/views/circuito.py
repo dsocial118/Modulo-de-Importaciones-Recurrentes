@@ -176,7 +176,7 @@ class RevisionView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
             {
                 "presentaciones": filas,
                 "periodo_elegido": periodo,
-                "periodos": svc.periodos(),
+                "periodos": svc.periodos(visibles_para=self.request.user),
                 "es_revisor": puede_revisar(self.request.user),
                 "es_nacional": es_nacional(self.request.user),
             }

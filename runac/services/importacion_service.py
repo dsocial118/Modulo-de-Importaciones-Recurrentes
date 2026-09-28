@@ -110,7 +110,45 @@ def nombre_del_periodo(p: dict | None) -> str:
     return f"{ordinal} {_UNIDADES[m[1]]} {p['anio']}"
 
 
-def periodos():
+def periodos(visibles_para=None):
+    """Los períodos, del más reciente al más viejo.
+
+    Con `visibles_para`, sólo los que ese usuario puede ver: **un período en
+    preparación lo ve sólo el administrador nacional** (28-09-2026). Es el
+    estado previo al lanzamiento, mientras se arma la definición; para las
+    provincias y el revisor el período existe recién cuando se abre.
+    """
+    todos = _todos_los_periodos()
+    if visibles_para is None:
+        return todos
+    from runac.permissions import puede_administrar
+
+    if puede_administrar(visibles_para):
+        return todos
+    return [p for p in todos if p["estado"] != "PREPARACION"]
+
+
+def periodo_en_preparacion_para(usuario) -> str:
+    """El nombre del período que se está preparando, si a este usuario le toca saberlo.
+
+    Un período en preparación no se muestra a las provincias ni al revisor, y sin
+    ningún período abierto no tendrían con qué trabajar: sin una explicación
+    parecería una falla que no deja cargar (28-09-2026). Por eso se les avisa
+    cuál se está preparando. Vacío para el administrador, que sí lo ve, o
+    cuando hay un período abierto.
+    """
+    from runac.permissions import puede_administrar
+
+    if puede_administrar(usuario):
+        return ""
+    todos = _todos_los_periodos()
+    if any(p["estado"] == "ABIERTO" for p in todos):
+        return ""
+    en_preparacion = [p for p in todos if p["estado"] == "PREPARACION"]
+    return nombre_del_periodo(en_preparacion[0]) if en_preparacion else ""
+
+
+def _todos_los_periodos():
     with connection.cursor() as cur:
         cur.execute(
             """
@@ -822,8 +860,10 @@ def _se_puede_importar(jurisdiccion: str, codigo_periodo: str) -> str | None:
 
     pres = presentacion_de(jurisdiccion, codigo_periodo, crear=False)
     if pres and pres["estado"] not in ESTADOS_QUE_ADMITEN_CARGA:
+        from runac.services.circuito_service import estado_legible
+
         return (
-            f'La presentación de {jurisdiccion} está en «{pres["estado"]}»: '
+            f'La presentación de {jurisdiccion} está «{estado_legible(pres["estado"])}»: '
             "para importar, primero hay que reabrir la carga."
         )
     return None

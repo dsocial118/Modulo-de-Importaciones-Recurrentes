@@ -124,7 +124,7 @@ class CargarView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
         ctx.update(
             {
                 "periodo_elegido": periodo,
-                "periodos": svc.periodos(),
+                "periodos": svc.periodos(visibles_para=self.request.user),
                 "jurisdiccion": jurisdiccion,
                 "jurisdicciones": JURISDICCIONES,
                 "archivos": filas,
@@ -209,7 +209,7 @@ class ResultadoView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
                 "periodo_elegido": periodo,
                 "jurisdiccion": jurisdiccion,
                 "jurisdicciones": JURISDICCIONES,
-                "periodos": svc.periodos(),
+                "periodos": svc.periodos(visibles_para=self.request.user),
                 "archivos": filas,
                 "presentacion": pres,
                 "listo": estado["listo"],

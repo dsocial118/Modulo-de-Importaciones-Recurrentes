@@ -29,6 +29,7 @@ import { useNavigate } from 'react-router-dom';
 import { ESTADO_DEL_ARCHIVO, formaDe } from '../comun/estados';
 import { plural } from '../comun/formato';
 import { SelectorDeJurisdiccion, SelectorDePeriodo } from '../comun/Selectores';
+import { AvisoDePreparacion } from '../comun/AvisoDePreparacion';
 import { conFiltros, useFiltros } from '../comun/filtros';
 import { sinRepetir, useNombreDeArchivo } from '../comun/archivos';
 
@@ -395,9 +396,15 @@ export function Cargar() {
       </Titulo>
 
       {!d.jurisdiccion && <Alert severity="info">Seleccionar una jurisdicción para ver su carga.</Alert>}
-      {d.jurisdiccion && d.periodo?.estado !== 'ABIERTO' && (
+      {/* Sin período visible: el que se prepara no es un error (28-09-2026). */}
+      {!d.periodo && (
+        <Box sx={{ mb: 2 }}>
+          <AvisoDePreparacion />
+        </Box>
+      )}
+      {d.jurisdiccion && d.periodo && d.periodo.estado !== 'ABIERTO' && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          El período {d.periodo?.codigo} no está abierto: no se reciben archivos.
+          El período {d.periodo.nombre || d.periodo.codigo} no está abierto: no se reciben archivos.
         </Alert>
       )}
       {d.jurisdiccion && !d.carga_abierta && (

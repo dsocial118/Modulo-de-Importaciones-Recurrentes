@@ -190,17 +190,26 @@ export function Administracion() {
                                   Cerrar
                                 </Button>
                               </ConAyuda>
-                              <ConAyuda ayuda="Herramienta de prueba: vuelve el período a preparación para poder cambiar la definición. En el sistema real no existe.">
+                              {/* Sólo si ninguna provincia cargó (28-09-2026): con archivos
+                                  importados, la definición ya no se toca. */}
+                              <ConAyuda
+                                ayuda={
+                                  p.importaciones > 0
+                                    ? `No disponible: el período ya tiene ${p.importaciones} importaciones, y la definición no puede cambiar respecto de la que usaron las provincias.`
+                                    : 'Vuelve el período a preparación para modificar la definición (reglas y columnas). Mientras tanto, sólo el administrador nacional lo ve.'
+                                }
+                              >
                                 <Button
                                   size="small"
                                   variant="outlined"
-                                  disabled={ocupado}
+                                  disabled={ocupado || p.importaciones > 0}
+                                  startIcon={p.importaciones > 0 ? <LockOutlined /> : undefined}
                                   onClick={() =>
                                     pasarA(
                                       p.codigo,
                                       'PREPARACION',
                                       'Volver a preparación',
-                                      'Habilita a cambiar la definición. Es una herramienta de prueba: en el sistema real, con el período abierto, la definición no se toca.',
+                                      'El período deja de estar visible para las provincias y la definición (reglas y columnas) se puede modificar hasta que se vuelva a abrir.',
                                     )
                                   }
                                 >

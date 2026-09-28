@@ -572,11 +572,9 @@ def cambiar_estado_del_periodo(codigo: str, estado: str, usuario) -> str:
 def volver_atras_es_provisorio(codigo: str) -> int:
     """Cuántas importaciones ya entraron en ese período.
 
-    Volver a preparación con archivos ya cargados **no debería poder hacerse**:
-    habilita a cambiar la definición contra la que esas provincias ya
-    presentaron. Hoy se permite porque hace falta para probar y para mostrar el
-    circuito, y por eso se avisa cada vez. Queda pendiente prohibirlo cuando el
-    módulo deje de ser una demostración.
+    Con archivos ya cargados **no se puede volver a preparación** (28-09-2026):
+    habilitaría a cambiar la definición contra la que esas provincias ya
+    presentaron. La API lo rechaza y Administración muestra el botón con candado.
     """
     with connection.cursor() as cur:
         cur.execute(

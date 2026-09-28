@@ -31,7 +31,7 @@ class PlantillasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
         for a in archivos:
             a["nombre_plantilla"] = plantillas.nombre_de_archivo(a["codigo"], periodo)
         ctx["periodo_elegido"] = periodo
-        ctx["periodos"] = svc.periodos()
+        ctx["periodos"] = svc.periodos(visibles_para=self.request.user)
         ctx["archivos"] = archivos
         return ctx
 

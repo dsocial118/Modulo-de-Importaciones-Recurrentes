@@ -49,7 +49,7 @@ class InicioView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["accesos"] = accesos_de(self.request.user)
-        periodos = svc.periodos()
+        periodos = svc.periodos(visibles_para=self.request.user)
         elegido = self.request.GET.get("periodo") or (
             periodos[0]["codigo"] if periodos else None
         )

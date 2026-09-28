@@ -2227,11 +2227,14 @@ components:
           format: date
         presentaron:
           type: integer
+        importaciones:
+          type: integer
       required:
       - codigo
       - estado
       - fecha_desde
       - fecha_hasta
+      - importaciones
       - nombre
       - presentaron
     Permisos:
@@ -2637,6 +2640,8 @@ components:
           type: object
           additionalProperties:
             type: string
+        periodo_en_preparacion:
+          type: string
       required:
       - aviso
       - csrf_token
@@ -2647,6 +2652,7 @@ components:
       - menu
       - nombre_del_rol
       - nombres_de_archivo
+      - periodo_en_preparacion
       - permisos
       - rol
       - salir

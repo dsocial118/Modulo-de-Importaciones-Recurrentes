@@ -140,7 +140,7 @@ def _importacion_permitida(usuario, importacion_id: int) -> dict:
 
 def _periodos_y_elegido(request):
     """Los períodos y cuál se mira: el pedido si existe, o el más reciente."""
-    periodos = svc.periodos()
+    periodos = svc.periodos(visibles_para=request.user)
     pedido = request.query_params.get("periodo")
     elegido = next((p for p in periodos if p["codigo"] == pedido), None)
     return periodos, elegido or (periodos[0] if periodos else None)
@@ -202,6 +202,9 @@ class SesionView(APIView):
             # Cómo se nombra cada archivo en pantalla: «Dispositivos penales»
             # y no DISP_PENAL (guion 35, 27-09-2026).
             "nombres_de_archivo": svc.nombres_cortos(),
+            # El período que se está preparando, para avisar que todavía no se
+            # carga y que no es un error (28-09-2026).
+            "periodo_en_preparacion": svc.periodo_en_preparacion_para(usuario),
         }
         return Response(s.SesionSerializer(datos).data)
 
@@ -377,6 +380,21 @@ class EstadoDelPeriodoView(APIView):
             )
         pedido = s.EstadoDelPeriodoSerializer(data=request.data)
         pedido.is_valid(raise_exception=True)
+        # Volver a preparación, sólo si ninguna provincia cargó (28-09-2026): con
+        # archivos ya importados, cambiar la definición cambiaría las reglas
+        # contra las que esas provincias presentaron.
+        if pedido.validated_data["estado"] == "PREPARACION":
+            cargadas = circuito.volver_atras_es_provisorio(codigo)
+            if cargadas:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            f"El período {codigo} ya tiene {cargadas} importaciones: "
+                            "no puede volver a preparación, porque la definición "
+                            "quedaría distinta de la que usaron las provincias."
+                        )
+                    }
+                )
         try:
             estado = circuito.cambiar_estado_del_periodo(
                 codigo, pedido.validated_data["estado"], request.user
@@ -386,15 +404,9 @@ class EstadoDelPeriodoView(APIView):
         aviso = ""
         if estado == "PREPARACION":
             aviso = (
-                "Volver a preparación es una herramienta de prueba: en el sistema "
-                "real, con el período abierto la definición no se toca."
+                "El período volvió a preparación: sólo el administrador nacional lo "
+                "ve, y la definición se puede modificar hasta que se vuelva a abrir."
             )
-            cargadas = circuito.volver_atras_es_provisorio(codigo)
-            if cargadas:
-                aviso += (
-                    f" Y este período ya tiene {cargadas} importaciones: lo que "
-                    "cambies ahora no es contra lo que esas provincias presentaron."
-                )
         datos = {
             "estado": estado,
             "mensaje": f"El período {codigo} quedó en «{estado}».",
@@ -1534,7 +1546,13 @@ class AdministracionView(APIView):
         periodos = []
         for p in svc.periodos():
             totales = situacion.situacion(p["codigo"])["totales"]
-            periodos.append({**p, "presentaron": totales["presentaron"]})
+            periodos.append(
+                {
+                    **p,
+                    "presentaron": totales["presentaron"],
+                    "importaciones": circuito.volver_atras_es_provisorio(p["codigo"]),
+                }
+            )
         return Response(
             s.AdministracionSerializer(
                 {

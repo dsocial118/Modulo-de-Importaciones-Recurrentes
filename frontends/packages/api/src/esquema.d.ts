@@ -1046,6 +1046,7 @@ export interface components {
             /** Format: date */
             fecha_hasta: string;
             presentaron: number;
+            importaciones: number;
         };
         Permisos: {
             cargar: boolean;
@@ -1179,6 +1180,7 @@ export interface components {
             nombres_de_archivo: {
                 [key: string]: string;
             };
+            periodo_en_preparacion: string;
         };
         /**
          * @description * `ADVERTENCIA` - ADVERTENCIA

@@ -59,6 +59,8 @@ class SesionSerializer(serializers.Serializer):
     marca = serializers.CharField()
     # Del código del archivo a su nombre corto. Sin nombre corto, el código.
     nombres_de_archivo = serializers.DictField(child=serializers.CharField())
+    # El período en preparación que la provincia todavía no ve. Vacío si no hay.
+    periodo_en_preparacion = serializers.CharField(allow_blank=True)
 
 
 class PeriodoSerializer(serializers.Serializer):
@@ -726,6 +728,7 @@ class ObservacionesDelPeriodoSerializer(serializers.Serializer):
 
 class PeriodoDeAdministracionSerializer(PeriodoSerializer):
     presentaron = serializers.IntegerField()
+    importaciones = serializers.IntegerField()
 
 
 class JurisdiccionDelOperativoSerializer(serializers.Serializer):

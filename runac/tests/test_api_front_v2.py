@@ -25,6 +25,7 @@ def _sin_base_para_los_nombres(monkeypatch):
     monkeypatch.setattr(
         svc, "nombres_cortos", lambda: {"DISP_PENAL": "Dispositivos penales"}
     )
+    monkeypatch.setattr(svc, "periodo_en_preparacion_para", lambda usuario: "")
 
 
 def _usuario(rol=None, jurisdiccion=None, superusuario=False):
