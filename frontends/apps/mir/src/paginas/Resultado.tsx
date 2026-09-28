@@ -70,6 +70,10 @@ const A_CONFIRMAR: Record<string, string> = {
   habilitar: 'Concluye la revisión y habilita a la jurisdicción a presentar formalmente.',
 };
 
+// Habilitar sin haber abierto la revisión se puede, pero se avisa.
+export const SIN_ABRIR_LA_REVISION =
+  'Todavía no se comenzó la revisión de esta presentación. ¿La habilitás igual para que la jurisdicción la presente formalmente?';
+
 // Desde que la provincia cierra la carga hasta que se habilita: igual que el servidor.
 const OBSERVABLES = ['CERRADA', 'EN_REVISION', 'OBSERVADA', 'SUBSANADA'];
 
@@ -443,7 +447,9 @@ export function Resultado() {
   const ejecutar = async (a: Accion) => {
     if (!p) return;
     if (A_CONFIRMAR[a.accion]) {
-      const ok = await confirmar({ titulo: a.etiqueta, texto: A_CONFIRMAR[a.accion], confirmar: a.etiqueta });
+      const texto =
+        a.accion === 'habilitar' && p.estado === 'CERRADA' ? SIN_ABRIR_LA_REVISION : A_CONFIRMAR[a.accion];
+      const ok = await confirmar({ titulo: a.etiqueta, texto, confirmar: a.etiqueta });
       if (ok === null) return;
     }
     accion.mutate(

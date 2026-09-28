@@ -71,7 +71,10 @@ function Fila({ p, periodo }: { p: PresentacionEnRevision; periodo?: string }) {
                     if (a.accion === 'habilitar') {
                       const ok = await confirmar({
                         titulo: a.etiqueta,
-                        texto: `Concluye la revisión de ${p.jurisdiccion} y la habilita a presentar formalmente.`,
+                        texto:
+                          p.estado === 'CERRADA'
+                            ? `Todavía no se comenzó la revisión de ${p.jurisdiccion}. ¿La habilitás igual para que la presente formalmente?`
+                            : `Concluye la revisión de ${p.jurisdiccion} y la habilita a presentar formalmente.`,
                         confirmar: a.etiqueta,
                       });
                       if (ok === null) return;
