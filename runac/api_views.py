@@ -63,6 +63,7 @@ from runac.services import instructivo_service as instructivos
 from runac.services import informe_errores_service as informes
 from runac.services import plantillas_service as plantillas
 from runac.services import reglas_service
+from runac.services import situacion_service as situacion
 from runac.views.carga import JURISDICCIONES, PASOS
 from runac.views.estructura import (
     _dos_techos,
@@ -86,6 +87,9 @@ EN_V2 = {
     "resultado": "/v2/mir/resultado",
     "revision": "/v2/mir/revision",
     "estructura": "/v2/mir/reglas",
+    "situacion": "/v2/mir/situacion",
+    "observaciones": "/v2/mir/observaciones",
+    "administracion": "/v2/mir/administracion",
 }
 
 
@@ -160,7 +164,7 @@ class SesionView(APIView):
     def get(self, request):
         usuario = request.user
         menu = []
-        for seccion in menu_de(usuario):
+        for seccion in menu_de(usuario, v2=True):
             clave = seccion["clave"]
             menu.append(
                 {
@@ -1443,4 +1447,139 @@ class ReglasView(APIView):
                 "detalle": list(hecho["detalle"]),
                 "errores": [],
             }
+        )
+
+
+# ---------------------------------------------------------------------------
+# Nivel nacional: estado de situación, observaciones y administración
+# (maqueta aprobada por el responsable funcional el 27-09-2026)
+# ---------------------------------------------------------------------------
+
+
+class SituacionView(APIView):
+    """Cómo viene cada provincia del operativo en el período."""
+
+    @extend_schema(
+        parameters=[OpenApiParameter("periodo", str)], responses=s.SituacionSerializer
+    )
+    def get(self, request):
+        _exigir(request.user, "situacion")
+        periodos, periodo = _periodos_y_elegido(request)
+        datos = (
+            situacion.situacion(periodo["codigo"])
+            if periodo
+            else {
+                "operativo": 0,
+                "totales": dict.fromkeys(situacion.GRUPOS.values(), 0),
+                "filas": [],
+            }
+        )
+        return Response(
+            s.SituacionSerializer(
+                {"periodos": periodos, "periodo": periodo, **datos}
+            ).data
+        )
+
+
+class ObservacionesDelPeriodoView(APIView):
+    """Todas las observaciones del período, con filtros, para el seguimiento."""
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("periodo", str),
+            OpenApiParameter("jurisdiccion", str),
+            OpenApiParameter("estado", str),
+        ],
+        responses=s.ObservacionesDelPeriodoSerializer,
+    )
+    def get(self, request):
+        _exigir(request.user, "observaciones")
+        periodos, periodo = _periodos_y_elegido(request)
+        jurisdiccion = request.query_params.get("jurisdiccion") or None
+        estado = request.query_params.get("estado") or None
+        filas = (
+            situacion.observaciones_del_periodo(periodo["codigo"], jurisdiccion, estado)
+            if periodo
+            else []
+        )
+        return Response(
+            s.ObservacionesDelPeriodoSerializer(
+                {
+                    "periodos": periodos,
+                    "periodo": periodo,
+                    "jurisdicciones": situacion.operativo(),
+                    "filas": filas,
+                }
+            ).data
+        )
+
+
+class AdministracionView(APIView):
+    """Los períodos y las provincias del operativo. Sólo el administrador."""
+
+    @extend_schema(responses=s.AdministracionSerializer)
+    def get(self, request):
+        _exigir(request.user, "administracion")
+        periodos = []
+        for p in svc.periodos():
+            totales = situacion.situacion(p["codigo"])["totales"]
+            periodos.append({**p, "presentaron": totales["presentaron"]})
+        return Response(
+            s.AdministracionSerializer(
+                {
+                    "periodos": periodos,
+                    "operativo": len(situacion.operativo()),
+                    "jurisdicciones": situacion.jurisdicciones(),
+                    "todas": JURISDICCIONES,
+                }
+            ).data
+        )
+
+
+class OperativoView(APIView):
+    """Suma o saca una provincia del operativo."""
+
+    @extend_schema(request=s.CambioDeOperativoSerializer, responses=s.MensajeSerializer)
+    def post(self, request):
+        _exigir(request.user, "administracion")
+        pedido = s.CambioDeOperativoSerializer(data=request.data)
+        pedido.is_valid(raise_exception=True)
+        d = pedido.validated_data
+        if d["nombre"] not in JURISDICCIONES:
+            raise ValidationError({"detail": "Esa jurisdicción no existe."})
+        try:
+            situacion.cambiar_operativo(d["nombre"], d["en_el_operativo"], request.user)
+        except circuito.TransicionInvalida as error:
+            raise ValidationError({"detail": str(error)}) from error
+        accion = "entra al" if d["en_el_operativo"] else "sale del"
+        return Response({"mensaje": f'{d["nombre"]} {accion} operativo.'})
+
+
+class ResumenDeCierreView(APIView):
+    """Lo que hay y lo que falta, antes de cerrar el período para todas."""
+
+    @extend_schema(responses=s.ResumenDeCierreSerializer)
+    def get(self, request, codigo):
+        _exigir(request.user, "administracion")
+        periodo = next((p for p in svc.periodos() if p["codigo"] == codigo), None)
+        if not periodo:
+            raise NotFound("No existe ese período.")
+        return Response(
+            s.ResumenDeCierreSerializer(
+                {"periodo": periodo, "grupos": situacion.resumen_de_cierre(codigo)}
+            ).data
+        )
+
+
+class HistorialDeLaPresentacionView(APIView):
+    """El historial de cambios de toda la presentación, junto."""
+
+    @extend_schema(responses=s.HistorialDeLaPresentacionSerializer)
+    def get(self, request, presentacion_id):
+        _exigir(request.user, "resultado")
+        _presentacion_permitida(request.user, presentacion_id)
+        return Response(
+            s.HistorialDeLaPresentacionSerializer(
+                {"filas": situacion.historial_de_la_presentacion(presentacion_id)}
+            ).data
         )

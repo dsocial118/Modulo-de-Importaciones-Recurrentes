@@ -660,3 +660,117 @@ class PaginaDeHallazgosSerializer(serializers.Serializer):
     next = serializers.CharField(allow_null=True)
     previous = serializers.CharField(allow_null=True)
     results = HallazgoSerializer(many=True)
+
+
+# ---------------------------------------------------------------------------
+# Nivel nacional: estado de situación, observaciones y administración
+# (maqueta aprobada el 27-09-2026)
+# ---------------------------------------------------------------------------
+
+
+class FilaDeSituacionSerializer(serializers.Serializer):
+    jurisdiccion = serializers.CharField()
+    presentacion_id = serializers.IntegerField(allow_null=True)
+    estado = serializers.CharField()
+    estado_legible = serializers.CharField()
+    archivos_importados = serializers.IntegerField()
+    archivos_esperados = serializers.IntegerField()
+    faltan = serializers.ListField(child=serializers.CharField())
+    advertencias = serializers.IntegerField()
+    observaciones_abiertas = serializers.IntegerField()
+    observaciones_respondidas = serializers.IntegerField()
+    observaciones_subsanadas = serializers.IntegerField()
+    ultima_actividad = serializers.DateTimeField(allow_null=True)
+
+
+class TotalesDeSituacionSerializer(serializers.Serializer):
+    presentaron = serializers.IntegerField()
+    en_revision = serializers.IntegerField()
+    cargando = serializers.IntegerField()
+    sin_empezar = serializers.IntegerField()
+
+
+class SituacionSerializer(serializers.Serializer):
+    periodos = PeriodoSerializer(many=True)
+    periodo = PeriodoSerializer(allow_null=True)
+    operativo = serializers.IntegerField()
+    totales = TotalesDeSituacionSerializer()
+    filas = FilaDeSituacionSerializer(many=True)
+
+
+class ObservacionDelPeriodoSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    presentacion_id = serializers.IntegerField()
+    importacion_id = serializers.IntegerField(allow_null=True)
+    numero_fila = serializers.IntegerField(allow_null=True)
+    identificador_registro = serializers.CharField(allow_null=True, allow_blank=True)
+    texto = serializers.CharField()
+    estado = serializers.CharField()
+    respuesta = serializers.CharField(allow_null=True, allow_blank=True)
+    creada_el = serializers.DateTimeField()
+    usuario_observa = serializers.CharField(allow_null=True)
+    respondida_el = serializers.DateTimeField(allow_null=True)
+    jurisdiccion = serializers.CharField()
+    archivo_nombre = serializers.CharField(allow_blank=True)
+    campo_titulo = serializers.CharField(allow_null=True)
+
+
+class ObservacionesDelPeriodoSerializer(serializers.Serializer):
+    periodos = PeriodoSerializer(many=True)
+    periodo = PeriodoSerializer(allow_null=True)
+    jurisdicciones = serializers.ListField(child=serializers.CharField())
+    filas = ObservacionDelPeriodoSerializer(many=True)
+
+
+class PeriodoDeAdministracionSerializer(PeriodoSerializer):
+    presentaron = serializers.IntegerField()
+
+
+class JurisdiccionDelOperativoSerializer(serializers.Serializer):
+    nombre = serializers.CharField()
+    en_el_operativo = serializers.BooleanField()
+
+
+class AdministracionSerializer(serializers.Serializer):
+    periodos = PeriodoDeAdministracionSerializer(many=True)
+    operativo = serializers.IntegerField()
+    jurisdicciones = JurisdiccionDelOperativoSerializer(many=True)
+    todas = serializers.ListField(child=serializers.CharField())
+
+
+class CambioDeOperativoSerializer(serializers.Serializer):
+    nombre = serializers.CharField(max_length=120)
+    en_el_operativo = serializers.BooleanField()
+
+
+class ProvinciaDelCierreSerializer(serializers.Serializer):
+    jurisdiccion = serializers.CharField()
+    faltan = serializers.ListField(child=serializers.CharField())
+
+
+class GrupoDelCierreSerializer(serializers.Serializer):
+    grupo = serializers.CharField()
+    titulo = serializers.CharField()
+    cantidad = serializers.IntegerField()
+    provincias = ProvinciaDelCierreSerializer(many=True)
+
+
+class ResumenDeCierreSerializer(serializers.Serializer):
+    periodo = PeriodoSerializer()
+    grupos = GrupoDelCierreSerializer(many=True)
+
+
+class CambioDeLaPresentacionSerializer(serializers.Serializer):
+    fecha = serializers.DateTimeField()
+    usuario = serializers.CharField()
+    numero_fila = serializers.IntegerField()
+    identificador_registro = serializers.CharField(allow_null=True, allow_blank=True)
+    valor_anterior = serializers.CharField(allow_null=True, allow_blank=True)
+    valor_nuevo = serializers.CharField(allow_null=True, allow_blank=True)
+    motivo = serializers.CharField(allow_null=True, allow_blank=True)
+    archivo_nombre = serializers.CharField()
+    campo = serializers.CharField(allow_null=True)
+
+
+class HistorialDeLaPresentacionSerializer(serializers.Serializer):
+    filas = CambioDeLaPresentacionSerializer(many=True)

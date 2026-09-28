@@ -3,6 +3,48 @@ info:
   title: MIR — API del front v2
   version: 0.1.0
 paths:
+  /api/mir/administracion/:
+    get:
+      operationId: mir_administracion_retrieve
+      description: Los períodos y las provincias del operativo. Sólo el administrador.
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Administracion'
+          description: ''
+  /api/mir/administracion/operativo/:
+    post:
+      operationId: mir_administracion_operativo_create
+      description: Suma o saca una provincia del operativo.
+      tags:
+      - mir
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambioDeOperativo'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CambioDeOperativo'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CambioDeOperativo'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensaje'
+          description: ''
   /api/mir/carga/:
     get:
       operationId: mir_carga_retrieve
@@ -303,6 +345,34 @@ paths:
               schema:
                 $ref: '#/components/schemas/Inicio'
           description: ''
+  /api/mir/observaciones/:
+    get:
+      operationId: mir_observaciones_retrieve
+      description: Todas las observaciones del período, con filtros, para el seguimiento.
+      parameters:
+      - in: query
+        name: estado
+        schema:
+          type: string
+      - in: query
+        name: jurisdiccion
+        schema:
+          type: string
+      - in: query
+        name: periodo
+        schema:
+          type: string
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObservacionesDelPeriodo'
+          description: ''
   /api/mir/observaciones/{observacion_id}/desestimar/:
     post:
       operationId: mir_observaciones_desestimar_create
@@ -423,6 +493,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PeriodoCambiado'
+          description: ''
+  /api/mir/periodos/{codigo}/resumen-de-cierre/:
+    get:
+      operationId: mir_periodos_resumen_de_cierre_retrieve
+      description: Lo que hay y lo que falta, antes de cerrar el período para todas.
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumenDeCierre'
           description: ''
   /api/mir/plantillas/:
     get:
@@ -596,6 +687,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/Mensaje'
           description: ''
+  /api/mir/presentaciones/{presentacion_id}/historial/:
+    get:
+      operationId: mir_presentaciones_historial_retrieve
+      description: El historial de cambios de toda la presentación, junto.
+      parameters:
+      - in: path
+        name: presentacion_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistorialDeLaPresentacion'
+          description: ''
   /api/mir/presentaciones/{presentacion_id}/observaciones/:
     post:
       operationId: mir_presentaciones_observaciones_create
@@ -754,6 +866,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/Sesion'
           description: ''
+  /api/mir/situacion/:
+    get:
+      operationId: mir_situacion_retrieve
+      description: Cómo viene cada provincia del operativo en el período.
+      parameters:
+      - in: query
+        name: periodo
+        schema:
+          type: string
+      tags:
+      - mir
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Situacion'
+          description: ''
 components:
   schemas:
     Accion:
@@ -782,6 +914,28 @@ components:
       - estado
       - estado_legible
       - mensaje
+    Administracion:
+      type: object
+      properties:
+        periodos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PeriodoDeAdministracion'
+        operativo:
+          type: integer
+        jurisdicciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/JurisdiccionDelOperativo'
+        todas:
+          type: array
+          items:
+            type: string
+      required:
+      - jurisdicciones
+      - operativo
+      - periodos
+      - todas
     ArchivoACargar:
       type: object
       properties:
@@ -985,6 +1139,54 @@ components:
           minItems: 2
       required:
       - campo_id
+    CambioDeLaPresentacion:
+      type: object
+      properties:
+        fecha:
+          type: string
+          format: date-time
+        usuario:
+          type: string
+        numero_fila:
+          type: integer
+        identificador_registro:
+          type: string
+          nullable: true
+        valor_anterior:
+          type: string
+          nullable: true
+        valor_nuevo:
+          type: string
+          nullable: true
+        motivo:
+          type: string
+          nullable: true
+        archivo_nombre:
+          type: string
+        campo:
+          type: string
+          nullable: true
+      required:
+      - archivo_nombre
+      - campo
+      - fecha
+      - identificador_registro
+      - motivo
+      - numero_fila
+      - usuario
+      - valor_anterior
+      - valor_nuevo
+    CambioDeOperativo:
+      type: object
+      properties:
+        nombre:
+          type: string
+          maxLength: 120
+        en_el_operativo:
+          type: boolean
+      required:
+      - en_el_operativo
+      - nombre
     CambiosDeReglas:
       type: object
       properties:
@@ -1424,6 +1626,51 @@ components:
       - estado
       - identificacion
       - numero_fila
+    FilaDeSituacion:
+      type: object
+      properties:
+        jurisdiccion:
+          type: string
+        presentacion_id:
+          type: integer
+          nullable: true
+        estado:
+          type: string
+        estado_legible:
+          type: string
+        archivos_importados:
+          type: integer
+        archivos_esperados:
+          type: integer
+        faltan:
+          type: array
+          items:
+            type: string
+        advertencias:
+          type: integer
+        observaciones_abiertas:
+          type: integer
+        observaciones_respondidas:
+          type: integer
+        observaciones_subsanadas:
+          type: integer
+        ultima_actividad:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - advertencias
+      - archivos_esperados
+      - archivos_importados
+      - estado
+      - estado_legible
+      - faltan
+      - jurisdiccion
+      - observaciones_abiertas
+      - observaciones_respondidas
+      - observaciones_subsanadas
+      - presentacion_id
+      - ultima_actividad
     FilaQueLoUsa:
       type: object
       properties:
@@ -1480,6 +1727,24 @@ components:
       - periodo_nombre
       - que_pasa
       - te_toca
+    GrupoDelCierre:
+      type: object
+      properties:
+        grupo:
+          type: string
+        titulo:
+          type: string
+        cantidad:
+          type: integer
+        provincias:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProvinciaDelCierre'
+      required:
+      - cantidad
+      - grupo
+      - provincias
+      - titulo
     HaceFaltaConfirmar:
       type: object
       description: 'El dato lo usan filas de otros archivos: hay que decidir antes.'
@@ -1548,6 +1813,15 @@ components:
       - codigo
       - ejemplo
       - severidad
+    HistorialDeLaPresentacion:
+      type: object
+      properties:
+        filas:
+          type: array
+          items:
+            $ref: '#/components/schemas/CambioDeLaPresentacion'
+      required:
+      - filas
     Hoja:
       type: object
       properties:
@@ -1677,6 +1951,16 @@ components:
       - periodo
       - periodos
       - presentacion
+    JurisdiccionDelOperativo:
+      type: object
+      properties:
+        nombre:
+          type: string
+        en_el_operativo:
+          type: boolean
+      required:
+      - en_el_operativo
+      - nombre
     Mensaje:
       type: object
       description: 'Lo que devuelve una acción: qué pasó, dicho para una persona.'
@@ -1764,6 +2048,85 @@ components:
       - texto
       - usuario_observa
       - usuario_responde
+    ObservacionDelPeriodo:
+      type: object
+      properties:
+        id:
+          type: integer
+        presentacion_id:
+          type: integer
+        importacion_id:
+          type: integer
+          nullable: true
+        numero_fila:
+          type: integer
+          nullable: true
+        identificador_registro:
+          type: string
+          nullable: true
+        texto:
+          type: string
+        estado:
+          type: string
+        respuesta:
+          type: string
+          nullable: true
+        creada_el:
+          type: string
+          format: date-time
+        usuario_observa:
+          type: string
+          nullable: true
+        respondida_el:
+          type: string
+          format: date-time
+          nullable: true
+        jurisdiccion:
+          type: string
+        archivo_nombre:
+          type: string
+        campo_titulo:
+          type: string
+          nullable: true
+      required:
+      - archivo_nombre
+      - campo_titulo
+      - creada_el
+      - estado
+      - id
+      - identificador_registro
+      - importacion_id
+      - jurisdiccion
+      - numero_fila
+      - presentacion_id
+      - respondida_el
+      - respuesta
+      - texto
+      - usuario_observa
+    ObservacionesDelPeriodo:
+      type: object
+      properties:
+        periodos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Periodo'
+        periodo:
+          allOf:
+          - $ref: '#/components/schemas/Periodo'
+          nullable: true
+        jurisdicciones:
+          type: array
+          items:
+            type: string
+        filas:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObservacionDelPeriodo'
+      required:
+      - filas
+      - jurisdicciones
+      - periodo
+      - periodos
     PaginaDeHallazgos:
       type: object
       description: Una página de hallazgos, con la forma estándar de DRF.
@@ -1843,6 +2206,31 @@ components:
       - aviso
       - estado
       - mensaje
+    PeriodoDeAdministracion:
+      type: object
+      properties:
+        codigo:
+          type: string
+        nombre:
+          type: string
+          readOnly: true
+        estado:
+          type: string
+        fecha_desde:
+          type: string
+          format: date
+        fecha_hasta:
+          type: string
+          format: date
+        presentaron:
+          type: integer
+      required:
+      - codigo
+      - estado
+      - fecha_desde
+      - fecha_hasta
+      - nombre
+      - presentaron
     Permisos:
       type: object
       properties:
@@ -1989,6 +2377,18 @@ components:
       - observaciones
       - puede_observar
       - version
+    ProvinciaDelCierre:
+      type: object
+      properties:
+        jurisdiccion:
+          type: string
+        faltan:
+          type: array
+          items:
+            type: string
+      required:
+      - faltan
+      - jurisdiccion
     Rangos:
       type: object
       properties:
@@ -2146,6 +2546,18 @@ components:
       - importacion_id
       - mensaje
       - rechazado
+    ResumenDeCierre:
+      type: object
+      properties:
+        periodo:
+          $ref: '#/components/schemas/Periodo'
+        grupos:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrupoDelCierre'
+      required:
+      - grupos
+      - periodo
     Revision:
       type: object
       properties:
@@ -2251,6 +2663,31 @@ components:
       required:
       - aplicacion_id
       - severidad
+    Situacion:
+      type: object
+      properties:
+        periodos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Periodo'
+        periodo:
+          allOf:
+          - $ref: '#/components/schemas/Periodo'
+          nullable: true
+        operativo:
+          type: integer
+        totales:
+          $ref: '#/components/schemas/TotalesDeSituacion'
+        filas:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilaDeSituacion'
+      required:
+      - filas
+      - operativo
+      - periodo
+      - periodos
+      - totales
     Techo:
       type: object
       description: 'Un rango: desde dónde y hasta dónde, escrito como se lee en castellano.'
@@ -2284,6 +2721,22 @@ components:
       - bloqueantes
       - filas
       - validas
+    TotalesDeSituacion:
+      type: object
+      properties:
+        presentaron:
+          type: integer
+        en_revision:
+          type: integer
+        cargando:
+          type: integer
+        sin_empezar:
+          type: integer
+      required:
+      - cargando
+      - en_revision
+      - presentaron
+      - sin_empezar
     UsoDelDato:
       type: object
       properties:

@@ -36,6 +36,12 @@ export type ReglasGuardadas = E['ReglasGuardadas'];
 export type PeriodoCambiado = E['PeriodoCambiado'];
 export type Mensaje = E['Mensaje'];
 export type Franja = E['Franja'];
+export type Situacion = E['Situacion'];
+export type FilaDeSituacion = E['FilaDeSituacion'];
+export type ObservacionesDelPeriodo = E['ObservacionesDelPeriodo'];
+export type Administracion = E['Administracion'];
+export type ResumenDeCierre = E['ResumenDeCierre'];
+export type HistorialDeLaPresentacion = E['HistorialDeLaPresentacion'];
 
 type Parametros = Record<string, string | number | null | undefined>;
 
@@ -225,3 +231,21 @@ export const useCorregir = (importacion: number) =>
 export const useReglas = (hoja: string | null) => useConsulta<Reglas>('reglas/', { hoja });
 
 export const useGuardarReglas = () => useEnvio<CambiosDeReglas, ReglasGuardadas>(() => 'reglas/');
+
+// --- Nivel nacional (27-09-2026) ---
+
+export const useSituacion = (periodo: string | null) => useConsulta<Situacion>('situacion/', { periodo });
+
+export const useObservacionesDelPeriodo = (periodo: string | null, jurisdiccion: string | null, estado: string | null) =>
+  useConsulta<ObservacionesDelPeriodo>('observaciones/', { periodo, jurisdiccion, estado });
+
+export const useAdministracion = () => useConsulta<Administracion>('administracion/');
+
+export const useCambiarOperativo = () =>
+  useEnvio<{ nombre: string; en_el_operativo: boolean }, Mensaje>(() => 'administracion/operativo/');
+
+export const useResumenDeCierre = (codigo: string | null) =>
+  useConsulta<ResumenDeCierre>(codigo ? `periodos/${codigo}/resumen-de-cierre/` : null);
+
+export const useHistorialDeLaPresentacion = (presentacion: number | null) =>
+  useConsulta<HistorialDeLaPresentacion>(presentacion ? `presentaciones/${presentacion}/historial/` : null);

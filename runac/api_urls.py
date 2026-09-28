@@ -102,6 +102,23 @@ urlpatterns = [
     ),
     # Reglas
     path("reglas/", v.ReglasView.as_view(), name="reglas"),
+    # Nivel nacional (27-09-2026)
+    path("situacion/", v.SituacionView.as_view(), name="situacion"),
+    path(
+        "observaciones/", v.ObservacionesDelPeriodoView.as_view(), name="observaciones"
+    ),
+    path("administracion/", v.AdministracionView.as_view(), name="administracion"),
+    path("administracion/operativo/", v.OperativoView.as_view(), name="operativo"),
+    path(
+        "periodos/<str:codigo>/resumen-de-cierre/",
+        v.ResumenDeCierreView.as_view(),
+        name="resumen_de_cierre",
+    ),
+    path(
+        "presentaciones/<int:presentacion_id>/historial/",
+        v.HistorialDeLaPresentacionView.as_view(),
+        name="historial_de_la_presentacion",
+    ),
     # Herramientas de prueba: no forman parte del sistema.
     path("pruebas/armar-demo/", v.ArmarDemoView.as_view(), name="armar_demo"),
     path(

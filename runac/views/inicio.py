@@ -86,7 +86,10 @@ DETALLE_DE_SECCION = {
     "plantillas": "Los Excel modelo del período, con las listas al día.",
     "cargar": "De a uno, indicando cuál es. El sistema controla el orden.",
     "resultado": "Qué entró, qué falta corregir, y el cierre de carga.",
-    "revision": "Observaciones, habilitación y presentación del período.",
+    "situacion": "Cómo viene cada provincia del operativo.",
+    "revision": "Lo que te toca revisar ahora.",
+    "observaciones": "Todas las observaciones del período, para el seguimiento.",
+    "administracion": "Los períodos, las provincias del operativo y las herramientas de prueba.",
     "estructura": "Qué se espera en cada columna de cada archivo.",
 }
 

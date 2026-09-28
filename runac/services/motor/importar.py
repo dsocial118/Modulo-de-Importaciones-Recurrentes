@@ -1442,10 +1442,10 @@ def _ejecutar_con(args, cn):
         # la provincia lo que ya tenía cargado.
         if estado == "VALIDA":
             cur2.execute(
-                """UPDATE mir_c2_importacion SET estado='ANULADA'
+                """UPDATE mir_c2_importacion SET estado='ANULADA', anulada_por=%s
                     WHERE presentacion_id=%s AND archivo_id=%s AND id<>%s
                       AND estado='VALIDA'""",
-                (presentacion_id, a["archivo_id"], importacion_id),
+                (importacion_id, presentacion_id, a["archivo_id"], importacion_id),
             )
             # Y los que dependen de este —las nóminas de los dispositivos, todo
             # lo que cuelga del legajo— se tienen que volver a cargar: fueron
@@ -1458,10 +1458,10 @@ def _ejecutar_con(args, cn):
             if dependientes:
                 marcas = ", ".join(["%s"] * len(dependientes))
                 cur2.execute(
-                    f"""UPDATE mir_c2_importacion SET estado='ANULADA'
+                    f"""UPDATE mir_c2_importacion SET estado='ANULADA', anulada_por=%s
                         WHERE presentacion_id=%s AND archivo_id IN ({marcas})
                           AND estado='VALIDA' AND id < %s""",
-                    (presentacion_id, *dependientes, importacion_id),
+                    (importacion_id, presentacion_id, *dependientes, importacion_id),
                 )
         cn.commit()
 

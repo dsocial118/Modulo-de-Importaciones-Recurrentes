@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/api/mir/administracion/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Los períodos y las provincias del operativo. Sólo el administrador. */
+        get: operations["mir_administracion_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/administracion/operativo/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Suma o saca una provincia del operativo. */
+        post: operations["mir_administracion_operativo_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mir/carga/": {
         parameters: {
             query?: never;
@@ -182,6 +216,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mir/observaciones/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Todas las observaciones del período, con filtros, para el seguimiento. */
+        get: operations["mir_observaciones_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mir/observaciones/{observacion_id}/desestimar/": {
         parameters: {
             query?: never;
@@ -244,6 +295,23 @@ export interface paths {
         put?: never;
         /** @description Abre, cierra o vuelve a preparar un período. Lo decide el nivel nacional. */
         post: operations["mir_periodos_estado_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/periodos/{codigo}/resumen-de-cierre/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Lo que hay y lo que falta, antes de cerrar el período para todas. */
+        get: operations["mir_periodos_resumen_de_cierre_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -362,6 +430,23 @@ export interface paths {
         put?: never;
         /** @description Registra el número GDE, después de remitir el comprobante. */
         post: operations["mir_presentaciones_expediente_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mir/presentaciones/{presentacion_id}/historial/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description El historial de cambios de toda la presentación, junto. */
+        get: operations["mir_presentaciones_historial_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -494,6 +579,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mir/situacion/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Cómo viene cada provincia del operativo en el período. */
+        get: operations["mir_situacion_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -507,6 +609,12 @@ export interface components {
             estado: string;
             estado_legible: string;
             mensaje: string;
+        };
+        Administracion: {
+            periodos: components["schemas"]["PeriodoDeAdministracion"][];
+            operativo: number;
+            jurisdicciones: components["schemas"]["JurisdiccionDelOperativo"][];
+            todas: string[];
         };
         ArchivoACargar: {
             codigo: string;
@@ -572,6 +680,22 @@ export interface components {
             obligatorio?: boolean;
             advierte?: string[];
             bloquea?: string[];
+        };
+        CambioDeLaPresentacion: {
+            /** Format: date-time */
+            fecha: string;
+            usuario: string;
+            numero_fila: number;
+            identificador_registro: string | null;
+            valor_anterior: string | null;
+            valor_nuevo: string | null;
+            motivo: string | null;
+            archivo_nombre: string;
+            campo: string | null;
+        };
+        CambioDeOperativo: {
+            nombre: string;
+            en_el_operativo: boolean;
         };
         CambiosDeReglas: {
             cambios?: components["schemas"]["CambioDeCampo"][];
@@ -722,6 +846,21 @@ export interface components {
             avisos: components["schemas"]["AvisoDeFila"][];
             celdas: components["schemas"]["Celda"][];
         };
+        FilaDeSituacion: {
+            jurisdiccion: string;
+            presentacion_id: number | null;
+            estado: string;
+            estado_legible: string;
+            archivos_importados: number;
+            archivos_esperados: number;
+            faltan: string[];
+            advertencias: number;
+            observaciones_abiertas: number;
+            observaciones_respondidas: number;
+            observaciones_subsanadas: number;
+            /** Format: date-time */
+            ultima_actividad: string | null;
+        };
         FilaQueLoUsa: {
             numero_fila: number;
             identificacion: string;
@@ -739,6 +878,12 @@ export interface components {
             archivos_importados: number;
             archivos_esperados: number;
             observaciones_abiertas: number;
+        };
+        GrupoDelCierre: {
+            grupo: string;
+            titulo: string;
+            cantidad: number;
+            provincias: components["schemas"]["ProvinciaDelCierre"][];
         };
         /** @description El dato lo usan filas de otros archivos: hay que decidir antes. */
         HaceFaltaConfirmar: {
@@ -761,6 +906,9 @@ export interface components {
             severidad: string;
             casos: number;
             ejemplo: string | null;
+        };
+        HistorialDeLaPresentacion: {
+            filas: components["schemas"]["CambioDeLaPresentacion"][];
         };
         Hoja: {
             id: number;
@@ -801,6 +949,10 @@ export interface components {
             archivos: components["schemas"]["ArchivoDelPeriodo"][];
             avance: components["schemas"]["Avance"];
         };
+        JurisdiccionDelOperativo: {
+            nombre: string;
+            en_el_operativo: boolean;
+        };
         /** @description Lo que devuelve una acción: qué pasó, dicho para una persona. */
         Mensaje: {
             mensaje: string;
@@ -829,6 +981,30 @@ export interface components {
             usuario_responde: string | null;
             /** Format: date-time */
             respondida_el: string | null;
+        };
+        ObservacionDelPeriodo: {
+            id: number;
+            presentacion_id: number;
+            importacion_id: number | null;
+            numero_fila: number | null;
+            identificador_registro: string | null;
+            texto: string;
+            estado: string;
+            respuesta: string | null;
+            /** Format: date-time */
+            creada_el: string;
+            usuario_observa: string | null;
+            /** Format: date-time */
+            respondida_el: string | null;
+            jurisdiccion: string;
+            archivo_nombre: string;
+            campo_titulo: string | null;
+        };
+        ObservacionesDelPeriodo: {
+            periodos: components["schemas"]["Periodo"][];
+            periodo: components["schemas"]["Periodo"] | null;
+            jurisdicciones: string[];
+            filas: components["schemas"]["ObservacionDelPeriodo"][];
         };
         /** @description Una página de hallazgos, con la forma estándar de DRF. */
         PaginaDeHallazgos: {
@@ -859,6 +1035,16 @@ export interface components {
             estado: string;
             mensaje: string;
             aviso: string;
+        };
+        PeriodoDeAdministracion: {
+            codigo: string;
+            readonly nombre: string;
+            estado: string;
+            /** Format: date */
+            fecha_desde: string;
+            /** Format: date */
+            fecha_hasta: string;
+            presentaron: number;
         };
         Permisos: {
             cargar: boolean;
@@ -909,6 +1095,10 @@ export interface components {
             acciones: components["schemas"]["Accion"][];
             puede_observar: boolean;
         };
+        ProvinciaDelCierre: {
+            jurisdiccion: string;
+            faltan: string[];
+        };
         Rangos: {
             avisa: components["schemas"]["Techo"] | null;
             frena: components["schemas"]["Techo"] | null;
@@ -955,6 +1145,10 @@ export interface components {
             bloqueantes: number;
             advertencias: number;
         };
+        ResumenDeCierre: {
+            periodo: components["schemas"]["Periodo"];
+            grupos: components["schemas"]["GrupoDelCierre"][];
+        };
         Revision: {
             periodos: components["schemas"]["Periodo"][];
             periodo: components["schemas"]["Periodo"] | null;
@@ -994,6 +1188,13 @@ export interface components {
             aplicacion_id: number;
             severidad: components["schemas"]["SeveridadEnum"];
         };
+        Situacion: {
+            periodos: components["schemas"]["Periodo"][];
+            periodo: components["schemas"]["Periodo"] | null;
+            operativo: number;
+            totales: components["schemas"]["TotalesDeSituacion"];
+            filas: components["schemas"]["FilaDeSituacion"][];
+        };
         /** @description Un rango: desde dónde y hasta dónde, escrito como se lee en castellano. */
         Techo: {
             minimo: string;
@@ -1006,6 +1207,12 @@ export interface components {
             validas: number;
             bloqueantes: number;
             advertencias: number;
+        };
+        TotalesDeSituacion: {
+            presentaron: number;
+            en_revision: number;
+            cargando: number;
+            sin_empezar: number;
         };
         UsoDelDato: {
             archivo: string;
@@ -1029,6 +1236,50 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    mir_administracion_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Administracion"];
+                };
+            };
+        };
+    };
+    mir_administracion_operativo_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CambioDeOperativo"];
+                "application/x-www-form-urlencoded": components["schemas"]["CambioDeOperativo"];
+                "multipart/form-data": components["schemas"]["CambioDeOperativo"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensaje"];
+                };
+            };
+        };
+    };
     mir_carga_retrieve: {
         parameters: {
             query?: never;
@@ -1291,6 +1542,29 @@ export interface operations {
             };
         };
     };
+    mir_observaciones_retrieve: {
+        parameters: {
+            query?: {
+                estado?: string;
+                jurisdiccion?: string;
+                periodo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservacionesDelPeriodo"];
+                };
+            };
+        };
+    };
     mir_observaciones_desestimar_create: {
         parameters: {
             query?: never;
@@ -1389,6 +1663,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PeriodoCambiado"];
+                };
+            };
+        };
+    };
+    mir_periodos_resumen_de_cierre_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                codigo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResumenDeCierre"];
                 };
             };
         };
@@ -1543,6 +1838,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Mensaje"];
+                };
+            };
+        };
+    };
+    mir_presentaciones_historial_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                presentacion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistorialDeLaPresentacion"];
                 };
             };
         };
@@ -1711,6 +2027,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Sesion"];
+                };
+            };
+        };
+    };
+    mir_situacion_retrieve: {
+        parameters: {
+            query?: {
+                periodo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Situacion"];
                 };
             };
         };

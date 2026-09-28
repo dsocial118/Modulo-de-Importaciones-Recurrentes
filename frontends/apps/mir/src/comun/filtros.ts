@@ -24,10 +24,16 @@ export function useFiltros() {
 }
 
 /** Los filtros de siempre, para agregarlos a un enlace interno. */
-export function conFiltros(ruta: string, periodo?: string | null, jurisdiccion?: string | null) {
+export function conFiltros(
+  ruta: string,
+  periodo?: string | null,
+  jurisdiccion?: string | null,
+  otros: Record<string, string | number | null | undefined> = {},
+) {
   const q = new URLSearchParams();
   if (periodo) q.set('periodo', periodo);
   if (jurisdiccion) q.set('jurisdiccion', jurisdiccion);
+  for (const [clave, valor] of Object.entries(otros)) if (valor !== null && valor !== undefined && valor !== '') q.set(clave, String(valor));
   const s = q.toString();
   return s ? `${ruta}?${s}` : ruta;
 }

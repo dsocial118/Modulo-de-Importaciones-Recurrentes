@@ -13,6 +13,9 @@ import { Detalle } from './paginas/Detalle';
 import { Inicio } from './paginas/Inicio';
 import { Plantillas } from './paginas/Plantillas';
 import { Reglas } from './paginas/Reglas';
+import { Situacion } from './paginas/Situacion';
+import { ObservacionesDelPeriodo } from './paginas/ObservacionesDelPeriodo';
+import { Administracion } from './paginas/Administracion';
 import { Resultado } from './paginas/Resultado';
 import { Revision } from './paginas/Revision';
 import { FranjaDelCircuito } from './comun/Franja';
@@ -28,6 +31,9 @@ const SECCION_DE: Record<string, string> = {
   presentacion: 'resultado',
   revision: 'revision',
   reglas: 'estructura',
+  situacion: 'situacion',
+  observaciones: 'observaciones',
+  administracion: 'administracion',
 };
 
 const BASE = '/v2/mir';
@@ -81,7 +87,8 @@ export function App() {
   // sección desde la que llegó: si no, el menú no marcaba nada (27-09-2026).
   const seccion = SECCION_DE[pathname.split('/')[1] ?? ''] ?? '';
   const enElMenu = s.menu.some((m) => m.clave === seccion);
-  const activa = enElMenu ? seccion : seccion === 'resultado' && s.menu.some((m) => m.clave === 'revision') ? 'revision' : seccion;
+  const desde = ['situacion', 'revision'].find((c) => s.menu.some((m) => m.clave === c));
+  const activa = enElMenu ? seccion : seccion === 'resultado' && desde ? desde : seccion;
 
   return (
     <Avisos>
@@ -132,6 +139,9 @@ export function App() {
           <Route path="/presentacion/:id/comprobante" element={<Comprobante />} />
           <Route path="/revision" element={<Revision />} />
           <Route path="/reglas" element={<Reglas />} />
+          <Route path="/situacion" element={<Situacion />} />
+          <Route path="/observaciones" element={<ObservacionesDelPeriodo />} />
+          <Route path="/administracion" element={<Administracion />} />
           <Route path="*" element={<Alert severity="info">Esa página no existe.</Alert>} />
         </Routes>
         </Box>

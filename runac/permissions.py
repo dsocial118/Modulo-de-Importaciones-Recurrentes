@@ -65,6 +65,16 @@ SECCIONES = {
         # El revisor entra desde la bandeja, aunque no lo tenga en el menú.
         "acceso": TODOS,
     },
+    # Las tres de abajo existen sólo en /v2/mir/ (27-09-2026): la versión
+    # actual no las muestra en su menú (`solo_v2`).
+    "situacion": {
+        "etiqueta": "Estado de situación",
+        "url": "runac:inicio",
+        "icono": "bi-speedometer2",
+        "menu": ES_NACIONAL,
+        "acceso": ES_NACIONAL,
+        "solo_v2": True,
+    },
     "revision": {
         "etiqueta": "Revisión nacional",
         "url": "runac:revision",
@@ -72,12 +82,28 @@ SECCIONES = {
         "menu": ES_NACIONAL,
         "acceso": ES_NACIONAL,
     },
+    "observaciones": {
+        "etiqueta": "Observaciones",
+        "url": "runac:inicio",
+        "icono": "bi-chat-left-text",
+        "menu": ES_NACIONAL,
+        "acceso": ES_NACIONAL,
+        "solo_v2": True,
+    },
     "estructura": {
         "etiqueta": "Reglas",
         "url": "runac:estructura",
         "icono": "bi-list-check",
         "menu": TODOS,
         "acceso": TODOS,
+    },
+    "administracion": {
+        "etiqueta": "Administración",
+        "url": "runac:inicio",
+        "icono": "bi-gear",
+        "menu": ("administrador_nacional",),
+        "acceso": ("administrador_nacional",),
+        "solo_v2": True,
     },
 }
 
@@ -118,15 +144,18 @@ def es_provincial(usuario) -> bool:
     return rol_de(usuario) in ES_PROVINCIAL
 
 
-def menu_de(usuario) -> list[dict]:
-    """Las secciones que este usuario ve en la barra de navegación."""
+def menu_de(usuario, v2: bool = False) -> list[dict]:
+    """Las secciones que este usuario ve en la barra de navegación.
+
+    Las que existen sólo en /v2/mir/ no se ofrecen en la versión actual.
+    """
     rol = rol_de(usuario)
     if not rol:
         return []
     return [
         {"clave": clave, **datos}
         for clave, datos in SECCIONES.items()
-        if rol in datos["menu"]
+        if rol in datos["menu"] and (v2 or not datos.get("solo_v2"))
     ]
 
 
