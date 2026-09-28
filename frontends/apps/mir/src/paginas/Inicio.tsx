@@ -64,7 +64,7 @@ function FichaDeArchivo({ a }: { a: ArchivoDelPeriodo }) {
     <Box sx={{ py: 1.5, borderTop: 1, borderColor: 'divider' }}>
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
         <Box>
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
             {nombreDe(a.codigo)}
           </Typography>
           {sinRepetir(a.nombre, nombreDe(a.codigo)) && (
@@ -344,7 +344,7 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
                       return (
                         <TableRow key={a.codigo} hover>
                           <TableCell>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
                               {nombreDe(a.codigo)}
                             </Typography>
                             {sinRepetir(a.nombre, nombreDe(a.codigo)) && (

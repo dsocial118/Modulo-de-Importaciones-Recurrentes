@@ -68,7 +68,7 @@ export function Plantillas() {
               {d.archivos.map((a) => (
                 <Stack key={a.codigo} direction="row" spacing={1} sx={{ py: 1.5, alignItems: 'center' }}>
                   <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
                       {nombreDe(a.codigo)}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" component="div">
@@ -109,7 +109,7 @@ export function Plantillas() {
                   {d.archivos.map((a) => (
                     <TableRow key={a.codigo} hover>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
                           {nombreDe(a.codigo)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">

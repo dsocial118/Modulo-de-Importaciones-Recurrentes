@@ -87,7 +87,7 @@ export function Comprobante() {
             <TableBody>
               {c.archivos.map((a) => (
                 <TableRow key={a.codigo}>
-                  <TableCell sx={{ fontWeight: 500 }}>{nombreDe(a.codigo)}</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>{nombreDe(a.codigo)}</TableCell>
                   <TableCell sx={{ fontFamily: 'monospace' }}>{a.nombre_archivo}</TableCell>
                   <TableCell align="right">{numero(a.filas_incorporadas)}</TableCell>
                   <TableCell>{fechaHora(a.iniciada_el)}</TableCell>

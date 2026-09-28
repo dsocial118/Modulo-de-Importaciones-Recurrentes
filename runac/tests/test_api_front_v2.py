@@ -434,3 +434,13 @@ def test_esperando_revision_y_en_revision_son_el_mismo_paso():
 def test_el_periodo_se_lee_con_su_nombre(periodo, nombre):
     """«1er. Trimestre 2026» y no «2026_T1» (pedido del responsable funcional, 27-09-2026)."""
     assert svc.nombre_del_periodo(periodo) == nombre
+
+
+def test_los_mensajes_nombran_los_archivos_por_su_nombre_corto():
+    """«No coincide con LEGAJO_NYA» se lee con el nombre del archivo (27-09-2026)."""
+    nombres = {"LEGAJO_NYA": "Legajo de niños, niñas y adolescentes", "MPI": "MPI"}
+    texto = "No coincide con LEGAJO_NYA: ahí dice 1 y en MPI dice 2."
+    assert svc.con_nombres_de_archivo(texto, nombres) == (
+        "No coincide con Legajo de niños, niñas y adolescentes: ahí dice 1 y en MPI dice 2."
+    )
+    assert svc.con_nombres_de_archivo(None, nombres) is None

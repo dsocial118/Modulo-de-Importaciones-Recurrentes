@@ -29,6 +29,7 @@ from typing import Any
 from django.db import connection, transaction
 
 from runac.services import circuito_service as circuito
+from runac.services.importacion_service import con_nombres_de_archivo, nombres_cortos
 
 _MOTOR = Path(__file__).resolve().parent / "motor"
 if str(_MOTOR) not in sys.path:
@@ -310,10 +311,12 @@ def datos_de_la_hoja(
             [importacion_id, hoja["nombre_esperado"]],
         )
         avisos: dict[int, list[dict]] = {}
+        nombres = nombres_cortos()
         for aviso in _filas(cur):
             # En palabras, como en los Excel: no «debe ser menor igual hoy».
-            aviso["descripcion"] = en_palabras.problema_en_palabras(
-                aviso["codigo"], aviso["descripcion"]
+            aviso["descripcion"] = con_nombres_de_archivo(
+                en_palabras.problema_en_palabras(aviso["codigo"], aviso["descripcion"]),
+                nombres,
             )
             avisos.setdefault(aviso["numero_fila"], []).append(aviso)
 
@@ -855,7 +858,9 @@ def editar(
         # total de la fila confundía: se corregía el dato y el número no bajaba,
         # porque contaba también las observaciones de los otros campos.
         "observaciones": [
-            en_palabras.problema_en_palabras(h.get("codigo"), h["descripcion"])
+            con_nombres_de_archivo(
+                en_palabras.problema_en_palabras(h.get("codigo"), h["descripcion"])
+            )
             for h in hallazgos
             if h["campo_id"] == campo["id"]
         ],

@@ -70,11 +70,15 @@ def en_palabras_comunes(
             )
             for campo_id, valor in cur.fetchall():
                 opciones.setdefault(campo_id, []).append(valor)
+    nombres = nombres_cortos() if filas else {}
     for f in filas:
         tecnico = f.get(clave_texto)
         f[f"{clave_texto}_tecnica"] = tecnico
-        f[clave_texto] = en_palabras.problema_en_palabras(
-            f.get(clave_codigo), tecnico, opciones.get(f.get("campo_id"))
+        f[clave_texto] = con_nombres_de_archivo(
+            en_palabras.problema_en_palabras(
+                f.get(clave_codigo), tecnico, opciones.get(f.get("campo_id"))
+            ),
+            nombres,
         )
     return filas
 
@@ -942,3 +946,23 @@ def nombres_cortos() -> dict[str, str]:
             cur.execute("SELECT codigo FROM mir_c1_archivo")
             return {c: c for (c,) in cur.fetchall()}
         return {c: (n or c) for c, n in cur.fetchall()}
+
+
+def con_nombres_de_archivo(texto: str | None, nombres: dict[str, str] | None = None):
+    """Cambia los códigos de archivo que trae un mensaje por su nombre corto.
+
+    El motor escribe «No coincide con LEGAJO_NYA»; la pantalla dice «No
+    coincide con Legajo de niños, niñas y adolescentes» (27-09-2026).
+    """
+    if not texto:
+        return texto
+    nombres = nombres if nombres is not None else nombres_cortos()
+    distintos = {c: n for c, n in nombres.items() if n and n != c}
+    if not distintos:
+        return texto
+    patron = (
+        r"\b("
+        + "|".join(re.escape(c) for c in sorted(distintos, key=len, reverse=True))
+        + r")\b"
+    )
+    return re.sub(patron, lambda m: distintos[m[1]], texto)

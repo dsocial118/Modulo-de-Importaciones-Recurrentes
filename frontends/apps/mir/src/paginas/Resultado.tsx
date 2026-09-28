@@ -56,7 +56,7 @@ function Archivo({ a, puedeEditar }: { a: ArchivoDelResultado; puedeEditar: bool
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: { md: 'flex-start' } }}>
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-            <Typography sx={{ fontWeight: 500 }}>{nombreDe(a.codigo)}</Typography>
+            <Typography sx={{ fontWeight: 700 }}>{nombreDe(a.codigo)}</Typography>
             <EtiquetaDeEstado tono={e.tono} texto={e.texto} />
           </Stack>
           {/* Nombre y cifras en un solo renglón (27-09-2026). */}
@@ -210,11 +210,8 @@ export function Resultado() {
           ) : null}
 
           <Card variant="outlined">
-            <CardHeader
-              title="Archivos"
-              slotProps={{ title: { variant: 'subtitle1', sx: { fontWeight: 500 } } }}
-            />
-            <CardContent sx={{ pt: 0, '&:last-child': { pb: 0 } }}>
+            {/* Sin el título «Archivos»: es obvio de qué se trata (27-09-2026). */}
+            <CardContent sx={{ pt: 0, '&:last-child': { pb: 0 }, '& > :first-of-type': { borderTop: 0 } }}>
               {d.archivos.map((a) => (
                 <Archivo key={a.codigo} a={a} puedeEditar={d.puede_editar} />
               ))}

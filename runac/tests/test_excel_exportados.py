@@ -385,9 +385,12 @@ def test_el_informe_dice_quien_lo_genero():
     assert "revisor" in valores
 
 
-def test_las_pantallas_dicen_lo_mismo_que_los_excel():
+def test_las_pantallas_dicen_lo_mismo_que_los_excel(monkeypatch):
     """El mismo texto en pantalla y en Excel; el del motor queda guardado aparte."""
     from runac.services import importacion_service as svc
+
+    # Los nombres cortos de los archivos salen de la base; acá no hay.
+    monkeypatch.setattr(svc, "nombres_cortos", dict)
 
     filas = [
         {

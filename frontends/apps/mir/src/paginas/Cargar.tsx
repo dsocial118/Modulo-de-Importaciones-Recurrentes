@@ -89,7 +89,7 @@ function FilaDeCarga({
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} sx={{ alignItems: { md: 'center' } }}>
         <Box sx={{ flex: { md: '0 1 720px' }, minWidth: 0 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-            <Typography sx={{ fontWeight: 500 }}>{nombreDe(a.codigo)}</Typography>
+            <Typography sx={{ fontWeight: 700 }}>{nombreDe(a.codigo)}</Typography>
             <EtiquetaDeEstado tono={e.tono} texto={e.texto} />
             {a.filas != null && (
               <Typography variant="body2" color="text.secondary">
@@ -110,7 +110,7 @@ function FilaDeCarga({
           {/* Se dice SIEMPRE, no sólo cuando traba: así se sabe antes de intentar. */}
           {a.necesita.length > 0 && (
             <Typography variant="caption" color="text.secondary" component="div">
-              Necesita: <strong>{a.necesita.join(', ')}</strong>
+              Necesita: <strong>{a.necesita.map(nombreDe).join(', ')}</strong>
             </Typography>
           )}
         </Box>
