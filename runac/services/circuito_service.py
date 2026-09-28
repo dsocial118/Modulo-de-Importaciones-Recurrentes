@@ -173,7 +173,7 @@ def ejecutar(presentacion_id: int, accion: str, usuario, listo: bool = True) -> 
                 f"está en «{estado_legible(estado)}»."
             )
         if not _rol_permitido(usuario, quien):
-            raise TransicionInvalida(f"Tu rol no puede {ETIQUETAS[accion].lower()}.")
+            raise TransicionInvalida(f"El rol del usuario no permite {ETIQUETAS[accion].lower()}.")
         if accion == "cerrar_carga" and not listo:
             raise TransicionInvalida(
                 "Faltan archivos obligatorios por importar. No se puede cerrar la carga."

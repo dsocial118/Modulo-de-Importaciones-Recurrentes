@@ -309,7 +309,7 @@ export function Datos({
   };
 
   if (consulta.isPending) return <LinearProgress aria-label="Cargando" />;
-  if (consulta.isError) return <Alert severity="error">No existe esa importación, o no es de tu jurisdicción.</Alert>;
+  if (consulta.isError) return <Alert severity="error">No existe esa importación, o no corresponde a la jurisdicción del usuario.</Alert>;
   const d = consulta.data;
   const c = d.contexto;
   const abiertas = d.observaciones.filter((o) => o.estado === 'ABIERTA');

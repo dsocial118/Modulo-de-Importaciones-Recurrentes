@@ -190,7 +190,7 @@ export function Inicio({ sesion }: { sesion: Sesion }) {
 
       <Card variant="outlined">
         <CardHeader
-          title={`Estado de la presentación — ${d.jurisdiccion ?? 'elegí una jurisdicción'}`}
+          title={`Estado de la presentación — ${d.jurisdiccion ?? 'sin jurisdicción seleccionada'}`}
           sx={{ py: 1.25 }}
           slotProps={{ title: { variant: 'subtitle1', sx: { fontWeight: 500 } } }}
           action={

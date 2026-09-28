@@ -213,8 +213,8 @@ def problema_en_palabras(
             lista = ", ".join(opciones[:6]) + (
                 f" y {len(opciones) - 6} más" if len(opciones) > 6 else ""
             )
-            return f"No está en la lista: elegí una opción del desplegable ({lista})."
-        return "No está en la lista: elegí una opción del desplegable."
+            return f"No está en la lista: seleccionar una opción del desplegable ({lista})."
+        return "No está en la lista: seleccionar una opción del desplegable."
     if codigo == "OBLIGATORIO_VACIO":
         return "Dato obligatorio vacío."
     if codigo == "TEXTO_MUY_LARGO":

@@ -87,7 +87,7 @@ DETALLE_DE_SECCION = {
     "cargar": "De a uno, indicando cuál es. El sistema controla el orden.",
     "resultado": "Qué entró, qué falta corregir, y el cierre de carga.",
     "situacion": "Cómo viene cada provincia del operativo.",
-    "revision": "Lo que te toca revisar ahora.",
+    "revision": "Presentaciones pendientes de revisión.",
     "observaciones": "Todas las observaciones del período, para el seguimiento.",
     "administracion": "Los períodos, las provincias del operativo y las herramientas de prueba.",
     "estructura": "Qué se espera en cada columna de cada archivo.",

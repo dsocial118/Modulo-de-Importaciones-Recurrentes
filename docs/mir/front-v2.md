@@ -24,6 +24,13 @@ rehacer el front:
 - **Todo entra por Django**, que reenvía `/v2/mir/` al servicio del front: el
   mismo login y el mismo middleware que el resto.
 - **La API es el único canal**: ver `docs/mir/api.md`.
+- **Los textos, formales e impersonales** (decisión del 28-09-2026). Vale para
+  todo lo que produce el sistema: pantallas de las dos versiones, mensajes del
+  servidor, Excel generados y manuales. Se usa el infinitivo o el «se»:
+  «Seleccionar una jurisdicción», «Se selecciona el archivo y se presiona
+  Importar», «El rol del usuario no permite importar archivos». No se usa
+  voseo («elegí», «apretá», «podés») ni segunda persona («tu rol», «te toca»).
+  Los rótulos dicen qué es cada cosa, no a quién le toca.
 
 ## Estructura
 

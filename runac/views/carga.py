@@ -152,7 +152,7 @@ class CargarArchivoView(SeccionPermitidaMixin, LoginRequiredMixin, View):
         )
 
         if not puede_cargar(request.user):
-            messages.error(request, "Tu rol no puede importar archivos.")
+            messages.error(request, "El rol del usuario no permite importar archivos.")
             return redirect(volver)
 
         fichero = request.FILES.get("archivo")

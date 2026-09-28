@@ -72,7 +72,7 @@ const A_CONFIRMAR: Record<string, string> = {
 
 // Habilitar sin haber abierto la revisión se puede, pero se avisa.
 export const SIN_ABRIR_LA_REVISION =
-  'Todavía no se comenzó la revisión de esta presentación. ¿La habilitás igual para que la jurisdicción la presente formalmente?';
+  'La revisión de esta presentación todavía no se inició. ¿Se habilita igualmente para que la jurisdicción realice la presentación formal?';
 
 // Desde que la provincia cierra la carga hasta que se habilita: igual que el servidor.
 const OBSERVABLES = ['CERRADA', 'EN_REVISION', 'OBSERVADA', 'SUBSANADA'];
@@ -493,7 +493,7 @@ export function Resultado() {
       </Titulo>
 
       {!d.jurisdiccion ? (
-        <Alert severity="info">Elegí una jurisdicción para ver su resultado.</Alert>
+        <Alert severity="info">Seleccionar una jurisdicción para ver su resultado.</Alert>
       ) : (
         <>
           {/* Las solapas y, a la derecha, los botones del circuito: siempre en el mismo lugar. */}

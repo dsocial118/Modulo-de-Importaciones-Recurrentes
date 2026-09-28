@@ -160,7 +160,7 @@ class ReglasView(SeccionPermitidaMixin, LoginRequiredMixin, TemplateView):
             for error in problema.errores:
                 messages.error(request, error)
             messages.warning(
-                request, "No se guardó ningún cambio: corregí eso y volvé a guardar."
+                request, "No se guardó ningún cambio: corregir lo indicado y volver a guardar."
             )
         except (ValueError, reglas_service.NoSePuede) as error:
             messages.error(request, str(error) or "No se indicó qué cambiar.")

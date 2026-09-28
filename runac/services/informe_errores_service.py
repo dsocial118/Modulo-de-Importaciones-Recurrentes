@@ -448,7 +448,7 @@ def armar_informe(datos: dict, generado: datetime) -> bytes:
         formula1='"' + ",".join(s for s, _, _ in ESTADOS) + '"',
         allow_blank=True,
     )
-    dv.error, dv.errorTitle = "Elegí un estado de la lista.", "Estado"
+    dv.error, dv.errorTitle = "Seleccionar un estado de la lista.", "Estado"
     ws.add_data_validation(dv)
     dv.add(rango)
     for estado, _, tono in ESTADOS:
@@ -638,8 +638,8 @@ def armar_archivo_para_corregir(
         libro,
         cab,
         "Archivo para corregir",
-        "Es el mismo Excel que se subió, con cada problema marcado en su celda. Pasá el mouse sobre la celda para "
-        "ver qué corregir y, después, volvé a subirlo tal cual.",
+        "Es el mismo Excel que se subió, con cada problema marcado en su celda. Al pasar el mouse sobre la celda "
+        "se indica qué corregir; después, el archivo se vuelve a subir tal cual.",
         [
             (t, g, n, "Ver")
             for (t, g), n in sorted(
@@ -660,7 +660,7 @@ def armar_archivo_para_corregir(
                 "Colores de los títulos",
                 "Verde: dato obligatorio. Verde clarito: opcional. Verde oscuro: grupo de "
                 "columnas. (En las plantillas bajadas antes del 28-09-2026, celeste y gris.) "
-                "Pasá el mouse por un título para ver qué va, los valores posibles y los "
+                "Al pasar el mouse por un título se indica qué va, los valores posibles y los "
                 "controles.",
             ),
         ],

@@ -63,7 +63,7 @@ export function App() {
   if (sesion.isError) {
     return (
       <Alert severity="error" sx={{ m: 3 }}>
-        No se pudo obtener la sesión. Probá recargar la página.
+        No se pudo obtener la sesión. Se sugiere recargar la página.
       </Alert>
     );
   }

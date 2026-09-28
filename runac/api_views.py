@@ -100,7 +100,7 @@ EN_V2 = {
 
 def _exigir(usuario, seccion: str):
     if not puede_entrar(usuario, seccion):
-        raise PermissionDenied("Tu rol no tiene acceso a esta sección.")
+        raise PermissionDenied("El rol del usuario no tiene acceso a esta sección.")
 
 
 def jurisdiccion_permitida(request) -> str | None:
@@ -309,7 +309,7 @@ class FranjaView(APIView):
             "estado_legible": circuito.estado_legible(estado),
             "que_pasa": circuito.ESTADOS.get(estado, ("", ""))[1],
             "pasos": _pasos_de_la_franja(estado),
-            # Lo que este usuario puede hacer ahora: «Te toca: cerrar la carga».
+            # Lo que este usuario puede hacer ahora: «Acción pendiente: cerrar la carga».
             "te_toca": [
                 a["etiqueta"]
                 for a in circuito.acciones_disponibles(
@@ -618,7 +618,7 @@ class CargarArchivoView(APIView):
     def post(self, request, codigo):
         _exigir(request.user, "cargar")
         if not puede_cargar(request.user):
-            raise PermissionDenied("Tu rol no puede importar archivos.")
+            raise PermissionDenied("El rol del usuario no permite importar archivos.")
         fichero = request.FILES.get("archivo")
         periodo = request.data.get("periodo")
         jurisdiccion = (
@@ -627,11 +627,11 @@ class CargarArchivoView(APIView):
             else jurisdiccion_de(request.user)
         )
         if es_nacional(request.user) and jurisdiccion not in JURISDICCIONES:
-            raise ValidationError({"jurisdiccion": ["Elegí una jurisdicción."]})
+            raise ValidationError({"jurisdiccion": ["Debe seleccionarse una jurisdicción."]})
         if not fichero:
             raise ValidationError({"archivo": ["No se seleccionó ningún archivo."]})
         if not jurisdiccion:
-            raise PermissionDenied("Tu usuario no tiene jurisdicción asignada.")
+            raise PermissionDenied("El usuario no tiene una jurisdicción asignada.")
 
         resultado = svc.importar_uno(
             codigo, fichero, jurisdiccion, periodo, request.user.get_username()
@@ -1429,7 +1429,7 @@ class ReglasView(APIView):
         except reglas_service.ErroresDeValidacion as problema:
             return Response(
                 {
-                    "mensaje": "No se guardó ningún cambio: corregí eso y volvé a guardar.",
+                    "mensaje": "No se guardó ningún cambio: corregir lo indicado y volver a guardar.",
                     "detalle": [],
                     "errores": list(problema.errores),
                 },

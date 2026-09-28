@@ -127,7 +127,7 @@ export function Detalle() {
   }
 
   if (detalle.isPending) return <LinearProgress aria-label="Cargando" />;
-  if (detalle.isError) return <Alert severity="error">No existe esa importación, o no es de tu jurisdicción.</Alert>;
+  if (detalle.isError) return <Alert severity="error">No existe esa importación, o no corresponde a la jurisdicción del usuario.</Alert>;
   const d = detalle.data;
   const imp = d.importacion;
   const e = formaDe(ESTADO_DEL_ARCHIVO, imp.estado);
@@ -166,8 +166,8 @@ export function Detalle() {
                 describeChild
                 title={
                   d.puede_corregir
-                    ? 'Los datos que entraron, fila por fila: corregí las advertencias sin volver a subir el archivo.'
-                    : 'Los datos que entraron, fila por fila. Tu rol los ve pero no los cambia.'
+                    ? 'Los datos incorporados, fila por fila. Las advertencias se corrigen sin volver a subir el archivo.'
+                    : 'Los datos incorporados, fila por fila. Este rol puede consultarlos, pero no modificarlos.'
                 }
               >
                 <Button
@@ -384,7 +384,7 @@ export function Detalle() {
                 />
               )}
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                El número de fila es el del Excel, tal como lo ves al abrirlo.
+                El número de fila es el del Excel, tal como figura al abrirlo.
               </Typography>
             </CardContent>
           </Card>

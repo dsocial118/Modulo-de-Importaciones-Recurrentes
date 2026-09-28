@@ -125,7 +125,7 @@ def armar(archivo: dict, periodo: str, generado: datetime, usuario: str = "") ->
                 showErrorMessage=False,
                 showInputMessage=True,
                 promptTitle="Valores posibles",
-                prompt="Abrí el desplegable para ver las opciones.",
+                prompt="Abrir el desplegable para ver las opciones.",
             )
             ws.add_data_validation(dv)
             dv.add(ws.cell(row=n, column=7))

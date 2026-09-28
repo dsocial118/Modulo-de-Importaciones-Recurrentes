@@ -186,7 +186,7 @@ export function FranjaDelCircuito() {
             {sinProvincia
               ? enPanorama
                 ? null
-                : 'Elegí una provincia para ver su avance'
+                : 'Seleccionar una provincia para ver su avance'
               : archivosEnPalabras(f.estado, f.archivos_importados, f.archivos_esperados)}
           </Typography>
           {f.observaciones_abiertas > 0 && (
@@ -197,7 +197,7 @@ export function FranjaDelCircuito() {
           )}
           {f.te_toca.length > 0 && (
             <Typography variant="body2">
-              Te toca:{' '}
+              Acción pendiente:{' '}
               <Link component="button" variant="body2" onClick={irAlResultado} sx={{ fontWeight: 600, verticalAlign: 'baseline', color: 'nav.accent' }}>
                 {f.te_toca.join(' o ').toLowerCase()}
               </Link>

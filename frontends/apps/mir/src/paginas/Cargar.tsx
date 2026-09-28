@@ -394,7 +394,7 @@ export function Cargar() {
         )}
       </Titulo>
 
-      {!d.jurisdiccion && <Alert severity="info">Elegí una jurisdicción para ver su carga.</Alert>}
+      {!d.jurisdiccion && <Alert severity="info">Seleccionar una jurisdicción para ver su carga.</Alert>}
       {d.jurisdiccion && d.periodo?.estado !== 'ABIERTO' && (
         <Alert severity="info" sx={{ mb: 2 }}>
           El período {d.periodo?.codigo} no está abierto: no se reciben archivos.

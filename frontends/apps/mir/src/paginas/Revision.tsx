@@ -73,7 +73,7 @@ function Fila({ p, periodo }: { p: PresentacionEnRevision; periodo?: string }) {
                         titulo: a.etiqueta,
                         texto:
                           p.estado === 'CERRADA'
-                            ? `Todavía no se comenzó la revisión de ${p.jurisdiccion}. ¿La habilitás igual para que la presente formalmente?`
+                            ? `La revisión de ${p.jurisdiccion} todavía no se inició. ¿Se habilita igualmente para que realice la presentación formal?`
                             : `Concluye la revisión de ${p.jurisdiccion} y la habilita a presentar formalmente.`,
                         confirmar: a.etiqueta,
                       });
@@ -115,7 +115,7 @@ export function Revision() {
         titulo="Revisión nacional"
         subtitulo={
           <>
-            Lo que te toca revisar ahora{d.periodo ? ` · ${d.periodo.nombre}` : ''}. El revisor observa; <strong>no modifica
+            Presentaciones pendientes de revisión{d.periodo ? ` · ${d.periodo.nombre}` : ''}. El revisor observa; <strong>no modifica
             datos provinciales.</strong>
           </>
         }
@@ -150,10 +150,10 @@ export function Revision() {
         </TableContainer>
         {pendientes.length === 0 && (
           <Box sx={{ py: 3, px: 2, textAlign: 'center' }}>
-            <Typography sx={{ fontWeight: 700 }}>Ninguna provincia está esperando tu revisión.</Typography>
+            <Typography sx={{ fontWeight: 700 }}>No hay presentaciones pendientes de revisión.</Typography>
             <Typography variant="body2" color="text.secondary">
-              Una provincia aparece acá cuando cierra la carga y la envía a revisión nacional, y vuelve a aparecer cuando
-              responde tus observaciones.
+              Una provincia se incorpora a este listado al cerrar la carga y enviarla a revisión nacional, y vuelve a
+              incorporarse al responder las observaciones formuladas.
             </Typography>
           </Box>
         )}
@@ -162,7 +162,7 @@ export function Revision() {
       {otras.length > 0 && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.75 }}>
-            Las demás provincias, que todavía no te toca revisar
+            Otras provincias del operativo, sin revisión pendiente (en carga, habilitadas o presentadas)
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
             {otras.map((p) => (

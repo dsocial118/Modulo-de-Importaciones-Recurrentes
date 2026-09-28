@@ -92,7 +92,7 @@ function Editor({ celda, alTerminar }: { celda: Celda; alTerminar: (valor: strin
 
 function textoEmergente(c: Celda): string | undefined {
   if (c.observacion?.estado === 'ABIERTA') return `Observado: ${c.observacion.texto}`;
-  if (c.tiene_aviso) return 'Tiene una advertencia: elegí el dato para verla.';
+  if (c.tiene_aviso) return 'Tiene una advertencia: seleccionar el dato para verla.';
   return undefined;
 }
 

@@ -60,7 +60,7 @@ describe('Franja del avance del circuito', () => {
     );
     mostrar(<FranjaDelCircuito />);
     expect(screen.getByText('Todas las provincias')).toBeInTheDocument();
-    expect(screen.getByText('Elegí una provincia para ver su avance')).toBeInTheDocument();
+    expect(screen.getByText('Seleccionar una provincia para ver su avance')).toBeInTheDocument();
     expect(document.querySelector('[aria-current="step"]')).toBeNull();
   });
 });
