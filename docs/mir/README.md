@@ -21,6 +21,7 @@ docs/pae/      la segunda
 | [proceso-de-importacion.md](proceso-de-importacion.md) | Qué pasa con un archivo desde que se sube |
 | [reglas-de-validacion.md](reglas-de-validacion.md) | Los tipos de regla y cómo se declaran |
 | [actores-y-roles.md](actores-y-roles.md) | Quién hace qué, dentro y fuera del sistema |
+| [Comparación de identidad de personas](../registro/decisiones/2026-10-02-comparacion-identidad-personas.md) | Diseño acordado de un comparador reutilizable; implementación y circuito pendientes |
 | [esquema/](esquema/) | El modelo en SQL, capa por capa |
 | [presentacion-mir.pdf](presentacion-mir.pdf) | La presentación del módulo, para mostrar sin entrar al código |
 
