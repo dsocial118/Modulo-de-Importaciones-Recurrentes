@@ -22,6 +22,7 @@ docs/pae/      la segunda
 | [reglas-de-validacion.md](reglas-de-validacion.md) | Los tipos de regla y cómo se declaran |
 | [actores-y-roles.md](actores-y-roles.md) | Quién hace qué, dentro y fuera del sistema |
 | [Comparación de identidad de personas](../registro/decisiones/2026-10-02-comparacion-identidad-personas.md) | Diseño acordado de un comparador reutilizable; implementación y circuito pendientes |
+| [revision-identidad-personas.md](revision-identidad-personas.md) | Diseño de la comparación visual, estados por campo y modos de presentación; no implementado |
 | [esquema/](esquema/) | El modelo en SQL, capa por capa |
 | [presentacion-mir.pdf](presentacion-mir.pdf) | La presentación del módulo, para mostrar sin entrar al código |
 

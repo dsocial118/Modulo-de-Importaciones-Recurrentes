@@ -231,6 +231,8 @@ su historia**.
 
 ### La identidad se separa de lo relevado
 
+**Actualización de diseño — 02-10-2026:** la identidad común de persona en la Capa 3 de RUNAC utilizará ciudadano_id de SISOC. La descripción de tablas que sigue corresponde al esquema previo; no acredita una migración ni establece una identidad maestra independiente. Se mantienen caracterizaciones y datos de origen. La adaptación física y los casos sin DNI o con dudas están pendientes. Ver [decisión de identidad](../registro/decisiones/2026-10-02-comparacion-identidad-personas.md).
+
 `mir_c3_persona` contiene **sólo la identidad**: el identificador de SISOC, el
 vínculo con `ciudadanos`, el documento y el CUIL. Nada más.
 

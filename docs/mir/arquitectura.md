@@ -126,9 +126,9 @@ aplica a todo módulo nuevo (`docs/ia/MODULAR_BOUNDARIES.md`):
 | Campo | Valor |
 |---|---|
 | Nombre del dominio | `mir` |
-| Clasificación | **Vertical extraíble.** No es cambio de kernel: no toca `Ciudadano` ni los domicilios embebidos. No es parte de un contexto existente: padrón y dispositivos propios |
+| Clasificación | **Vertical extraíble**, clasificación previa a revisar al diseñar la integración de identidad con Ciudadano. Esta documentación no modifica el kernel |
 | Entidades propias | Padrón (persona, dispositivo, familia), eventos (medida, DAE) y las tres capas |
-| Dependencias al kernel | `ciudadanos.Ciudadano` **por vínculo opcional**, nunca obligatorio. Territorio a confirmar según el nomenclador |
+| Dependencias al kernel | Ciudadano de SISOC como identidad común de personas en Capa 3 (decisión del 02-10-2026); integración técnica pendiente. Territorio a confirmar según el nomenclador |
 | Dependencias a otros verticales | Ninguna. Los dispositivos son propios: no requiere fachada de `dispositivos` |
 
 ---
@@ -182,44 +182,19 @@ rehacer nada.
 
 ## Datos personales
 
-RUNAC guarda **su propio padrón**, con la información tal como la entregan las
-entidades. Tres motivos:
+**Diseño actualizado el 02-10-2026; pendiente de implementación.**
 
-- El requerimiento pide **trazabilidad del origen de cada dato** y prevé un
-  identificador de la entidad además del interno. Cumplirlo exige conservar lo que
-  informó cada archivo, coincida o no con lo que ya figura en el sistema y en
-  RENAPER.
-- Un niño, niña o adolescente **puede no tener DNI** y aun así debe poder registrarse;
-  en esos casos el identificador de la entidad es el único modo de reconocerlo entre
-  entregas.
-- La entidad suele tener el **domicilio real**, que no siempre coincide con el
-  del documento.
+Para RUNAC, la identidad común de las personas de la Capa 3 será ciudadano_id de SISOC. Se buscará primero en Ciudadano; si no existe y se resolvieron las dudas, se prevé crear el ciudadano mediante los mecanismos autorizados de SISOC y recuperar su ID. No se construirá una identidad maestra paralela.
 
-El padrón alcanza a los **tres tipos de persona** que informan las entidades que presentan:
-niños y adolescentes, referentes y responsables.
+Esta decisión reemplaza el vínculo meramente opcional del diseño anterior. MIR conserva lo informado por cada origen, sus identificadores (como provincia + id_Niño) y las caracterizaciones propias, sin sobrescribir automáticamente la información de Ciudadano. Una persona puede aparecer como persona alcanzada por una intervención, referente o responsable sin duplicar su identidad.
 
-Se vincula con el registro de ciudadanos de SISOC **siempre que sea posible**,
-para no duplicar personas y para enriquecer las vistas consolidadas con
-información de otras fuentes del sistema, sujeta a habilitación.
+En ciudadanos/api.py existe una resolución por DNI y RENAPER que devuelve ciudadano_id. El modelo de SISOC contempla personas sin DNI, pero el alta de esos casos, los conflictos y la concurrencia necesitan un contrato específico. No se presupone que el mecanismo RENAPER cubra todos los ingresos.
 
-Cuando la persona no exista en el registro de ciudadanos, SISOC ya cuenta con un
-mecanismo que la da de alta con datos de RENAPER, validando la identidad
-(`ciudadanos/api.py`). Se utilizará ese mecanismo y no se crearán ciudadanos por
-cuenta propia.
+Una duda no genera automáticamente un ciudadano nuevo. Los registros de origen pueden permanecer pendientes hasta resolver su identidad.
 
-**Sobre la confidencialidad:** el módulo **no escribe** en las tablas del resto
-del sistema. Los datos que llegan por este programa quedan dentro del módulo y
-no modifican información de otras áreas. La lectura del registro de ciudadanos
-es sólo para identificar a la persona.
+El cambio aquí es documental: no convierte claves físicas, no ejecuta migraciones y no habilita escritura directa en tablas de SISOC. La integración deberá definir esas adaptaciones y utilizar las operaciones autorizadas.
 
-> **Definición pendiente.** ¿Debe dar de alta ciudadanos en SISOC a partir de las
-> importaciones de la entidades? Una presentación trimestral puede incorporar miles
-> de personas al padrón general. Existe precedente en sentido contrario: VAT
-> mantiene deliberadamente por fuera a los profesores, para no sumarlos al padrón
-> que alimenta la validación de identidad y la revisión de duplicados.
-
-> **Definición pendiente.** En los casos sin DNI, ¿hay alguna otra forma de
-> establecer el vínculo con el registro de ciudadanos?
+Ver [decisión del comparador](../registro/decisiones/2026-10-02-comparacion-identidad-personas.md) y [diseño de revisión visual](revision-identidad-personas.md). El circuito y el rol revisor siguen pendientes.
 
 ---
 
