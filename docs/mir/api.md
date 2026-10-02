@@ -4,6 +4,8 @@
 Existen todos los puntos de acceso que usan las pantallas en React. Este
 documento separa siempre lo que **está hecho** de lo que **está previsto**.
 
+La [propuesta general de seguridad, escalabilidad y confiabilidad](seguridad.md) complementa este contrato. Sus requisitos no convierten la carga entre sistemas en una capacidad implementada.
+
 ---
 
 ## 1 · Qué es y para qué sirve

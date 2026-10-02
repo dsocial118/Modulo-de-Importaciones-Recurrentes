@@ -10,6 +10,8 @@ aparte.
 
 Revisión: **24 de septiembre de 2026**.
 
+**Complemento documental — 02-10-2026:** la [propuesta de seguridad, escalabilidad y confiabilidad](mir/seguridad.md) describe los controles previstos. No acredita su implementación ni actualiza por sí sola este relevamiento. Para el alcance por entidad, la [documentación de la API](mir/api.md) registra avances posteriores en el canal nuevo; el estado debe distinguirse por canal y verificarse antes de cerrar el pendiente.
+
 ---
 
 ## 1 · Qué es el módulo

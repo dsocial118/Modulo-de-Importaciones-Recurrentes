@@ -15,6 +15,7 @@ docs/pae/      la segunda
 | Documento | Qué responde |
 |---|---|
 | [arquitectura.md](arquitectura.md) | Por qué es un módulo reusable y no un sistema, y dónde termina |
+| [seguridad.md](seguridad.md) | Propuesta de seguridad, escalabilidad y confiabilidad; controles previstos, no acreditación de implementación |
 | [modelo-de-datos.md](modelo-de-datos.md) | Las tres capas, y qué vive en cada una |
 | [circuito.md](circuito.md) | Los nueve pasos, de la carga a la consolidación |
 | [proceso-de-importacion.md](proceso-de-importacion.md) | Qué pasa con un archivo desde que se sube |

@@ -115,6 +115,8 @@ corrección. Ver **[entorno/LEEME.md](entorno/LEEME.md)**.
 Lo que todavía no está definido o no está implementado a nivel de plataforma se
 registra en **[docs/PENDIENTES_ARQUITECTURA.md](docs/PENDIENTES_ARQUITECTURA.md)**.
 
+La arquitectura objetivo se desarrolla en la **[Propuesta de seguridad, escalabilidad y confiabilidad](docs/mir/seguridad.md)**. Es una propuesta; no acredita controles implementados.
+
 ## Por dónde empezar a leer el código
 
 | Archivo | Qué responde |
